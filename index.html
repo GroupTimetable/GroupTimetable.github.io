@@ -5,11 +5,15 @@
   <title>'Hello, world!' example</title>
 </head>
 <body>
-<canvas id="the-canvas" style="border: 1px solid black; direction: ltr;"></canvas>
+<canvas id="the-canvas" style="border: 1px solid red; direction: ltr;"></canvas>
+<div id="new-schedule"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+<script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+
 <script src="./index.js"></script>
 
-<div id="drop_zone" ondrop="dropHandler(event)" ondragover="dragOverHandler(event);" style="background-color:red">
+<div id="drop_zone" ondrop="dropHandler(event)" ondragover="dragOverHandler(event);" style="height: 500px; background-color:red">
   <p>Drag one or more files to this <i>drop zone</i>.</p>
 </div>
 
