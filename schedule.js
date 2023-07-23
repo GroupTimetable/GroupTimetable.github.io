@@ -622,7 +622,5 @@ async function scheduleToPDF(schedule, renderPattern, width) {
         }
     }
 
-    console.log("finished filling")
-
     return pdfDoc.save();
 }

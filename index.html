@@ -1,22 +1,98 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>'Hello, world!' example</title>
+    <meta charset="UTF-8">
+    <title>Расписание</title>
+
+    <script defer src="https://code.jquery.com/jquery-3.7.0.min.js" integrity="sha256-2Pmvv0kuTBOenSvLm6bvfBSSHrUJ+3A7x6P5Ebd07/g=" crossorigin="anonymous"></script>
+
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
+    <script defer src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script defer src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+
+    <script defer src="./units.js"></script>
+    <script defer src="./schedule.js"></script>
+    <script defer src="./index.js"></script>
+
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
-<canvas id="the-canvas" style="border: 1px solid red; direction: ltr;"></canvas>
-<div id="new-schedule"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
-<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-<script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+<body style="margin: 0;">
+    <div style=" min-width: 100vw; min-height: 100vh; display: flex; flex-direction: column;">
+        <div class="centerel-vert" style="flex: 1 1 0px">
+            <div class="before" style="display: flex; flex-direction: column; align-items: stretch;">
+                <div class="header">Создание расписания группы</div>
+                <div class="h-text" style="padding-bottom: 2rem; flex: 1 1 0px">
+                    <span class="file-picker">Нажмите здесь или перетащите PDF файл расписания чтобы загрузить</span> 
+                </div>
+            </div>
 
-<script src="./schedule.js"></script>
-<script src="./index.js"></script>
+            <div class="center group-bar-container">
+                <div id="filename" class="move-with-border" style="margin-bottom: 0.3rem; color: #a0a0a0; opacity: 0; transition: opacity 100ms;">
+                    &ZeroWidthSpace;
+                </div>
+                <div class="group-bar"> 
+                    <div class="before"></div>
+                    <div style="display: flex; align-items: stretch; padding: 0.1rem 0.3rem 0.1rem 0.8rem;">
+                        <input id="group-input" type="text" placeholder="Введите имя группы" value="ИБ-122"/>
 
-<div id="drop_zone" ondrop="dropHandler(event)" ondragover="dragOverHandler(event);" style="height: 500px; background-color:red">
-  <p>Drag one or more files to this <i>drop zone</i>.</p>
-</div>
+                        <svg class="group-bar-icon" onclick="clearPrompt()" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path>
+                        </svg>
 
+                        <div style="margin-left: 0.5rem; border-left: 1px solid #cccccc;"></div>
+
+                        <svg class="group-bar-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M13.85 22.25h-3.7c-.74 0-1.36-.54-1.45-1.27l-.27-1.89c-.27-.14-.53-.29-.79-.46l-1.8.72c-.7.26-1.47-.03-1.81-.65L2.2 15.53c-.35-.66-.2-1.44.36-1.88l1.53-1.19c-.01-.15-.02-.3-.02-.46 0-.15.01-.31.02-.46l-1.52-1.19c-.59-.45-.74-1.26-.37-1.88l1.85-3.19c.34-.62 1.11-.9 1.79-.63l1.81.73c.26-.17.52-.32.78-.46l.27-1.91c.09-.7.71-1.25 1.44-1.25h3.7c.74 0 1.36.54 1.45 1.27l.27 1.89c.27.14.53.29.79.46l1.8-.72c.71-.26 1.48.03 1.82.65l1.84 3.18c.36.66.2 1.44-.36 1.88l-1.52 1.19c.01.15.02.3.02.46s-.01.31-.02.46l1.52 1.19c.56.45.72 1.23.37 1.86l-1.86 3.22c-.34.62-1.11.9-1.8.63l-1.8-.72c-.26.17-.52.32-.78.46l-.27 1.91c-.1.68-.72 1.22-1.46 1.22zm-3.23-2h2.76l.37-2.55.53-.22c.44-.18.88-.44 1.34-.78l.45-.34 2.38.96 1.38-2.4-2.03-1.58.07-.56c.03-.26.06-.51.06-.78s-.03-.53-.06-.78l-.07-.56 2.03-1.58-1.39-2.4-2.39.96-.45-.35c-.42-.32-.87-.58-1.33-.77l-.52-.22-.37-2.55h-2.76l-.37 2.55-.53.21c-.44.19-.88.44-1.34.79l-.45.33-2.38-.95-1.39 2.39 2.03 1.58-.07.56a7 7 0 0 0-.06.79c0 .26.02.53.06.78l.07.56-2.03 1.58 1.38 2.4 2.39-.96.45.35c.43.33.86.58 1.33.77l.53.22.38 2.55z"></path><circle cx="12" cy="12" r="3.5"></circle>
+                        </svg> 
+                        
+                        <!--https://www.reshot.com/free-svg-icons/item/arrow-chevron-right-WDGHUKQ634/-->
+                        <svg class="group-bar-icon start-button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <polygon points="7.293 4.707 14.586 12 7.293 19.293 8.707 20.707 17.414 12 8.707 3.293 7.293 4.707"/>
+                        </svg>
+
+                    </div>
+                    <div class="after">
+                        <div class="progress-bar">
+                        </div>
+                    </div>
+                </div>
+                <div id="statuses" class="move-with-border" style="margin-top: 0.3rem; opacity: 0; transition: opacity 100ms;">
+                    &ZeroWidthSpace;
+                </div>
+            </div>
+
+            <div class="after" style="padding-top: 2rem; margin-bottom: 1rem">
+                <div id="outputs">
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="drop-zone" style="visibility: hidden;">
+        <div>
+            <!--https://www.svgrepo.com/svg/255818/pdf-->
+            <svg height="800px" width="800px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+                 viewBox="0 0 512 512" xml:space="preserve">
+                <path style="fill:#E2E5E7;" d="M128,0c-17.6,0-32,14.4-32,32v448c0,17.6,14.4,32,32,32h320c17.6,0,32-14.4,32-32V128L352,0H128z"/>
+                <path style="fill:#B0B7BD;" d="M384,128h96L352,0v96C352,113.6,366.4,128,384,128z"/>
+                <polygon style="fill:#CAD1D8;" points="480,224 384,128 480,128 "/>
+                <path style="fill:#f15642;" d="M416,416c0,8.8-7.2,16-16,16H48c-8.8,0-16-7.2-16-16V256c0-8.8,7.2-16,16-16h352c8.8,0,16,7.2,16,16
+                    V416z"/>
+                <g>
+                    <path style="fill:#FFFFFF;" d="M101.744,303.152c0-4.224,3.328-8.832,8.688-8.832h29.552c16.64,0,31.616,11.136,31.616,32.48
+                        c0,20.224-14.976,31.488-31.616,31.488h-21.36v16.896c0,5.632-3.584,8.816-8.192,8.816c-4.224,0-8.688-3.184-8.688-8.816V303.152z
+                         M118.624,310.432v31.872h21.36c8.576,0,15.36-7.568,15.36-15.504c0-8.944-6.784-16.368-15.36-16.368H118.624z"/>
+                    <path style="fill:#FFFFFF;" d="M196.656,384c-4.224,0-8.832-2.304-8.832-7.92v-72.672c0-4.592,4.608-7.936,8.832-7.936h29.296
+                        c58.464,0,57.184,88.528,1.152,88.528H196.656z M204.72,311.088V368.4h21.232c34.544,0,36.08-57.312,0-57.312H204.72z"/>
+                    <path style="fill:#FFFFFF;" d="M303.872,312.112v20.336h32.624c4.608,0,9.216,4.608,9.216,9.072c0,4.224-4.608,7.68-9.216,7.68
+                        h-32.624v26.864c0,4.48-3.184,7.92-7.664,7.92c-5.632,0-9.072-3.44-9.072-7.92v-72.672c0-4.592,3.456-7.936,9.072-7.936h44.912
+                        c5.632,0,8.96,3.344,8.96,7.936c0,4.096-3.328,8.704-8.96,8.704h-37.248V312.112z"/>
+                </g>
+                <path style="fill:#CAD1D8;" d="M400,432H96v16h304c8.8,0,16-7.2,16-16v-16C416,424.8,408.8,432,400,432z"/>
+            </svg>
+        </div>
+    </div>
 </body>
 </html>
