@@ -15,7 +15,7 @@ function findItemBoundsH(cont, itemI) {
     let neighbour;
     if(itemI-2 >= 0 && cont[itemI-1].str == ' ') neighbour = itemI-2;
     else if(itemI+2 < cont.length && cont[itemI+1].str == ' ') neighbour = itemI+2;
-    else throw "";
+    else throw ["Невозможно определить вертикальные границы расписания", " [имя группы] = " + itemI + "/" + cont.length];
 
     const spacing = itemCenter - (cont[neighbour].transform[4] + cont[neighbour].width/2);
 
@@ -72,7 +72,7 @@ function findDaysOfWeekHoursBoundsV(cont) {
     for(let i = 0; i < cont.length; i++) {
         for(let j = 0; j < daysOfWeek.length; j++) {
             if(cont[i].str !== daysOfWeek[j]) continue;
-            if(dow[j] != undefined) throw "duplicate day of week";
+            if(dow[j] != undefined) throw ["День недели " + j + " обнаружен дважды", "[дубликат] = " + i + "/" + cont.length];
 
             dow[j] = { si: curStart, i: i };
             curStart = i+1;
@@ -93,7 +93,7 @@ function findDaysOfWeekHoursBoundsV(cont) {
         hours[i].bot = botof(hours[i].items[1]);
     }
 
-    if(hours < 2) throw "0 or 1 hours found, need at least 2";
+    if(hours < 2) throw "В рассписании найдено меньше двух пар";
     let hoursSpacing = Math.abs(hours[0].top + hours[0].bot - hours[1].top - hours[1].bot) * 0.5;
 
     const info = Array(dow.length);
@@ -190,24 +190,40 @@ function mergeLessons(lessons, shouldMerge) {
         }
     }
 
+    const done = new Map()
+
     for(let i = 0; i < 4; i++) {
         const a = lessons[i];
-        if(a.length == 0) {
-            lessons[i] = "";
-            continue;
+        const cached = done.get(a)
+        if(cached != undefined) {
+            lessons[i] = cached
         }
-        let result = "" + a[0].str;
-        let prevR = rigof(a[0]);
-        for(let j = 1; j < a.length; j++) {
-            const curL = lefof(a[j]);
-            const curR = rigof(a[j]);
-            result = result + " " + a[j].str;
-            prevR = curR;
+        else if(a.length == 0) {
+            done.set(a, lessons[i] = "");
         }
-        lessons[i] = result;
-    }
+        else {
+            a.sort(function(a, b) { // a - b
+                const xa = a.transform[4],
+                    ya = a.transform[5],
+                    xb = b.transform[4],
+                    yb = b.transform[5];
 
-    return lessons
+                const dy = ya - yb
+                if(Math.abs(dy) < 0.01 * Math.min(a.height, b.height)) return xa - xb
+                else return -dy //in pdf y is flipped
+            })
+
+            let res = "" + a[0].str;
+            let prevR = rigof(a[0]);
+            for(let j = 1; j < a.length; j++) {
+                const curL = lefof(a[j]);
+                const curR = rigof(a[j]);
+                res = res + " " + a[j].str;
+                prevR = curR;
+            }
+            done.set(a, lessons[i] = res);
+        }
+    }
 }
 
 
@@ -259,6 +275,8 @@ function makeSchedule(cont, vBounds, hBounds) {
                 if(it && ir && !shouldB && !shouldL) c[1].push(s);
                 if(ib && il &&  shouldB &&  shouldL) c[2].push(s);
                 if(ib && ir &&  shouldB && !shouldL) c[3].push(s);
+
+                break;
             }
         }
 
@@ -268,7 +286,10 @@ function makeSchedule(cont, vBounds, hBounds) {
             const l = curS[i];
             for(let j = 0; j < 4 && empty; j++) empty = empty && l.lessons[j].length == 0;
             if(empty) curS.pop();
-            else l.lessons = mergeLessons(l.lessons, l.shouldMerge);
+            else {
+                mergeLessons(l.lessons, l.shouldMerge);
+                l.shouldMerge = undefined;
+            }
         }
     }
 
