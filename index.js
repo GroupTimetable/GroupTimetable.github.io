@@ -167,27 +167,6 @@ updatePending(true)
 
 let daysScheme = [[0, 1, 2], [3, 4]]
 
-async function renderPDF(doc, width) {
-    const pdf = await pdfjsLib.getDocument(doc).promise;
-    const page = await pdf.getPage(1);
-
-    const viewport = page.getViewport({ scale: width / page.getViewport({scale:1}).width })
-
-    const canvas = new OffscreenCanvas(
-        Math.floor(viewport.width),
-        Math.floor(viewport.height)
-    )
-    const context = canvas.getContext("2d");
-
-    const renderContext = {
-        canvasContext: context,
-        transform: null, viewport,
-    };
-    
-    await page.render(renderContext).promise;
-
-    return await canvas.convertToBlob();
-}
 
 async function processPDF0(name, contents, width, stage) {
     let pdf
@@ -201,6 +180,32 @@ async function processPDF0(name, contents, width, stage) {
 
         for(let i = 0; i < cont.length; i++) {
             if(cont[i].str === name) try {
+
+                if(false) {
+                    var viewport = page.getViewport({ scale: 1, });
+                    // Support HiDPI-screens.
+                    var outputScale = window.devicePixelRatio || 1;
+
+                    var canvas = document.getElementById('the-canvas');
+                    var context = canvas.getContext('2d');
+
+                    canvas.width = Math.floor(viewport.width * outputScale);
+                    canvas.height = Math.floor(viewport.height * outputScale);
+                    canvas.style.width = Math.floor(viewport.width) + "px";
+                    canvas.style.height =  Math.floor(viewport.height) + "px";
+
+                    var transform = outputScale !== 1
+                      ? [outputScale, 0, 0, outputScale, 0, 0]
+                      : null;
+
+                    var renderContext = {
+                      canvasContext: context,
+                      transform: transform,
+                      viewport: viewport
+                    };
+                    await page.render(renderContext).promise
+                }
+
                 const boundsH = findItemBoundsH(cont, i);
                 const vBounds = findDaysOfWeekHoursBoundsV(cont);
                 stage("Достаём расписание из файла")
@@ -254,6 +259,12 @@ async function processPDF() {
         $(element.downloadImg).on('click', async function() {
             const blob = await renderPDF(copy(pdf), 1000)
             download(blob, outFilename + '.png')
+        })
+        $(element.edit).on('click', function() {
+            var parms = JSON.stringify({ schedule: schedule });
+            var storageId = "parms" + String(Date.now());
+            sessionStorage.setItem(storageId, parms);
+            window.open("./fix.html" + "?sid=" + storageId);
         })
     }
     catch(e) {

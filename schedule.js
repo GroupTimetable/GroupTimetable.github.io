@@ -17,7 +17,7 @@ function findItemBoundsH(cont, itemI) {
     else if(itemI+2 < cont.length && cont[itemI+1].str == ' ') neighbour = itemI+2;
     else throw ["Невозможно определить вертикальные границы расписания", " [имя группы] = " + itemI + "/" + cont.length];
 
-    const spacing = itemCenter - (cont[neighbour].transform[4] + cont[neighbour].width/2);
+    const spacing = Math.abs(itemCenter - (cont[neighbour].transform[4] + cont[neighbour].width/2));
 
     const itemS = itemCenter - spacing/2;
     const itemE = itemCenter + spacing/2;
@@ -52,18 +52,36 @@ function parseTime(str) {
     return hour * 60 + minute;
 }
 
-function topof(item) {
-    return item.transform[5] + item.height;
+function bounds(item) {
+    const h = 1;
+    const w = item.width / item.height;
+
+    const op = [[0,0], [0,h], [w,0], [w,h]]
+    const a = item.transform[0], b = item.transform[1], c = item.transform[2], d = item.transform[3]
+    
+    const min = Number.MIN_VALUE, max = Number.MAX_VALUE;
+    const bs = { l: max, b: max, r: min, t: min }
+    for(let i = 0; i < 4; i++) {
+        const x = op[i][0]
+        const y = op[i][1]
+
+        const xp = a*x + b*y;
+        const yp = c*x + d*y;
+
+        bs.l = Math.min(bs.l, xp)
+        bs.b = Math.min(bs.b, yp)
+        bs.r = Math.max(bs.r, xp)
+        bs.t = Math.max(bs.t, yp)
+    }
+
+    bs.l += item.transform[4]
+    bs.r += item.transform[4]
+    bs.t += item.transform[5]
+    bs.b += item.transform[5]
+
+    return bs
 }
-function botof(item) {
-    return item.transform[5];
-}
-function lefof(item) {
-    return item.transform[4];
-}
-function rigof(item) {
-    return item.transform[4] + item.width;
-}
+
 
 function findDaysOfWeekHoursBoundsV(cont) {
     const dow = Array(daysOfWeek.length);
@@ -89,8 +107,8 @@ function findDaysOfWeekHoursBoundsV(cont) {
     }
 
     for(let i = 0; i < hours.length; i++) {
-        hours[i].top = topof(hours[i].items[0]);
-        hours[i].bot = botof(hours[i].items[1]);
+        hours[i].top = bounds(hours[i].items[0]).t;
+        hours[i].bot = bounds(hours[i].items[1]).b;
     }
 
     if(hours < 2) throw "В рассписании найдено меньше двух пар";
@@ -140,13 +158,15 @@ function shouldMergeLessons2(l1, l2, isVertical) {
 
     let max1;
     for(let i = 0; i < l1.length; i++) {
-        const p = isVertical ? topof(l1[i]) : rigof(l1[i]);
+        const bs = bounds(l1[i]) 
+        const p = isVertical ? bs.t : bs.r;
         if(max1 == undefined || p > max1) max1 = p;
     }
 
     let min2;
     for(let i = 0; i < l2.length; i++) {
-        const p = isVertical ? botof(l2[i]) : lefof(l2[i]);
+        const bs = bounds(l2[i]) 
+        const p = isVertical ? bs.b : bs.l;
         if(min2 == undefined || p < min2) min2 = p;
     }
 
@@ -214,10 +234,11 @@ function mergeLessons(lessons, shouldMerge) {
             })
 
             let res = "" + a[0].str;
-            let prevR = rigof(a[0]);
+            let prevR = bounds(a[0]).r;
             for(let j = 1; j < a.length; j++) {
-                const curL = lefof(a[j]);
-                const curR = rigof(a[j]);
+                const bs = bounds(a[j])
+                const curL = bs.l;
+                const curR = bs.r;
                 res = res + " " + a[j].str;
                 prevR = curR;
             }
@@ -245,8 +266,10 @@ function makeSchedule(cont, vBounds, hBounds) {
             const item = cont[j];
             item.index = j;
             if(item.str.trim() === '') continue;
-            const bi = botof(item), ti = topof(item); 
-            const li = lefof(item), ri = rigof(item);
+            const ibounds = bounds(item)
+            const bi = ibounds.b, ti = ibounds.t; 
+            const li = ibounds.l, ri = ibounds.r;
+            
             const itemC = (bi + ti) * 0.5;
             const itemM = (li + ri) * 0.5;
             for(let i = 0; i < day.hours.length; i++) {
@@ -271,10 +294,10 @@ function makeSchedule(cont, vBounds, hBounds) {
 
                 const c = curS[i].lessons;
                 const s = item;
-                if(it && il && !shouldB &&  shouldL) c[0].push(s);
-                if(it && ir && !shouldB && !shouldL) c[1].push(s);
-                if(ib && il &&  shouldB &&  shouldL) c[2].push(s);
-                if(ib && ir &&  shouldB && !shouldL) c[3].push(s);
+                if(!shouldB &&  shouldL) c[0].push(s);
+                if(!shouldB && !shouldL) c[1].push(s);
+                if( shouldB &&  shouldL) c[2].push(s);
+                if( shouldB && !shouldL) c[3].push(s);
 
                 break;
             }
@@ -298,7 +321,7 @@ function makeSchedule(cont, vBounds, hBounds) {
 
 
 function calcSize(schedule, renderPattern, width) {
-    let maxLessonsInCol;
+    let maxLessonsInCol = 1;
     for(let i = 0; i < renderPattern.length; i++) {
         let maxCount = 0;
         for(let j = 0; j < renderPattern[i].length; j++) {
@@ -307,7 +330,7 @@ function calcSize(schedule, renderPattern, width) {
             const day = schedule[index];
             maxCount += day.length;
         }
-        if(maxLessonsInCol == undefined || maxCount > maxLessonsInCol) maxLessonsInCol = maxCount;
+        if(maxCount > maxLessonsInCol) maxLessonsInCol = maxCount;
     }
 
     const height = width / renderPattern.length * maxLessonsInCol*(1 / 5.2);
@@ -482,13 +505,17 @@ function drawLessonText(lesson, secondWeek, page, font, coord, blockSize) {
     })
 }
 
+function minuteOfDayToString(it) {
+    return Math.floor(it/60) + ":" + (it%60).toString().padStart(2, '0')
+}
+
 function drawTime(lesson, page, font, coord, blockSize) {
     const innerSize = { w: blockSize.w*0.8, h: blockSize.h*0.9 }
 
     const text = [
-        Math.floor(lesson.sTime/60) + ":" + (lesson.sTime%60).toString().padStart(2, '0'),
+        minuteOfDayToString(lesson.sTime),
         "–",
-        Math.floor(lesson.eTime/60) + ":" + (lesson.eTime%60).toString().padStart(2, '0')
+        minuteOfDayToString(lesson.eTime)
     ];
     let fontSize = font.sizeAtHeight(innerSize.w);
     const widths = []
@@ -545,20 +572,22 @@ function drawLessons(lesson, page, font, coord, size) {
         { w: size.w    , h: size.h     }
     ];
 
-    if((eqh1 || eqh2) && (eqv1 || eqv2)) {
+    if(eqh1 && eqh2 && eqv1 && eqv2) {
         drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[3])
     }
-    else {
+    else if(eqh1 || eqh2) {
         if(eqh1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[1])
         if(eqh2) drawLessonText(lesson.lessons[2], true, page, font, points[2], sizes[1])
-        if(eqv1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[2])
-        if(eqv2) drawLessonText(lesson.lessons[1], page, font, points[1], sizes[2])
-
-        if(!eqh1 && !eqv1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[0])
-        if(!eqh1 && !eqv2) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[0])
-        if(!eqh2 && !eqv1) drawLessonText(lesson.lessons[2], true, page, font, points[2], sizes[0])
-        if(!eqh2 && !eqv2) drawLessonText(lesson.lessons[3], true, page, font, points[3], sizes[0])
     }
+    else if(eqv1 || eqv2) {
+        if(eqv1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[2])
+        if(eqv2) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[2])
+    }
+
+    if(!eqh1 && !eqv1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[0])
+    if(!eqh1 && !eqv2) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[0])
+    if(!eqh2 && !eqv1) drawLessonText(lesson.lessons[2], true, page, font, points[2], sizes[0])
+    if(!eqh2 && !eqv2) drawLessonText(lesson.lessons[3], true, page, font, points[3], sizes[0])
 }
 function drawLesson(lesson, page, font, coord, size, timeWidth) {
     drawTime(lesson, page, font, coord, { w: timeWidth, h: size.h })
@@ -606,6 +635,28 @@ function drawDay(day, dayI, page, font, coord, groupSize) {
         borderColor: PDFLib.rgb(0, 0, 0),
         borderWidth: 3,
     })
+}
+
+async function renderPDF(doc, width) {
+    const pdf = await pdfjsLib.getDocument(doc).promise;
+    const page = await pdf.getPage(1);
+
+    const viewport = page.getViewport({ scale: width / page.getViewport({scale:1}).width })
+
+    const canvas = new OffscreenCanvas(
+        Math.floor(viewport.width),
+        Math.floor(viewport.height)
+    )
+    const context = canvas.getContext("2d");
+
+    const renderContext = {
+        canvasContext: context,
+        transform: null, viewport,
+    };
+    
+    await page.render(renderContext).promise;
+
+    return await canvas.convertToBlob();
 }
 
 let fontkitV =  window.fontkit;
