@@ -98,7 +98,7 @@ new ResizeObserver(() => resizeProgressBar(true)).observe(groupBar.get()[0])
 function resetStage() {
     currentStage = -1
     resizeProgressBar(false)
-    statuses.text('\u200c')
+    setStatus('')
 }
 function nextStage(msg) {
     currentStage++;
@@ -116,7 +116,8 @@ function stageError(msg) {
     statuses.text("Ошибка: " + msg).css('color', '#f15642').css({opacity:1})
 }
 function setStatus(msg) {
-    statuses.text(msg).css('color', '#202020').css({opacity:1})
+    if(!msg || msg.trim() === '') statuses.text('\u200c').css({opacity:0})
+    else statuses.text(msg).css('color', '#202020').css({opacity:1})
 }
 
 $('.file-picker').on('click', function() {
@@ -168,7 +169,8 @@ updatePending(true)
 let daysScheme = [[0, 1, 2], [3, 4]]
 
 
-async function processPDF0(name, contents, width, stage) {
+async function processPDF0(name, contents, width) {
+    setStatus("Начинаем обработку")
     let pdf
     try { pdf = await pdfjsLib.getDocument({ data: contents }).promise }
     catch (e) { throw ["Документ не распознан как PDF", e] }
@@ -208,14 +210,14 @@ async function processPDF0(name, contents, width, stage) {
 
                 const boundsH = findItemBoundsH(cont, i);
                 const vBounds = findDaysOfWeekHoursBoundsV(cont);
-                stage("Достаём расписание из файла")
+                nextStage("Достаём расписание из файла")
                 const schedule = makeSchedule(cont, vBounds, boundsH);
-                stage("Создаём PDF файл расписания")
+                nextStage("Создаём PDF файл расписания")
                 const doc = await scheduleToPDF(schedule, daysScheme, 1000)
-                stage("Создаём предпросмотр")
+                nextStage("Создаём предпросмотр")
                 const outputElement = createOutputElement()
                 outputElement.image.src = URL.createObjectURL(await renderPDF(copy(doc), width))
-                stage("Готово")
+                nextStage("Готово")
                 return [outputElement, doc, schedule];
             }
             catch(e) {
