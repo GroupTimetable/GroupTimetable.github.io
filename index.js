@@ -17,6 +17,33 @@ function clearPrompt() {
     groupInput.val('')
 }
 
+const settingsEl = document.querySelector('.generation-settings')
+const genPopupEl = insertPopup(settingsEl)
+const genPopupId = registerPopup(genPopupEl)
+let keepGenPopupOpen = false
+addOwner('hover', genPopupId)
+addOwner('click', genPopupId)
+let genPopupKeepOpened = false
+settingsEl.firstElementChild.addEventListener('click', () => {
+    keepGenPopupOpen = !keepGenPopupOpen;
+    if(keepGenPopupOpen) updatePopup('click', genPopupId, stateShown)
+    else updatePopup('click', genPopupId, stateHidden)
+    settingsEl.setAttribute('data-pressed', keepGenPopupOpen)
+})
+$(settingsEl.firstElementChild).on('mouseenter', () => {
+    updatePopupAfterMs('hover', genPopupId, stateShown, 300)
+}).on('mouseleave', () => {
+    updatePopupAfterMs('hover', genPopupId, stateHidden, 500)
+})
+
+
+genPopupEl.popup.appendChild($('<div style="margin-bottom: 0.3rem">Расположение дней:</div>').get()[0])
+const scheduleLayoutEl = genPopupEl.popup.appendChild($(`<div contentEditable="true" style="width: 100%; border: none; outline: none; border-bottom: 1px solid white; min-height: 1rem; display: inline-block; font-family: monospace; font-size: 1.0rem"></div>`).get()[0])
+scheduleLayoutEl.innerHTML = 'Пн Чт<br\>Вт Пт<br\>Ср Сб'/*
+    textContent - ignores line breaks,
+    innerText - doesn't read when the element is hidden (nice)  https://stackoverflow.com/a/43740154/18704284
+*/
+
 function hideOverlay() {
     $('#drop-zone').css('visibility', 'hidden').css('opacity', '0') 
 }
@@ -52,7 +79,7 @@ function checkShouldProcess() {
     }
     const name = groupInput.val().toString().trim()
     if(name == '') {
-        setStatus('Для продолжения требуется имя группы')
+        setStatus('Для продолжения требуется имя группы, нажмите Enter для продолжения')
         return
     }
 
@@ -63,15 +90,12 @@ function checkShouldProcess() {
 
 function updatePending(newValue) {
     currentPending = newValue;
-    if(currentPending) startButton.attr('pending', '')
-    else startButton.removeAttr('pending')
+    if(currentPending) startButton.attr('data-pending', '')
+    else startButton.removeAttr('data-pending')
     checkShouldProcess()
 }
 
-groupInput.on('change', function() {
-    if(processing) return;
-    updatePending(true)
-}).on('keypress', function(e) {
+groupInput.on('keypress', function(e) {
     if(processing) return
     if (e.key === "Enter") updatePending(true)
 })
@@ -136,7 +160,7 @@ window.addEventListener('drop', function(ev) {
     }
     else {
         //if you drop files fast enough sometimes files list would be empty
-        setError("Не удалось получить файлы. Попробуйте перетащить их ещё раз");
+        stageError("Не удалось получить файлы. Попробуйте перетащить их ещё раз");
     }
 })
 
@@ -166,11 +190,13 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 resetStage()
 updatePending(true)
 
-let daysScheme = [[0, 1, 2], [3, 4]]
-
-
 async function processPDF0(name, contents, width) {
     setStatus("Начинаем обработку")
+
+    const nameLower = name.toLowerCase()
+
+    const scheme = readScheduleScheme(scheduleLayoutEl.innerHTML.replace(/<\s*[bB][rR]\s*\/?>/g, '\n'))
+
     let pdf
     try { pdf = await pdfjsLib.getDocument({ data: contents }).promise }
     catch (e) { throw ["Документ не распознан как PDF", e] }
@@ -181,7 +207,7 @@ async function processPDF0(name, contents, width) {
         const cont = (await page.getTextContent()).items;
 
         for(let i = 0; i < cont.length; i++) {
-            if(cont[i].str === name) try {
+            if(cont[i].str.toLowerCase() === nameLower) try {
 
                 if(false) {
                     var viewport = page.getViewport({ scale: 1, });
@@ -213,12 +239,12 @@ async function processPDF0(name, contents, width) {
                 nextStage("Достаём расписание из файла")
                 const schedule = makeSchedule(cont, vBounds, boundsH);
                 nextStage("Создаём PDF файл расписания")
-                const doc = await scheduleToPDF(schedule, daysScheme, 1000)
+                const doc = await scheduleToPDF(schedule, scheme, 1000)
                 nextStage("Создаём предпросмотр")
                 const outputElement = createOutputElement()
                 outputElement.image.src = URL.createObjectURL(await renderPDF(copy(doc), width))
                 nextStage("Готово")
-                return [outputElement, doc, schedule];
+                return [outputElement, doc, schedule, scheme];
             }
             catch(e) {
                 const add = "[название группы] = " + i + '/' + cont.length
@@ -244,7 +270,7 @@ async function processPDF() {
         resetStage()
         //TypeError: Cannot perform Construct on a detached ArrayBuffer
         //index.js:198 DOMException: Failed to execute 'postMessage' on 'Worker': ArrayBuffer at index 0 is already detached.
-        const [element, pdf, schedule] = await processPDF0(name, copy(currentFileContent), width, nextStage)
+        const [element, pdf, schedule, scheme] = await processPDF0(name, copy(currentFileContent), width, nextStage)
         outputs.get()[0].appendChild(element.element)
 
         const outFilename = currentFilename + '_' + name;
@@ -263,7 +289,7 @@ async function processPDF() {
             download(blob, outFilename + '.png')
         })
         $(element.edit).on('click', function() {
-            var parms = JSON.stringify({ schedule: schedule });
+            var parms = JSON.stringify({ schedule: schedule, scheme: scheme });
             var storageId = "parms" + String(Date.now());
             sessionStorage.setItem(storageId, parms);
             window.open("./fix.html" + "?sid=" + storageId);

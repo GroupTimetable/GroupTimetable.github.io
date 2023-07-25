@@ -8,6 +8,8 @@ const daysOfWeek = [
     "Воскресенье"
 ]; 
 
+const daysOfWeekLower = daysOfWeek.map(a => a.toLowerCase())
+
 function findItemBoundsH(cont, itemI) {
     const item = cont[itemI];
     const itemCenter = Math.abs(cont[itemI].transform[4] + cont[itemI].width/2);
@@ -88,8 +90,9 @@ function findDaysOfWeekHoursBoundsV(cont) {
     const hours = [];
     let curStart = 0;
     for(let i = 0; i < cont.length; i++) {
+        const str = cont[i].str.toLowerCase();
         for(let j = 0; j < daysOfWeek.length; j++) {
-            if(cont[i].str !== daysOfWeek[j]) continue;
+            if(str !== daysOfWeekLower[j]) continue;
             if(dow[j] != undefined) throw ["День недели " + j + " обнаружен дважды", "[дубликат] = " + i + "/" + cont.length];
 
             dow[j] = { si: curStart, i: i };
@@ -97,24 +100,46 @@ function findDaysOfWeekHoursBoundsV(cont) {
             break;
         }
 
-        if(i + 2 < cont.length) {
+        if(i + 1 < cont.length) {
             const h = parseTime(cont[i].str);
             if(h != undefined) {
-                const h2 = parseTime(cont[i+2].str);
-                if(h2 != undefined) hours.push({ i: i, sTime: h, eTime: h2, items: [cont[i], cont[i+2]] });
+                for(let j = 1; j < 3; j++) {
+                    let h2 = parseTime(cont[i+j].str);
+                    if(h2 != undefined) hours.push({ i: i, sTime: h, eTime: h2, items: [cont[i], cont[i+j]] });
+                }
             }
         }
     }
 
-    for(let i = 0; i < hours.length; i++) {
-        hours[i].top = bounds(hours[i].items[0]).t;
-        hours[i].bot = bounds(hours[i].items[1]).b;
+    if(hours < 2) throw "В рассписании найдено меньше двух пар";
+
+    let hoursSpacing2; //height between hours labels / 2
+    {
+        const b00 = bounds(hours[0].items[0])
+        const b01 = bounds(hours[0].items[1])
+        const b10 = bounds(hours[1].items[0])
+        const b11 = bounds(hours[1].items[1])
+
+        const c0 = 0.5 * (Math.min(b00.b, b01.b) + Math.max(b00.t, b01.t)) //center of the 1st hours label
+        const c1 = 0.5 * (Math.min(b10.b, b11.b) + Math.max(b10.t, b11.t)) // --- 2nd ---
+
+        hoursSpacing2 = Math.abs(c1 - c0) * 0.5;
+
+        hours[0].top = c0 + hoursSpacing2
+        hours[0].bot = c0 - hoursSpacing2
+        hours[1].top = c1 + hoursSpacing2
+        hours[1].bot = c1 - hoursSpacing2
     }
 
-    if(hours < 2) throw "В рассписании найдено меньше двух пар";
-    let hoursSpacing = Math.abs(hours[0].top + hours[0].bot - hours[1].top - hours[1].bot) * 0.5;
+    for(let i = 2; i < hours.length; i++) {
+        const b0 = bounds(hours[i].items[0]);
+        const b1 = bounds(hours[i].items[1]);
+        const c = 0.5 * (Math.min(b0.b, b1.b) + Math.max(b0.t, b1.t))
+        hours[i].top = c + hoursSpacing2
+        hours[i].bot = c - hoursSpacing2
+    }
 
-    const info = Array(dow.length);
+    const info = Array(dow.length); //starting and ending indices for the days of week
     let newHourI = 0;
     for(let d = 0; d < dow.length; d++) {
         if(dow[d] == undefined) continue;
@@ -328,6 +353,7 @@ function calcSize(schedule, renderPattern, width) {
             const index = renderPattern[i][j];
             if(index === -1) continue;
             const day = schedule[index];
+            if(day == undefined) continue;
             maxCount += day.length;
         }
         if(maxCount > maxLessonsInCol) maxLessonsInCol = maxCount;
@@ -659,6 +685,7 @@ async function renderPDF(doc, width) {
     return await canvas.convertToBlob();
 }
 
+
 let fontkitV =  window.fontkit;
 
 async function scheduleToPDF(schedule, renderPattern, width) {
@@ -689,10 +716,59 @@ async function scheduleToPDF(schedule, renderPattern, width) {
     
         for(let j = 0; j < renderPattern[i].length; j++) { 
             const index = renderPattern[i][j];
+            if(index == undefined || schedule[index] == undefined) continue;
             drawDay(schedule[index], index, page, font, { x: i*groupSize.w, y: curY }, groupSize);
             curY = curY - schedule[index].length * groupSize.h;
         }
     }
 
     return pdfDoc.save();
+}
+
+const daysOfWeekShortened = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+
+function readScheduleScheme(text) {
+    const dowa = daysOfWeekShortened
+    text = text.split('\n')
+
+    const scheme = []
+    function appS(row, col, day) {
+        if(col >= scheme.length) {
+            for(let i = 0; i <= col - scheme.length; i++) scheme.push([])
+        }
+        const c = scheme[col]
+
+        if(row >= c.length) {
+            for(let i = 0; i <= row - c.length; i++) c.push([])
+        }
+
+        c[row] = day
+    }
+
+    for(let i = 0; i < text.length; i++) {
+        const line = text[i].trim()
+        const count = Math.floor(line.length+1)/3
+        if(count*3-1 !== line.length) throw ['Неправильная строка расположения дней: `' + line + '`', '[строка] = ' + i + '/' + text.length]
+
+        for(let j = 0; j < count; j++) {
+            const sp = j*3;
+            const p = line.substring(sp, sp+2)
+
+            if(p.trim() === '');
+            else {
+                let found = false;
+                for(let k = 0; k < dowa.length; k++) {
+                    if(dowa[k] === p) {
+                        found = true;
+                        appS(i, j, k)
+                        break
+                    }
+                }
+                if(!found) throw ['Неправильный день недели `' + p + '`  в строке: `' + line + '` на ' + (sp+1) + ':' +  i]
+            }
+        }
+    }
+
+    //let daysScheme = [[0, 1, 2], [3, 4]]
+    return scheme
 }

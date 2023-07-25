@@ -1,6 +1,5 @@
 let origSchedule;
-
-let daysScheme = [[0, 1, 2], [3, 4]]
+let origScheme;
 
 {
     const prmstr = window.location.search.split("=");
@@ -8,6 +7,7 @@ let daysScheme = [[0, 1, 2], [3, 4]]
     const args = JSON5.parse(sessionStorage.getItem(sid));
     sessionStorage.removeItem(sid);
     origSchedule = args.schedule
+    origScheme = args.scheme
 }
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
@@ -77,6 +77,20 @@ function dayToSimple(day, indent) {
 function scheduleToSimple(schedule) {
     let result = '';
 
+    result += '"Расположение дней": [\n';
+    for(let j = 0;; j++) {
+        let line = ''
+        for(let i = 0; i < origScheme.length; i++) {
+            if(i !== 0) line += ' '
+            if(origScheme[i][j] == undefined) line += '  '
+            else line += daysOfWeekShortened[origScheme[i][j]]
+        }
+        if(line.trim() === '') break
+        result += ' '.repeat(4) + '"' + line + '",\n'
+    }
+    result += '],\n'
+
+
     for(let i = 0; i < 7; i++) {
         result += '"' + daysOfWeek[i] + '": ' + dayToSimple(schedule[i], 0) + '\n'
     }
@@ -124,6 +138,15 @@ async function processEdit() {
     }
 
     const schedule = new Array(7)
+
+    const schemeSA = si['Расположение дней'] 
+    let schemeS = ''
+    for(let i = 0; i < schemeSA.length; i++) {
+        schemeS += schemeSA[i] + '\n';
+    }
+    schemeS.substring(0, schemeS.length-1)
+
+    const scheme = readScheduleScheme(schemeS) 
 
     for(let i = 0; i < daysOfWeek.length; i++) {
         const day = si[daysOfWeek[i]]
@@ -179,7 +202,7 @@ async function processEdit() {
         }
     }
 
-    const pdf = await scheduleToPDF(schedule, daysScheme, 1000)
+    const pdf = await scheduleToPDF(schedule, scheme, 1000)
 
     const width = 250
     const element = createOutputElement()

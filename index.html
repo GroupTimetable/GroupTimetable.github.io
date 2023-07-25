@@ -10,7 +10,8 @@
     <script defer src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script defer src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
 
-    <script defer src="./outputElement.js"></script>
+    <script defer src="./popups.js"></script>
+    <script defer src="./elements.js"></script>
     <script defer src="./units.js"></script>
     <script defer src="./schedule.js"></script>
     <script defer src="./index.js"></script>
@@ -18,6 +19,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body style="margin: 0;">
+    <!--<canvas id='the-canvas'></canvas>-->
     <div style=" min-width: 100vw; min-height: 100vh; display: flex; flex-direction: column;">
         <div class="centerel-vert" style="flex: 1 1 0px">
             <div class="before" style="display: flex; flex-direction: column; align-items: stretch;">
@@ -32,29 +34,32 @@
                     &ZeroWidthSpace;
                 </div>
                 <div class="group-bar"> 
-                    <div class="before"></div>
+                    <div style="visibility: hidden; overflow: clip; position: absolute; top: 0; bottom: 0; right: 0; left: 0; border-radius: 999999px; border: 0px solid transparent; display: flex; flex-direction: column-reverse;">
+                        <div class="progress-bar progress-bar-height" style="visibility: visible"></div>
+                    </div>
+                    <div class="before progress-bar-height"></div>
                     <div style="display: flex; align-items: stretch; padding: 0.1rem 0.3rem 0.1rem 0.8rem;">
                         <input id="group-input" type="text" placeholder="Название группы"/>
 
-                        <svg class="group-bar-icon collapsable" onclick="clearPrompt()" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <span class="group-bar-icon collapsable" onclick="clearPrompt()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path>
-                        </svg>
+                        </svg></span>
 
                         <div style="margin-left: 0.5rem; border-left: 1px solid #cccccc;"></div>
 
-                        <svg class="generation-settings group-bar-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <span class="generation-settings group-bar-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <path d="M13.85 22.25h-3.7c-.74 0-1.36-.54-1.45-1.27l-.27-1.89c-.27-.14-.53-.29-.79-.46l-1.8.72c-.7.26-1.47-.03-1.81-.65L2.2 15.53c-.35-.66-.2-1.44.36-1.88l1.53-1.19c-.01-.15-.02-.3-.02-.46 0-.15.01-.31.02-.46l-1.52-1.19c-.59-.45-.74-1.26-.37-1.88l1.85-3.19c.34-.62 1.11-.9 1.79-.63l1.81.73c.26-.17.52-.32.78-.46l.27-1.91c.09-.7.71-1.25 1.44-1.25h3.7c.74 0 1.36.54 1.45 1.27l.27 1.89c.27.14.53.29.79.46l1.8-.72c.71-.26 1.48.03 1.82.65l1.84 3.18c.36.66.2 1.44-.36 1.88l-1.52 1.19c.01.15.02.3.02.46s-.01.31-.02.46l1.52 1.19c.56.45.72 1.23.37 1.86l-1.86 3.22c-.34.62-1.11.9-1.8.63l-1.8-.72c-.26.17-.52.32-.78.46l-.27 1.91c-.1.68-.72 1.22-1.46 1.22zm-3.23-2h2.76l.37-2.55.53-.22c.44-.18.88-.44 1.34-.78l.45-.34 2.38.96 1.38-2.4-2.03-1.58.07-.56c.03-.26.06-.51.06-.78s-.03-.53-.06-.78l-.07-.56 2.03-1.58-1.39-2.4-2.39.96-.45-.35c-.42-.32-.87-.58-1.33-.77l-.52-.22-.37-2.55h-2.76l-.37 2.55-.53.21c-.44.19-.88.44-1.34.79l-.45.33-2.38-.95-1.39 2.39 2.03 1.58-.07.56a7 7 0 0 0-.06.79c0 .26.02.53.06.78l.07.56-2.03 1.58 1.38 2.4 2.39-.96.45.35c.43.33.86.58 1.33.77l.53.22.38 2.55z"></path><circle cx="12" cy="12" r="3.5"></circle>
-                        </svg> 
+                        </svg></span> 
                         
                         <!--https://www.reshot.com/free-svg-icons/item/arrow-chevron-right-WDGHUKQ634/-->
-                        <svg class="group-bar-icon start-button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <span class="group-bar-icon start-button" style="position: relative; width: min-content; height: min-content">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <polygon points="7.293 4.707 14.586 12 7.293 19.293 8.707 20.707 17.414 12 8.707 3.293 7.293 4.707"/>
                         </svg>
+                        </span>
 
                     </div>
-                    <div class="after">
-                        <div class="progress-bar">
-                        </div>
+                    <div class="after progress-bar-height">
                     </div>
                 </div>
                 <div id="statuses" class="move-with-border" style="margin-top: 0.3rem; opacity: 0; transition: opacity 100ms;">
