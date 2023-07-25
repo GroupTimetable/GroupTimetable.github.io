@@ -11,7 +11,7 @@ function timeout(ms) {
 
 function registerPopup(popup) {
     const id = popupTop++
-    popupList[id] = { popup, state: stateHidden, action: {}, ownerStates: {} }
+    popupList[id] = { popup, state: stateHidden, action: {}, ownerStates: {}, ownerActions: {} }
     addOwner('safe zone', id)
     popup.safeZone.setAttribute('data-popup-id', id)
     return id
@@ -23,27 +23,28 @@ function addOwner(owner, id) {
 
 async function updatePopupAfterMs(owner, id, state, delay) {
     const item = popupList[id]
-    item.ownerStates[owner] = state
-    const action = item.action
+    const action = item.ownerActions[owner]
     if(delay <= 0) { updatePopup(owner, id, state); return }
 
     const end = new Date()
     end.setMilliseconds(end.getMilliseconds() + delay)
-    if(action.desired === state && end >= action.time) return
+    if(action && action.desired === state && end >= action.time) return
+    else if(!action && item.ownerStates[owner] === state) return
 
     const me = curActor++
-    item.action = { actor: me, owner: owner, desired: state, time: end }
+    item.ownerActions[owner] = { actor: me, owner: owner, desired: state, time: end }
 
     //console.log('popup ' + id + ' ' + owner + ' started ' + (state === stateShown ? 'showing' : 'hiding'))
 
     await timeout(delay)
-    if(item.action.actor === me) updatePopup(owner, id, state); 
+    const newAction = item.ownerActions[owner]
+    if(newAction && newAction.actor === me) updatePopup(owner, id, state); 
 }
 
 function updatePopup(owner, id, newState) {
     const item = popupList[id]
     item.ownerStates[owner] = newState
-    item.action = {}
+    item.ownerActions[owner] = undefined
 
     const oldState = item.state
 
@@ -76,10 +77,19 @@ function clamp(value, min, max) {
 }
 
 window.addEventListener('mousemove', function(ev) {
+    if(popupList.length === 0) return
+
+    if(!window.matchMedia('(pointer: fine)').matches) {
+        for(const i in popupList) {
+            updatePopup('safe zone', i, stateHidden)
+        }
+        return
+    }
+
     const x = ev.clientX
     const y = ev.clientY
 
-    for(let i = 0; i < popupList.length; i++) {
+    for(const i in popupList) {
         const pp = popupList[i]
         const bs = pp.popup.safeZone.getBoundingClientRect()
         if(pp.state !== stateShown) continue;

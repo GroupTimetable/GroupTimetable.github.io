@@ -7,76 +7,8 @@ function htmlToElement(html) {
 }
 
 function createOutputElement() {
-    const style = `
-.output {
-    position: relative;
-    border: 1px solid transparent;
-}
-
-.output-cont > .output {
-    box-shadow: 0px 0px 0.5rem 0px #00000030;
-}
-
-.out-overlay {
-    opacity: 0;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    transition: opacity 200ms;
-
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-}
-
-.out-header {
-    background: #000000a0;
-}
-
-.output:hover {
-    border-color: #00000040;
-}
-
-.output:hover .out-overlay {
-    opacity: 1;
-}
-
-.out-overlay .view-pdf, .out-overlay .settings, .out-overlay .delete, .out-overlay .download-img {
-    cursor: pointer;
-}
-
-.out-header > .icons {
-    display: flex;
-    padding: 0.3rem;
-}
-
-.mag-svg {
-    fill:none;
-    stroke:#eeeeee;
-    stroke-miterlimit:10;
-    stroke-width:1.91px;
-}
-
-.out-header > .icons > svg {
-    overflow: visible;
-    height: 1.4rem;
-    margin-left: 0.2rem;
-    fill: #eeeeee;
-    stroke: #eeeeee;
-    padding: 0.3rem;
-    border: 0px solid #00000000;
-    border-radius: 999999px;
-}
-
-.out-header > .icons > svg:hover {
-    background-color: #ffffff30;
-}
-`
     const el = htmlToElement(`
 <div class="output-cont" style="display: flex; align-items: center; flex-direction: column;">
-<style>${style}</style>
 <span style="display: block" class="name"></span>
 <div class="output">
     <img class="preview"></img>
@@ -116,8 +48,10 @@ function createOutputElement() {
                 </svg>
             </div>
         </div>
-        <div class="download-img" style="flex: 1 1 0px; background-color: #ffffff80; display: flex; justify-content: center; align-items: center">
-            <svg style="width: 50%; height: 50%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path id="Vector" d="M6 21H18M12 3V17M12 17L17 12M12 17L7 12" stroke="#202020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <div class="download-img" style="flex: 1 1 0px;">
+            <div style="width: 100%; height: 100%; background-color: #ffffff80; display: flex; justify-content: center; align-items: center">
+                <svg style="width: 50%; height: 50%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path id="Vector" d="M6 21H18M12 3V17M12 17L17 12M12 17L7 12" stroke="#202020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </div>
         </div>
     </div>
 </div>
@@ -149,11 +83,6 @@ const el = htmlToElement(`
     justify-content: center; 
     margin-top: 0.3rem;
 ">
-<style>
-.popup:hover { 
-    outline: 1px solid white;
-}
-</style>
     <div>
         <div class="safe-zone" style="padding: 2rem; margin-top: -2rem;
             position: relative;
@@ -187,4 +116,102 @@ const el = htmlToElement(`
         safeZone: el.querySelector('.safe-zone')
     };
 
+}
+
+
+const css = `
+
+.output {
+    position: relative;
+    border: 1px solid transparent;
+}
+
+.output-cont > .output {
+    box-shadow: 0px 0px 0.5rem 0px #00000030;
+}
+
+.out-overlay {
+    opacity: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transition: opacity 200ms;
+
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.out-header {
+    background: #000000a0;
+}
+
+.output:hover {
+    border-color: #00000040;
+}
+
+@media (pointer: fine) {
+    .output:hover .out-overlay { opacity: 1; }
+}
+
+@media not (pointer: fine) {
+    .output .out-overlay { opacity: 1 }
+    .output .download-img { opacity: 0 }
+}
+
+
+.out-overlay .view-pdf, .out-overlay .settings, .out-overlay .delete, .out-overlay .download-img {
+    cursor: pointer;
+}
+
+.out-header > .icons {
+    display: flex;
+    padding: 0.3rem;
+}
+
+.mag-svg {
+    fill:none;
+    stroke:#eeeeee;
+    stroke-miterlimit:10;
+    stroke-width:1.91px;
+}
+
+.out-header > .icons > svg {
+    overflow: visible;
+    height: 1.4rem;
+    margin-left: 0.2rem;
+    fill: #eeeeee;
+    stroke: #eeeeee;
+    padding: 0.3rem;
+    border: 0px solid #00000000;
+    border-radius: 999999px;
+}
+
+.out-header > .icons > svg:hover {
+    background-color: #ffffff30;
+}
+
+
+
+.popup:hover { 
+    outline: 1px solid white;
+}
+`
+
+
+{ //https://stackoverflow.com/a/524721/18704284
+    const head = document.head || document.getElementsByTagName('head')[0],
+          style = document.createElement('style');
+
+    style.type = 'text/css';
+    if (style.styleSheet){
+      // This is required for IE8 and below.
+      style.styleSheet.cssText = css;
+    } else {
+      style.appendChild(document.createTextNode(css));
+    }
+
+    head.appendChild(style);
 }

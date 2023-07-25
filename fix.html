@@ -1,5 +1,7 @@
 <html>
     <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        
         <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
         <script defer src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
         <script defer src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
@@ -10,10 +12,18 @@
         <script defer src="./units.js"></script>
         <script defer src="./schedule.js"></script>
         <script defer src="fix.js"></script>
+
+            <style>
+@media (orientation: landscape) {
+    .main-flex {
+        display: flex;
+    }
+}
+            </style>
     </head>
     <body style="margin: 0">
-        <div style="display: flex; width: 100vw; height: 100vh; align-items: stretch">
-            <div style="padding: 1rem; flex: 1 1 0px; display: flex; flex-direction: column; align-items: stretch">
+        <div class="main-flex" style="width: 100vw; min-height: 100vh; align-items: stretch">
+            <div style="min-height: 90vh; padding: 1rem; flex: 1 1 auto; display: flex; flex-direction: column; align-items: stretch">
                 <div style="margin-bottom: 1rem">
                     <div>
                         Окно изменения созданного расписания.
@@ -27,7 +37,7 @@
                         <button id="create">Создать</button>
                     </div>
                 </div>
-                <textarea id="edit-input" wrap="off" style="font-family: monospace; background-color: #f0f0f0; overflow: scroll; flex: 1 1 0px; resize: none; -webkit-appearance: none; border: none; outline: none;"></textarea>
+                <textarea id="edit-input" wrap="off" style="font-family: monospace; background-color: #f0f0f0; overflow: scroll; flex: 1 1 auto; resize: none; -webkit-appearance: none; border: none; outline: none;"></textarea>
             </div>
             <div id="outputs" style="display: flex; flex-direction: column; overflow: scroll; align-items: center; gap: 1.5rem; padding: 1rem">
             </div>

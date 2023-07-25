@@ -20,20 +20,27 @@ function clearPrompt() {
 const settingsEl = document.querySelector('.generation-settings')
 const genPopupEl = insertPopup(settingsEl)
 const genPopupId = registerPopup(genPopupEl)
-let keepGenPopupOpen = false
+let keepGenPopupOpen = false, ignoreHover = false
 addOwner('hover', genPopupId)
 addOwner('click', genPopupId)
 let genPopupKeepOpened = false
 settingsEl.firstElementChild.addEventListener('click', () => {
     keepGenPopupOpen = !keepGenPopupOpen;
+
+    if(!window.matchMedia('(pointer: fine)').matches) {
+        ignoreHover = true
+        updatePopup('hover', genPopupId, stateHidden)
+    }
+    else ignoreHover = false
+
     if(keepGenPopupOpen) updatePopup('click', genPopupId, stateShown)
     else updatePopup('click', genPopupId, stateHidden)
     settingsEl.setAttribute('data-pressed', keepGenPopupOpen)
 })
 $(settingsEl.firstElementChild).on('mouseenter', () => {
-    updatePopupAfterMs('hover', genPopupId, stateShown, 300)
+    if(!ignoreHover) updatePopupAfterMs('hover', genPopupId, stateShown, 300)
 }).on('mouseleave', () => {
-    updatePopupAfterMs('hover', genPopupId, stateHidden, 500)
+    if(!ignoreHover) updatePopupAfterMs('hover', genPopupId, stateHidden, 500)
 })
 
 
