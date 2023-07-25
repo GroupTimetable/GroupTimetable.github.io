@@ -15,9 +15,16 @@ function findItemBoundsH(cont, itemI) {
     const itemCenter = Math.abs(cont[itemI].transform[4] + cont[itemI].width/2);
     
     let neighbour;
-    if(itemI-2 >= 0 && cont[itemI-1].str == ' ') neighbour = itemI-2;
-    else if(itemI+2 < cont.length && cont[itemI+1].str == ' ') neighbour = itemI+2;
-    else throw ["Невозможно определить вертикальные границы расписания", " [имя группы] = " + itemI + "/" + cont.length];
+    const offsets = [-1, 1, -2, 2, -3, 3]
+    for(let i = 0; i < offsets.length; i++) {
+        const neigI = itemI + offsets[i]
+        if(cont[neigI] && cont[neigI].str == ' ') {
+            neighbour = neigI + (i % 2 === 0 ? -1 : 1);
+            break
+        }
+    }
+
+    if(!neighbour) throw ["Невозможно определить вертикальные границы расписания", " [имя группы] = " + itemI + "/" + cont.length];
 
     const spacing = Math.abs(itemCenter - (cont[neighbour].transform[4] + cont[neighbour].width/2));
 

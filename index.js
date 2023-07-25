@@ -154,20 +154,21 @@ window.addEventListener('drop', function(ev) {
     ev.preventDefault();
     hideOverlay()
 
-    const list = ev.dataTransfer.files;
-    if(list.length !== 0) {
-        loadFromListFiles(list)
-    }
-    else {
-        //if you drop files fast enough sometimes files list would be empty
-        stageError("Не удалось получить файлы. Попробуйте перетащить их ещё раз");
-    }
+    loadFromListFiles(ev.dataTransfer.files)
 })
 
 async function loadFromListFiles(list) {
+    if(list.length === 0) {
+        //if you drop files fast enough sometimes files list would be empty
+        stageError("Не удалось получить файлы. Попробуйте перетащить их ещё раз");
+        return
+    }
+
     resetStage()
 
-    for(let i = 0; i < list.length; i++) {
+    for(let i = 0;; i++) {
+        let errorReason = 'неправильное расширение файла'
+
         const file = list[i]
         const ext = file.name.endsWith('.pdf')
         if(ext || i === list.length-1) {
@@ -175,25 +176,48 @@ async function loadFromListFiles(list) {
             if(ext) currentFilename = currentFilename.substring(0, currentFilename.length-4)
             currentFileContent = await file.arrayBuffer()
 
-            filenameElement.text('Файл' + (list.length === 1 ? '' : ' №' + (i+1)) + ': ' + file.name).css({opacity:1})
-            setStatus("Файл загружен")
+            if(currentFileContent.length === 0) {
+                currentFileContent = undefined
+                //no idea why this happens
+                errorReason = 'Получен пустой файл'
+            }
+            else {
+                filenameElement.text('Файл' + (list.length === 1 ? '' : ' №' + (i+1)) + ': ' + file.name).css({opacity:1})
+                setStatus("Файл загружен")
 
-            checkShouldProcess()
-            return
+                checkShouldProcess()
+                return
+            }
         }
+
+        if(i < list.length) continue
+
+        stageError(errorReason)
+        return
     }
 
-    stageError('неправильное расширение файла')
 }
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
 resetStage()
 updatePending(true)
 
+function nameFixup(name) {
+    const alphanumeric = /[\p{L})\p{N}]/u
+
+    let newName = ''
+    for(let i = 0; i < name.length; i++) {
+        let a = name[i]
+        if(alphanumeric.test(a)) newName += a.toLowerCase()
+    }
+    if(newName.length === 0) return name
+    else return newName;
+}
+
 async function processPDF0(name, contents, width) {
     setStatus("Начинаем обработку")
 
-    const nameLower = name.toLowerCase()
+    const nameFixed = nameFixup(name)
 
     const scheme = readScheduleScheme(scheduleLayoutEl.innerHTML.replace(/<\s*[bB][rR]\s*\/?>/g, '\n'))
 
@@ -207,7 +231,7 @@ async function processPDF0(name, contents, width) {
         const cont = (await page.getTextContent()).items;
 
         for(let i = 0; i < cont.length; i++) {
-            if(cont[i].str.toLowerCase() === nameLower) try {
+            if(nameFixup(cont[i].str) === nameFixed) try {
 
                 if(false) {
                     var viewport = page.getViewport({ scale: 1, });
@@ -273,7 +297,7 @@ async function processPDF() {
         const [element, pdf, schedule, scheme] = await processPDF0(name, copy(currentFileContent), width, nextStage)
         outputs.get()[0].appendChild(element.element)
 
-        const outFilename = currentFilename + '_' + name;
+        const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
 
         $(element.name).text(outFilename)
         $(element.viewPDF).on('click', function() {
