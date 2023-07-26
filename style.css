@@ -2,18 +2,6 @@ body {
     font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type=number] {
-  -moz-appearance: textfield;
-}
-input { border: none; outline: none; background: none; }
-
-
-
 .centerel-horiz {
   display: -webkit-flex; /* Safari */
   display: flex;

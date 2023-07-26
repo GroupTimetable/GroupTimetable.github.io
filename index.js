@@ -33,31 +33,6 @@ scheduleLayoutEl.innerHTML = 'Пн Чт<br\>Вт Пт<br\>Ср Сб'/*
 */
 }
 
-function popupAddHoverClick(id, onElement, whenToggled) {
-    addOwner('hover', id)
-    addOwner('click', id)
-
-    let keepPopupOpen = false, ignoreHover = false
-    $(onElement).on('click', () => {
-        keepPopupOpen = !keepPopupOpen;
-
-        if(!window.matchMedia('(pointer: fine)').matches) {
-            ignoreHover = true
-            updatePopup('hover', id, stateHidden)
-        }
-        else ignoreHover = false
-
-        if(keepPopupOpen) updatePopup('click', id, stateShown)
-        else updatePopup('click', id, stateHidden)
-
-        whenToggled(keepPopupOpen)
-    }).on('mouseenter', () => {
-        if(!ignoreHover) updatePopupAfterMs('hover', id, stateShown, 300)
-    }).on('mouseleave', () => {
-        if(!ignoreHover) updatePopupAfterMs('hover', id, stateHidden, 500)
-    })
-}
-
 function hideOverlay() {
     $('#drop-zone').css('visibility', 'hidden').css('opacity', '0') 
 }
@@ -234,7 +209,6 @@ async function processPDF0() {
 
     const contents = copy(currentFileContent)
     const name = groupInput.val().toString().trim()
-    const width = 250
 
     const nameFixed = nameFixup(name)
 
@@ -252,69 +226,42 @@ async function processPDF0() {
             for(let i = 0; i < cont.length; i++) {
                 if(nameFixup(cont[i].str) === nameFixed) try {
 
-                    if(false) {
-                        var viewport = page.getViewport({ scale: 1, });
-                        // Support HiDPI-screens.
-                        var outputScale = window.devicePixelRatio || 1;
+                if(false) {
+                    var viewport = page.getViewport({ scale: 1, });
+                    // Support HiDPI-screens.
+                    var outputScale = window.devicePixelRatio || 1;
 
-                        var canvas = document.getElementById('the-canvas');
-                        var context = canvas.getContext('2d');
+                    var canvas = document.getElementById('the-canvas');
+                    var context = canvas.getContext('2d');
 
-                        canvas.width = Math.floor(viewport.width * outputScale);
-                        canvas.height = Math.floor(viewport.height * outputScale);
-                        canvas.style.width = Math.floor(viewport.width) + "px";
-                        canvas.style.height =  Math.floor(viewport.height) + "px";
+                    canvas.width = Math.floor(viewport.width * outputScale);
+                    canvas.height = Math.floor(viewport.height * outputScale);
+                    canvas.style.width = Math.floor(viewport.width) + "px";
+                    canvas.style.height =  Math.floor(viewport.height) + "px";
 
-                        var transform = outputScale !== 1
-                            ? [outputScale, 0, 0, outputScale, 0, 0]
-                            : null;
+                    var transform = outputScale !== 1
+                        ? [outputScale, 0, 0, outputScale, 0, 0]
+                        : null;
 
-                        var renderContext = {
-                            canvasContext: context,
-                            transform: transform,
-                            viewport: viewport
-                        };
-                        await page.render(renderContext).promise
-                    }
+                    var renderContext = {
+                        canvasContext: context,
+                        transform: transform,
+                        viewport: viewport
+                    };
+                    await page.render(renderContext).promise
+                }
 
-                    const boundsH = findItemBoundsH(cont, i);
-                    const vBounds = findDaysOfWeekHoursBoundsV(cont);
-                    nextStage("Достаём расписание из файла")
-                    const schedule = makeSchedule(cont, vBounds, boundsH);
-                    nextStage("Создаём PDF файл расписания")
-                    const doc = await scheduleToPDF(schedule, scheme, 1000)
+                const boundsH = findItemBoundsH(cont, i);
+                const vBounds = findDaysOfWeekHoursBoundsV(cont);
+                nextStage("Достаём расписание из файла")
+                const schedule = makeSchedule(cont, vBounds, boundsH);
+                nextStage("Создаём PDF файл расписания")
+                const doc = await scheduleToPDF(schedule, scheme, 1000)
 
-                    nextStage("Создаём предпросмотр")
-                    const element = createOutputElement()
-                    element.image.src = URL.createObjectURL(await renderPDF(copy(doc), width))
-
-                    element.widthInput.value = 1000
-
-                    outputs.get()[0].appendChild(element.element)
-
-                    const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
-
-                    $(element.name).text(outFilename)
-                    $(element.viewPDF).on('click', function() {
-                        var fileURL = window.URL.createObjectURL(new Blob([doc], { type: 'application/pdf' }));
-                        let tab = window.open();
-                        tab.location.href = fileURL;
-                    })
-                    $(element.del).on('click', function() {
-                        outputs.get()[0].removeChild(element.element)
-                        unregisterPopup(element.popupId)
-                })
-                $(element.downloadImg).on('click', async function() {
-                    const blob = await renderPDF(copy(doc), Number.parseInt(element.widthInput.value))
-                    download(blob, outFilename + '.png')
-                })
-                $(element.edit).on('click', function() {
-                    var parms = JSON.stringify({ schedule: schedule, scheme: scheme });
-                    var storageId = "parms" + String(Date.now());
-                    sessionStorage.setItem(storageId, parms);
-                    window.open("./fix.html" + "?sid=" + storageId);
-                })
-                $(element.settings).on
+                nextStage("Создаём предпросмотр")
+                const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
+                const img = await renderPDF(copy(doc), 250)
+                createAndInitOutputElement(scheme, schedule, doc, img, outputs.get()[0], outFilename)
 
                 nextStage("Готово")
                 return
@@ -358,23 +305,6 @@ async function processPDF() {
         }
 
         stageError(str)
-    }
-}
-
-function download(file, filename) {
-    if (window.navigator.msSaveOrOpenBlob) // IE10+
-        window.navigator.msSaveOrOpenBlob(file, filename);
-    else { // Others
-        var a = document.createElement("a"),
-        url = URL.createObjectURL(file);
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(function() {
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        }, 0);
     }
 }
 

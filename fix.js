@@ -104,12 +104,18 @@ document.getElementById('create').addEventListener('click', async function() {
     catch(e) {
         let str = ''
         if(Array.isArray(e)) {
+            console.error('ERROR')
             for(let i = 0; i < e.length; i++) {
+                console.error(e[i])
                 if(i !== 0) str += ', '
                 str += e[i]
             }
+            console.error('RORRE')
         }
-        else str += e
+        else {
+            console.error(e)
+            str += e
+        }
 
         const st = document.getElementById('status')
         st.style.color = 'red'
@@ -196,12 +202,15 @@ async function processEdit() {
     }
 
     const pdf = await scheduleToPDF(schedule, scheme, 1000)
+    const outs = document.getElementById('outputs')
+    const img = await renderPDF(copy(pdf), 250)
+    createAndInitOutputElement(scheme, schedule, pdf, img, outs, '') 
 
+    /*
     const width = 250
     const element = createOutputElement()
     element.image.src = URL.createObjectURL(await renderPDF(copy(pdf), width))
 
-    const outs = document.getElementById('outputs')
     outs.appendChild(element.element)
 
     element.viewPDF.addEventListener('click', function() {
@@ -221,7 +230,7 @@ async function processEdit() {
         var storageId = "parms" + String(Date.now());
         sessionStorage.setItem(storageId, parms);
         window.open("./fix.html" + "?sid=" + storageId);
-    })
+    })*/
 }
 
 //https://stackoverflow.com/a/22114687/18704284

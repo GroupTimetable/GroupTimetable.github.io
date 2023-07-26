@@ -138,8 +138,66 @@ const el = htmlToElement(`
 
 }
 
+function download(file, filename) {
+    if (window.navigator.msSaveOrOpenBlob) // IE10+
+        window.navigator.msSaveOrOpenBlob(file, filename);
+    else { // Others
+        var a = document.createElement("a"),
+        url = URL.createObjectURL(file);
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function() {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 0);
+    }
+}
+
+function createAndInitOutputElement(scheme, schedule, doc, img, parentElement, name) {
+    const element = createOutputElement()
+    parentElement.appendChild(element.element)
+
+    const imgUrl = URL.createObjectURL(img)
+    element.image.src = imgUrl 
+    element.widthInput.value = 1000
+
+    element.name.textContent = name
+    element.viewPDF.addEventListener('click', function() {
+        const fileURL = window.URL.createObjectURL(new Blob([doc], { type: 'application/pdf' }));
+        const tab = window.open();
+        tab.location.href = fileURL;
+    })
+    element.del.addEventListener('click', function() {
+        parentElement.removeChild(element.element)
+        unregisterPopup(element.popupId)
+        window.URL.revokeObjectURL(imgUrl);
+    })
+    element.downloadImg.addEventListener('click', async function() {
+        const blob = await renderPDF(copy(doc), Number.parseInt(element.widthInput.value))
+        download(blob, name + '.png')
+    })
+    element.edit.addEventListener('click', function() {
+        const parms = JSON.stringify({ schedule: schedule, scheme: scheme });
+        const storageId = "parms" + String(Date.now());
+        sessionStorage.setItem(storageId, parms);
+        window.open("./fix.html" + "?sid=" + storageId);
+    })
+}
+
 
 const css = `
+
+.popup input::-webkit-outer-spin-button,
+.popup input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.popup input[type=number] {
+  -moz-appearance: textfield;
+}
+.popup input { border: none; outline: none; background: none; }
 
 .output {
     position: relative;
