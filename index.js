@@ -3,7 +3,8 @@ const startButton = $('.start-button')
 const groupBar = $('.group-bar')
 const moveWithBorder = $('.move-with-border')
 const progressBar = $('.progress-bar')
-const statuses = $('#statuses')
+const statusEl = $('#status')
+const warningEl = $('#warning')
 const filenameElement = $('#filename')
 const outputs = $('#outputs')
 
@@ -113,24 +114,27 @@ function resetStage() {
     resizeProgressBar(false)
     setStatus('')
 }
-function nextStage(msg) {
+function nextStage(msg, warning) {
     currentStage++;
     if(currentStage >= stagesC) {
         console.log("change stagesC! (" + currentStage + ")")
     }
     progressBar.css('background-color', '')
     resizeProgressBar(false)
-    statuses.text(msg).css('color', '#202020').css({opacity:1})
+    setStatus(msg, warning)
 }
-function stageError(msg) {
+function setError(msg) {
     if(currentStage == -1) currentStage = stagesC-1
     progressBar.css('background-color', '#f15642')
     resizeProgressBar(false)
-    statuses.text("Ошибка: " + msg).css('color', '#f15642').css({opacity:1})
+    statusEl.text("Ошибка: " + msg).css('color', '#f15642').css({opacity:1})
+    warningEl.css({opacity:0})
 }
-function setStatus(msg) {
-    if(!msg || msg.trim() === '') statuses.text('\u200c').css({opacity:0})
-    else statuses.text(msg).css('color', '#202020').css({opacity:1})
+function setStatus(msg, warning) {
+    if(!msg || msg.trim() === '') statusEl.text('\u200c').css({opacity:0})
+    else statusEl.text(msg).css('color', '#202020').css({opacity:1})
+    if(!warning || warning.trim() === '') warningEl.css({opacity:0})
+    else warningEl.text(warning).css({opacity:1})
 }
 
 $('.file-picker').on('click', function() {
@@ -149,7 +153,7 @@ window.addEventListener('drop', function(ev) {
 async function loadFromListFiles(list) {
     if(list.length === 0) {
         //if you drop files fast enough sometimes files list would be empty
-        stageError("Не удалось получить файлы. Попробуйте перетащить их ещё раз");
+        setError("Не удалось получить файлы. Попробуйте перетащить их ещё раз");
         return
     }
 
@@ -181,7 +185,7 @@ async function loadFromListFiles(list) {
 
         if(i < list.length) continue
 
-        stageError(errorReason)
+        setError(errorReason)
         return
     }
 
@@ -254,16 +258,30 @@ async function processPDF0() {
                 const boundsH = findItemBoundsH(cont, i);
                 const vBounds = findDaysOfWeekHoursBoundsV(cont);
                 nextStage("Достаём расписание из файла")
-                const schedule = makeSchedule(cont, vBounds, boundsH);
+                const [schedule, bigFields] = makeSchedule(cont, vBounds, boundsH);
                 nextStage("Создаём PDF файл расписания")
                 const doc = await scheduleToPDF(schedule, scheme, 1000)
+
+                let warningText = ''
+                if(bigFields.length !== 0) {
+                    warningText += "Внимание, обнаружены большие поля названий уроков (" 
+                    for(let i = 0; i < bigFields.length; i++) {
+                        const f = bigFields[i]
+                        const d = schedule[f.day]
+                        const h = d[f.hours]
+                        warningText += daysOfWeek[f.day] + '-' + minuteOfDayToString(h.sTime) +  '; '
+                    }
+                    warningText = warningText.substring(0, warningText.length-2)
+                    warningText += "). Проверьте полученное расписание на их корркетность"
+                }
+
 
                 nextStage("Создаём предпросмотр")
                 const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
                 const img = await renderPDF(copy(doc), 250)
                 createAndInitOutputElement(scheme, schedule, doc, img, outputs.get()[0], outFilename)
 
-                nextStage("Готово")
+                nextStage("Готово", warningText)
                 return
             }
             catch(e) {
@@ -304,7 +322,7 @@ async function processPDF() {
             console.error(e)
         }
 
-        stageError(str)
+        setError(str)
     }
 }
 

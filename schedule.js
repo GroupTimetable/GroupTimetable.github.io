@@ -284,6 +284,7 @@ function mergeLessons(lessons, shouldMerge) {
 
 function makeSchedule(cont, vBounds, hBounds) {
     const schedule = Array(vBounds.length);
+    const bigFields = []
 
     const la = hBounds.lef, ra = hBounds.rig;
     const ma = (la + ra) * 0.5;
@@ -316,6 +317,17 @@ function makeSchedule(cont, vBounds, hBounds) {
                 const ib = intersects(bi, ti, ba, ca);
                 const it = intersects(bi, ti, ca, ta);
                 if(!it && !ib) continue;
+
+                let addBigField = item.width > hBounds.rig - hBounds.lef
+                const bigField = { day: dayI, hours: i }
+                if(addBigField && bigFields.length !== 0) {
+                    const otherField = bigFields[bigFields.length-1]
+                    if(otherField.day == bigField.day && otherField.hours == bigField.hours) {
+                        addBigField = false
+                    }
+                }
+
+                if(addBigField) bigFields.push(bigField)
 
                 const shouldL = itemM < ma;
                 const shouldB = itemC < ca;
@@ -350,7 +362,7 @@ function makeSchedule(cont, vBounds, hBounds) {
         }
     }
 
-    return schedule;
+    return [schedule, bigFields]
 }
 
 
