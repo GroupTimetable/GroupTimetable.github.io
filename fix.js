@@ -4,10 +4,31 @@ let origScheme;
 {
     const prmstr = window.location.search.split("=");
     const sid = prmstr[1];
-    const args = JSON5.parse(sessionStorage.getItem(sid));
-    sessionStorage.removeItem(sid);
-    origSchedule = args.schedule
-    origScheme = args.scheme
+    if(sid) {
+        const args = JSON5.parse(sessionStorage.getItem(sid));
+        sessionStorage.removeItem(sid);
+        origSchedule = args.schedule
+        origScheme = args.scheme
+    }
+    else {
+        origSchedule = [
+            [
+                {sTime: 510, eTime: 600, lessons: ['Общая пара', 'Общая пара', 'Общая пара', 'Общая пара', ]},
+                {sTime: 620, eTime: 710, lessons: ['Пара 1 группы', 'Пара 2 группы', 'Пара 1 группы', 'Пара 2 группы']},
+                {sTime: 730, eTime: 820, lessons: ['', '', '', '']},
+                {sTime: 840, eTime: 930, lessons: ['Пара числителя', 'Пара числителя', 'Пара знаменателя', 'Пара знаменателя']},
+                {sTime: 950, eTime: 1040, lessons: ['Числитель 1 группы', 'Числитель 2 группы', 'Знаменатель 1 группы', 'Знаменатель 2 группы']}
+            ],
+            [],[],
+            [
+                {sTime: 620, eTime: 710, lessons: ['', '', '', '']},
+                {sTime: 730, eTime: 820, lessons: ['Числитель 1 группы', '', '', 'Знаменатель 2 группы']},
+                {sTime: 840, eTime: 930, lessons: ['', '', '', '']}
+            ],
+            [],[],[]
+        ]
+        origScheme = [[0, 1, 2], [3, 4, 5]]
+    }
 }
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
@@ -70,7 +91,7 @@ function dayToSimple(day, indent) {
 function scheduleToSimple(schedule) {
     let result = '';
 
-    result += '"Расположение дней": [\n';
+    result += '"Расположение дней": [';
     for(let j = 0;; j++) {
         let line = ''
         for(let i = 0; i < origScheme.length; i++) {
@@ -79,9 +100,10 @@ function scheduleToSimple(schedule) {
             else line += daysOfWeekShortened[origScheme[i][j]]
         }
         if(line.trim() === '') break
-        result += ' '.repeat(4) + '"' + line + '",\n'
+        result += '\n' + ' '.repeat(4) + '"' + line + '",'
     }
-    result += '],\n'
+    if(result.endsWith(',')) result = result.substring(0, result.length-1)
+    result += '\n],\n'
 
 
     for(let i = 0; i < 7; i++) {

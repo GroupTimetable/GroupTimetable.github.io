@@ -14,8 +14,8 @@ body {
   display: flex;
   flex-direction: column;
 }
-.centerel-vert > .before:not([disable]) { display: block; flex: 1; }
-.centerel-vert > .after:not([disable]) { display: block; flex: 1; }
+.centerel-vert > .before:not([disable]) { display: block; flex: 1 1 0px; }
+.centerel-vert > .after:not([disable]) { display: block; flex: 1 1 0px; }
 .centerel-vert > .center { display: block; }
 
 .center-content {

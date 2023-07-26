@@ -40,7 +40,8 @@
                 </div>
                 <textarea id="edit-input" wrap="off" style="font-family: monospace; background-color: #f0f0f0; overflow: scroll; flex: 1 1 auto; resize: none; -webkit-appearance: none; border: none; outline: none;"></textarea>
             </div>
-            <div id="outputs" style="flex: 0 0 auto; overflow-x: visible; display: flex; flex-direction: column; overflow-y: scroll; align-items: center; gap: 1.5rem; padding: 1rem">
+            <!-- apparently we can't have overflow-x: visible; overflow-y: scroll so the parent would be scrollable now -->
+            <div id="outputs" style="flex: 0 0 auto; overflow-x: visible; display: flex; flex-direction: column; align-items: center; gap: 1.5rem; padding: 1rem">
             </div>
         </div>
     </body>
