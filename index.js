@@ -17,39 +17,46 @@ function clearPrompt() {
     groupInput.val('')
 }
 
+let scheduleLayoutEl
+{
 const settingsEl = document.querySelector('.generation-settings')
 const genPopupEl = insertPopup(settingsEl)
 const genPopupId = registerPopup(genPopupEl)
-let keepGenPopupOpen = false, ignoreHover = false
-addOwner('hover', genPopupId)
-addOwner('click', genPopupId)
-let genPopupKeepOpened = false
-settingsEl.firstElementChild.addEventListener('click', () => {
-    keepGenPopupOpen = !keepGenPopupOpen;
 
-    if(!window.matchMedia('(pointer: fine)').matches) {
-        ignoreHover = true
-        updatePopup('hover', genPopupId, stateHidden)
-    }
-    else ignoreHover = false
-
-    if(keepGenPopupOpen) updatePopup('click', genPopupId, stateShown)
-    else updatePopup('click', genPopupId, stateHidden)
-    settingsEl.setAttribute('data-pressed', keepGenPopupOpen)
-})
-$(settingsEl.firstElementChild).on('mouseenter', () => {
-    if(!ignoreHover) updatePopupAfterMs('hover', genPopupId, stateShown, 300)
-}).on('mouseleave', () => {
-    if(!ignoreHover) updatePopupAfterMs('hover', genPopupId, stateHidden, 500)
-})
-
+popupAddHoverClick(genPopupId, settingsEl.firstElementChild, (pressed) => settingsEl.setAttribute('data-pressed', pressed))
 
 genPopupEl.popup.appendChild($('<div style="margin-bottom: 0.3rem">Расположение дней:</div>').get()[0])
-const scheduleLayoutEl = genPopupEl.popup.appendChild($(`<div contentEditable="true" style="width: 100%; border: none; outline: none; border-bottom: 1px solid white; min-height: 1rem; display: inline-block; font-family: monospace; font-size: 1.0rem"></div>`).get()[0])
+scheduleLayoutEl = genPopupEl.popup.appendChild($(`<div contentEditable="true" style="width: 100%; border: none; outline: none; border-bottom: 1px solid white; min-height: 1rem; display: inline-block; font-family: monospace; font-size: 1.0rem"></div>`).get()[0])
 scheduleLayoutEl.innerHTML = 'Пн Чт<br\>Вт Пт<br\>Ср Сб'/*
     textContent - ignores line breaks,
     innerText - doesn't read when the element is hidden (nice)  https://stackoverflow.com/a/43740154/18704284
 */
+}
+
+function popupAddHoverClick(id, onElement, whenToggled) {
+    addOwner('hover', id)
+    addOwner('click', id)
+
+    let keepPopupOpen = false, ignoreHover = false
+    $(onElement).on('click', () => {
+        keepPopupOpen = !keepPopupOpen;
+
+        if(!window.matchMedia('(pointer: fine)').matches) {
+            ignoreHover = true
+            updatePopup('hover', id, stateHidden)
+        }
+        else ignoreHover = false
+
+        if(keepPopupOpen) updatePopup('click', id, stateShown)
+        else updatePopup('click', id, stateHidden)
+
+        whenToggled(keepPopupOpen)
+    }).on('mouseenter', () => {
+        if(!ignoreHover) updatePopupAfterMs('hover', id, stateShown, 300)
+    }).on('mouseleave', () => {
+        if(!ignoreHover) updatePopupAfterMs('hover', id, stateHidden, 500)
+    })
+}
 
 function hideOverlay() {
     $('#drop-zone').css('visibility', 'hidden').css('opacity', '0') 
@@ -86,7 +93,7 @@ function checkShouldProcess() {
     }
     const name = groupInput.val().toString().trim()
     if(name == '') {
-        setStatus('Для продолжения требуется имя группы, нажмите Enter для продолжения')
+        setStatus('Для продолжения введите имя группы и нажмите Enter')
         return
     }
 
@@ -221,8 +228,13 @@ function nameFixup(name) {
     else return newName;
 }
 
-async function processPDF0(name, contents, width) {
+async function processPDF0() {
+    resetStage()
     setStatus("Начинаем обработку")
+
+    const contents = copy(currentFileContent)
+    const name = groupInput.val().toString().trim()
+    const width = 250
 
     const nameFixed = nameFixup(name)
 
@@ -234,48 +246,78 @@ async function processPDF0(name, contents, width) {
 
     for(let j = 0; j < pdf.numPages; j++) {
         try {
-        const page = await pdf.getPage(j + 1);
-        const cont = (await page.getTextContent()).items;
+            const page = await pdf.getPage(j + 1);
+            const cont = (await page.getTextContent()).items;
 
-        for(let i = 0; i < cont.length; i++) {
-            if(nameFixup(cont[i].str) === nameFixed) try {
+            for(let i = 0; i < cont.length; i++) {
+                if(nameFixup(cont[i].str) === nameFixed) try {
 
-                if(false) {
-                    var viewport = page.getViewport({ scale: 1, });
-                    // Support HiDPI-screens.
-                    var outputScale = window.devicePixelRatio || 1;
+                    if(false) {
+                        var viewport = page.getViewport({ scale: 1, });
+                        // Support HiDPI-screens.
+                        var outputScale = window.devicePixelRatio || 1;
 
-                    var canvas = document.getElementById('the-canvas');
-                    var context = canvas.getContext('2d');
+                        var canvas = document.getElementById('the-canvas');
+                        var context = canvas.getContext('2d');
 
-                    canvas.width = Math.floor(viewport.width * outputScale);
-                    canvas.height = Math.floor(viewport.height * outputScale);
-                    canvas.style.width = Math.floor(viewport.width) + "px";
-                    canvas.style.height =  Math.floor(viewport.height) + "px";
+                        canvas.width = Math.floor(viewport.width * outputScale);
+                        canvas.height = Math.floor(viewport.height * outputScale);
+                        canvas.style.width = Math.floor(viewport.width) + "px";
+                        canvas.style.height =  Math.floor(viewport.height) + "px";
 
-                    var transform = outputScale !== 1
-                      ? [outputScale, 0, 0, outputScale, 0, 0]
-                      : null;
+                        var transform = outputScale !== 1
+                            ? [outputScale, 0, 0, outputScale, 0, 0]
+                            : null;
 
-                    var renderContext = {
-                      canvasContext: context,
-                      transform: transform,
-                      viewport: viewport
-                    };
-                    await page.render(renderContext).promise
-                }
+                        var renderContext = {
+                            canvasContext: context,
+                            transform: transform,
+                            viewport: viewport
+                        };
+                        await page.render(renderContext).promise
+                    }
 
-                const boundsH = findItemBoundsH(cont, i);
-                const vBounds = findDaysOfWeekHoursBoundsV(cont);
-                nextStage("Достаём расписание из файла")
-                const schedule = makeSchedule(cont, vBounds, boundsH);
-                nextStage("Создаём PDF файл расписания")
-                const doc = await scheduleToPDF(schedule, scheme, 1000)
-                nextStage("Создаём предпросмотр")
-                const outputElement = createOutputElement()
-                outputElement.image.src = URL.createObjectURL(await renderPDF(copy(doc), width))
+                    const boundsH = findItemBoundsH(cont, i);
+                    const vBounds = findDaysOfWeekHoursBoundsV(cont);
+                    nextStage("Достаём расписание из файла")
+                    const schedule = makeSchedule(cont, vBounds, boundsH);
+                    nextStage("Создаём PDF файл расписания")
+                    const doc = await scheduleToPDF(schedule, scheme, 1000)
+
+                    nextStage("Создаём предпросмотр")
+                    const element = createOutputElement()
+                    element.image.src = URL.createObjectURL(await renderPDF(copy(doc), width))
+
+                    element.widthInput.value = 1000
+
+                    outputs.get()[0].appendChild(element.element)
+
+                    const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
+
+                    $(element.name).text(outFilename)
+                    $(element.viewPDF).on('click', function() {
+                        var fileURL = window.URL.createObjectURL(new Blob([doc], { type: 'application/pdf' }));
+                        let tab = window.open();
+                        tab.location.href = fileURL;
+                    })
+                    $(element.del).on('click', function() {
+                        outputs.get()[0].removeChild(element.element)
+                        unregisterPopup(element.popupId)
+                })
+                $(element.downloadImg).on('click', async function() {
+                    const blob = await renderPDF(copy(doc), Number.parseInt(element.widthInput.value))
+                    download(blob, outFilename + '.png')
+                })
+                $(element.edit).on('click', function() {
+                    var parms = JSON.stringify({ schedule: schedule, scheme: scheme });
+                    var storageId = "parms" + String(Date.now());
+                    sessionStorage.setItem(storageId, parms);
+                    window.open("./fix.html" + "?sid=" + storageId);
+                })
+                $(element.settings).on
+
                 nextStage("Готово")
-                return [outputElement, doc, schedule, scheme];
+                return
             }
             catch(e) {
                 const add = "[название группы] = " + i + '/' + cont.length
@@ -295,48 +337,26 @@ async function processPDF0(name, contents, width) {
 
 async function processPDF() {
     try {
-        const name = groupInput.val().toString().trim()
-        const width = 250
-
-        resetStage()
         //TypeError: Cannot perform Construct on a detached ArrayBuffer
         //index.js:198 DOMException: Failed to execute 'postMessage' on 'Worker': ArrayBuffer at index 0 is already detached.
-        const [element, pdf, schedule, scheme] = await processPDF0(name, copy(currentFileContent), width, nextStage)
-        outputs.get()[0].appendChild(element.element)
-
-        const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
-
-        $(element.name).text(outFilename)
-        $(element.viewPDF).on('click', function() {
-            var fileURL = window.URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' }));
-            let tab = window.open();
-            tab.location.href = fileURL;
-        })
-        $(element.del).on('click', function() {
-            outputs.get()[0].removeChild(element.element)
-        })
-        $(element.downloadImg).on('click', async function() {
-            const blob = await renderPDF(copy(pdf), 1000)
-            download(blob, outFilename + '.png')
-        })
-        $(element.edit).on('click', function() {
-            var parms = JSON.stringify({ schedule: schedule, scheme: scheme });
-            var storageId = "parms" + String(Date.now());
-            sessionStorage.setItem(storageId, parms);
-            window.open("./fix.html" + "?sid=" + storageId);
-        })
+        await processPDF0()
     }
     catch(e) {
         let str = ''
         if(Array.isArray(e)) {
+            console.error('ERROR')
             for(let i = 0; i < e.length; i++) {
+                console.error(e[i])
                 if(i !== 0) str += ', '
                 str += e[i]
             }
+            console.error('RORRE')
         }
-        else str += e
+        else {
+            str += e
+            console.error(e)
+        }
 
-        console.error(e)
         stageError(str)
     }
 }

@@ -2,6 +2,18 @@ body {
     font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+input { border: none; outline: none; background: none; }
+
+
+
 .centerel-horiz {
   display: -webkit-flex; /* Safari */
   display: flex;
@@ -47,6 +59,10 @@ body {
     font-weight: bold;
     box-shadow: 0px 0px 0.5rem 0px #00000050;
     background: linear-gradient(190deg, #4286f1, #321ceb);
+}
+
+@media (orientation: portrait) {
+    .header { text-align: center }
 }
 
 .file-picker {

@@ -1,6 +1,6 @@
 const stateHidden = 0;
 const stateShown = 1;
-const popupList = []
+const popupList = {}
 let popupTop = 0
 
 let curActor = 0
@@ -15,6 +15,14 @@ function registerPopup(popup) {
     addOwner('safe zone', id)
     popup.safeZone.setAttribute('data-popup-id', id)
     return id
+}
+
+function unregisterPopup(id) {
+    delete popupList[id]
+}
+
+function addSafeZoneArgumentToElement(id, element) {
+    popupList[id].safeZoneArgElement = element;
 }
 
 function addOwner(owner, id) {
@@ -44,7 +52,7 @@ async function updatePopupAfterMs(owner, id, state, delay) {
 function updatePopup(owner, id, newState) {
     const item = popupList[id]
     item.ownerStates[owner] = newState
-    item.ownerActions[owner] = undefined
+    delete item.ownerActions[owner]
 
     const oldState = item.state
 
@@ -66,7 +74,7 @@ function updatePopup(owner, id, newState) {
     }
     else {
         item.popup.element.style.opacity = 0
-        item.popup.element.style.visibility = 'hidden'
+        item.popup.element.style.visibility = 'collapse'
 
         //console.log('popup ' + id + ' hidden')
     }
@@ -76,12 +84,23 @@ function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
 }
 
+function isHidden(elem) { //not position: fixed   !
+    //jQuery
+    return !( elem.offsetWidth || elem.offsetHeight || elem.getClientRects().length );
+}
+
+function setSafezoneElementArgument(id, isSafezone) {
+    const el = popupList[id].safeZoneArgElement
+    if(el) el.setAttribute('data-popup-safezone', isSafezone)
+}
+
 window.addEventListener('mousemove', function(ev) {
     if(popupList.length === 0) return
 
     if(!window.matchMedia('(pointer: fine)').matches) {
         for(const i in popupList) {
             updatePopup('safe zone', i, stateHidden)
+            setSafezoneElementArgument(i, false)
         }
         return
     }
@@ -91,11 +110,17 @@ window.addEventListener('mousemove', function(ev) {
 
     for(const i in popupList) {
         const pp = popupList[i]
+        if(isHidden(pp.popup.popup)) return
         const bs = pp.popup.safeZone.getBoundingClientRect()
-        if(pp.state !== stateShown) continue;
-        if(x === clamp(x, bs.left, bs.right)
+
+        const hovered = x === clamp(x, bs.left, bs.right)
             && y === clamp(y, bs.top, bs.bottom)
-        ) updatePopup('safe zone', i, stateShown)
-        else updatePopupAfterMs('safe zone', i, stateHidden, 500)
+
+        if(pp.state === stateShown) {
+            if(hovered) updatePopup('safe zone', i, stateShown)
+            else updatePopupAfterMs('safe zone', i, stateHidden, 500)
+        }
+
+        setSafezoneElementArgument(i, hovered)
     }
 })
