@@ -22,36 +22,29 @@ function lessonToSimple(lesson, indent) {
     const v1 = ll[0] === ll[2]
     const v2 = ll[1] === ll[3]
 
-    function a(key, value) { result = result + '\n' + ' '.repeat(indent+4) + '"' + key + '": "' + value + '",'; }
+    function a(key, index) { 
+        const value = ll[index]
+        if(value.trim() === '') return
+        result = result + '\n' + ' '.repeat(indent+4) + '"' + key + '": "' + value + '",'; 
+    }
 
     if(h1 && h2 && v1 && v2) {
-        if(ll[0].trim() !== '') a('все', ll[0])
+        a('все', 0)
     }
-    else {
-        if(ll[0].trim() !== '') {
-            if(h1) a('обе - ч', ll[0])
-            else if(!h2 && v1) a('1 - обе', ll[0])
-            else a('1 - ч', ll[0])
-        }
-        
-        if(ll[1].trim() !== '') {
-            if(h1); 
-            else if(!h2 && v2) a('обе - 2', ll[1])
-            else a('2 - ч', ll[1])
-        }
-        
-        if(ll[2].trim() !== '') {
-            if(h2) a('обе - з', ll[2])
-            else if(v2) a('2 - обе', ll[2])
-            else a('1 - з', ll[2])
-        }
-        
-        if(ll[3].trim() !== '') {
-            if(h2);
-            else if(v2);
-            else a('2 - з', ll[3])
-        }
+    else if(h1 || h2) {
+        if(h1) a('обе - ч', 0)
+        if(h2) a('обе - з', 2)
     }
+    else if(v1 || v2) {
+        if(v1) a('1 - обе', 0)
+        if(v2) a('2 - обе', 1)
+    }
+    else;
+
+    if(!h1 && !v1) a('1 - ч', 0)
+    if(!h1 && !v2) a('2 - ч', 1)
+    if(!h2 && !v1) a('1 - з', 2)
+    if(!h2 && !v2) a('2 - з', 3)
 
     if(result.length === 0) return '{},'
 

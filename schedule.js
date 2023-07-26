@@ -215,11 +215,11 @@ function mergeLessons(lessons, shouldMerge) {
     const v1 = shouldMerge[2] || shouldMergeLessons2(lessons[2], lessons[0], true );
     const v2 = shouldMerge[3] || shouldMergeLessons2(lessons[3], lessons[1], true );
 
-    if((h1 || h2) && (v1 || v2)) {
+    if(h1 && h2 && v1 && v2) {
         const e = lessons[0].concat(lessons[1]).concat(lessons[2]).concat(lessons[3]);
         lessons.fill(e);
     }
-    else {
+    else if(h1 || h2) {
         if(h1) {
             const e = lessons[0].concat(lessons[1]);
             lessons[0] = e;
@@ -230,6 +230,8 @@ function mergeLessons(lessons, shouldMerge) {
             lessons[2] = e;
             lessons[3] = e;
         }
+    }
+    else if(v1 || v2) {
         if(v1) {
             const e = lessons[0].concat(lessons[2]);
             lessons[0] = e;
@@ -616,6 +618,7 @@ function drawLessons(lesson, page, font, coord, size) {
         if(eqv1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[2])
         if(eqv2) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[2])
     }
+    else;
 
     if(!eqh1 && !eqv1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[0])
     if(!eqh1 && !eqv2) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[0])
