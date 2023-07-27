@@ -25,12 +25,14 @@
         <div class="centerel-vert" style="flex: 1 1 auto">
             <div class="before" style="display: flex; flex-direction: column; align-items: stretch;">
                 <div class="header">Создание и&nbsp;<a href="./fix.html" target="_blank" style="color: inherit; text-decoration underline">изменение</a>&nbspрасписания группы</div>
-                <div class="h-text" style="padding-bottom: 1rem; padding-top: 1rem; flex: 1 1 0px">
-                    <span class="file-picker">Нажмите здесь или перетащите PDF файл расписания чтобы загрузить</span> 
+                <div class="h-text" style="padding-bottom: 1rem; padding-top: 1rem; flex: 1 1 auto">
+                    <div class="file-picker">
+                        <span>Перетащите файл или нажмите здесь чтобы</span><span id="load-file-text">&nbsp;загрузить PDF файл расписания</span> 
+                    </div>
                 </div>
             </div>
 
-            <div class="center group-bar-container">
+            <div class="center group-bar-formatting">
                 <div id="filename" class="move-with-border" style="margin-bottom: 0.3rem; color: #a0a0a0; opacity: 0; transition: opacity 100ms;">
                     &ZeroWidthSpace;
                 </div>
@@ -63,15 +65,13 @@
                     <div class="after progress-bar-height">
                     </div>
                 </div>
-                <div class="move-with-border" style="margin-top: 0.3rem;">
-                    <div id="status" style="opacity: 0; transition: opacity 100ms;">&ZeroWidthSpace;</div>
-                </div>
             </div>
-
-            <div class="after" style="padding-top: 2rem; margin-bottom: 1rem">
-                <div id="warning" style="max-width: min(45rem, 90vw); margin: 0 auto; margin-bottom: 1rem; color: rgb(124 10 144); opacity: 0; transition: opacity 100ms;"></div>
-                <div id="outputs">
-
+            <div class="after" style="margin-bottom: 1rem">
+                <div class="group-bar-formatting" style="margin-top: 0.3rem;">
+                    <div id="status" class="move-with-border" style="opacity: 0; transition: opacity 100ms;">&ZeroWidthSpace;</div>
+                </div>
+                <div id="warning" style="max-width: min(45rem, 90vw); margin: 0 auto; margin-top: 1rem; color: rgb(124 10 144); opacity: 0; transition: opacity 100ms;"></div>
+                <div id="outputs" style="margin-top: 2rem">
                 </div>
             </div>
         </div>

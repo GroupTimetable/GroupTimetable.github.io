@@ -69,7 +69,7 @@ function checkShouldProcess() {
     }
     const name = groupInput.val().toString().trim()
     if(name == '') {
-        setStatus('Для продолжения введите имя группы и нажмите Enter')
+        setStatus('Для продолжения введите имя группы и нажмите <span style="color: rgb(124 10 144)">Enter</span>')
         return
     }
 
@@ -127,14 +127,14 @@ function setError(msg) {
     if(currentStage == -1) currentStage = stagesC-1
     progressBar.css('background-color', '#f15642')
     resizeProgressBar(false)
-    statusEl.text("Ошибка: " + msg).css('color', '#f15642').css({opacity:1})
-    warningEl.css({opacity:0})
+    statusEl.html("Ошибка: " + msg).css('color', '#f15642').css({opacity:1})
+    warningEl.text('').css({opacity:0})
 }
 function setStatus(msg, warning) {
     if(!msg || msg.trim() === '') statusEl.text('\u200c').css({opacity:0})
-    else statusEl.text(msg).css('color', '#202020').css({opacity:1})
-    if(!warning || warning.trim() === '') warningEl.css({opacity:0})
-    else warningEl.text(warning).css({opacity:1})
+    else statusEl.html(msg).css('color', '#202020').css({opacity:1})
+    if(!warning || warning.trim() === '') warningEl.text('').css({opacity:0})
+    else warningEl.html(warning).css({opacity:1})
 }
 
 $('.file-picker').on('click', function() {
@@ -177,6 +177,7 @@ async function loadFromListFiles(list) {
             else {
                 filenameElement.text('Файл' + (list.length === 1 ? '' : ' №' + (i+1)) + ': ' + file.name).css({opacity:1})
                 setStatus("Файл загружен")
+                $(document.body).attr('data-fileLoaded', '')
 
                 checkShouldProcess()
                 return
@@ -339,9 +340,3 @@ function pickFile(callback) {
     }, 0);
 }
 
-//https://stackoverflow.com/a/22114687/18704284
-function copy(src) {
-    var dst = new ArrayBuffer(src.byteLength);
-    new Uint8Array(dst).set(new Uint8Array(src));
-    return dst;
-}

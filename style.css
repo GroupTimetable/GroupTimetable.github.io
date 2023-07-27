@@ -29,7 +29,7 @@ body {
     align-items: center;
 }
 
-@media (orientation: portrait) {
+@media (max-aspect-ratio: 1/1), (orientation: portrait) {
     .collapsable {
         visibility: collapse;
         display: none;
@@ -49,12 +49,20 @@ body {
     background: linear-gradient(190deg, #4286f1, #321ceb);
 }
 
-@media (orientation: portrait) {
+@media (max-aspect-ratio: 1/1), (orientation: portrait) {
     .header { text-align: center }
 }
 
 .file-picker {
     cursor: pointer;
+    margin: 0 auto;
+    & > span {
+        word-wrap:break-word;
+    }
+}
+
+body:not([data-fileLoaded]) #load-file-text {
+    color: hsl(250deg 86% 60% / 1);
 }
 
 .h-text {
@@ -75,7 +83,7 @@ body {
     font-weight: bold;
 }
 
-.group-bar-container {
+.group-bar-formatting {
     width: min(30rem, 90vw);
     margin: 0 auto;
 }
@@ -107,6 +115,12 @@ body {
     color: #202020;
     background: none;
     font-size: 1.3em;
+}
+
+body[data-fileLoaded] #group-input:placeholder-shown {
+    border: 0px solid transparent;
+    border-radius: 0.5rem;
+    background-color: hsl(250deg 86% 60% / 10%);
 }
 
 .group-bar-icon {
@@ -190,6 +204,7 @@ body {
     transition: width 100ms; 
 }
 
+
 #outputs {
     margin: 0 auto;
     display: flex;
@@ -198,6 +213,13 @@ body {
     column-gap: 3rem;
     justify-content: space-between;
     align-items: flex-start;
+}
+
+@media (max-aspect-ratio: 1/1), (orientation: portrait) {
+    #outputs {
+        flex-direction: column-reverse;
+        align-items: center;
+    }
 }
 
 #outputs > * {

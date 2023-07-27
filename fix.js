@@ -227,37 +227,5 @@ async function processEdit() {
     const outs = document.getElementById('outputs')
     const img = await renderPDF(copy(pdf), 250)
     createAndInitOutputElement(scheme, schedule, pdf, img, outs, '') 
-
-    /*
-    const width = 250
-    const element = createOutputElement()
-    element.image.src = URL.createObjectURL(await renderPDF(copy(pdf), width))
-
-    outs.appendChild(element.element)
-
-    element.viewPDF.addEventListener('click', function() {
-        var fileURL = window.URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' }));
-        let tab = window.open();
-        tab.location.href = fileURL;
-    })
-    element.del.addEventListener('click', function() {
-        outs.removeChild(element.element)
-    })
-    element.downloadImg.addEventListener('click', async function() {
-        const blob = await renderPDF(copy(pdf), 1000)
-        download(blob, outFilename + '.png')
-    })
-    element.edit.addEventListener('click', function() {
-        var parms = JSON.stringify({ schedule: schedule });
-        var storageId = "parms" + String(Date.now());
-        sessionStorage.setItem(storageId, parms);
-        window.open("./fix.html" + "?sid=" + storageId);
-    })*/
 }
 
-//https://stackoverflow.com/a/22114687/18704284
-function copy(src) {
-    var dst = new ArrayBuffer(src.byteLength);
-    new Uint8Array(dst).set(new Uint8Array(src));
-    return dst;
-}

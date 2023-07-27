@@ -140,6 +140,13 @@ const el = htmlToElement(`
 
 }
 
+//https://stackoverflow.com/a/22114687/18704284
+function copy(src) {
+    var dst = new ArrayBuffer(src.byteLength);
+    new Uint8Array(dst).set(new Uint8Array(src));
+    return dst;
+}
+
 function download(file, filename) {
     if (window.navigator.msSaveOrOpenBlob) // IE10+
         window.navigator.msSaveOrOpenBlob(file, filename);
@@ -157,7 +164,20 @@ function download(file, filename) {
     }
 }
 
+function downloadUrl(url, filename) {
+    var a = document.createElement("a")
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() {
+        document.body.removeChild(a);
+    }, 0);
+}
+
 function createAndInitOutputElement(scheme, schedule, doc, img, parentElement, name) {
+    const fileURL = window.URL.createObjectURL(new Blob([copy(doc)], { type: 'application/pdf' }));
+
     const element = createOutputElement()
     parentElement.appendChild(element.element)
 
@@ -167,17 +187,21 @@ function createAndInitOutputElement(scheme, schedule, doc, img, parentElement, n
 
     element.name.textContent = name
     element.viewPDF.addEventListener('click', function() {
-        const fileURL = window.URL.createObjectURL(new Blob([doc], { type: 'application/pdf' }));
         const tab = window.open();
+        if(tab == null) {
+            downloadUrl(fileURL, name + '.pdf')
+            return
+        }
         tab.location.href = fileURL;
     })
     element.del.addEventListener('click', function() {
         parentElement.removeChild(element.element)
         unregisterPopup(element.popupId)
         window.URL.revokeObjectURL(imgUrl);
+        window.URL.revokeObjectURL(fileUrl);
     })
     element.downloadImg.addEventListener('click', async function() {
-        const blob = await renderPDF(copy(doc), Number.parseInt(element.widthInput.value))
+        const blob = new Blob([await renderPDF(copy(doc), Number.parseInt(element.widthInput.value))], { type: "image/png" })
         download(blob, name + '.png')
     })
     element.edit.addEventListener('click', function() {
