@@ -73,7 +73,7 @@ function createOutputElement() {
     const settings = el.querySelector('.settings')
     const popupEl = insertPopup(settings)
     const popupId = registerPopup(popupEl)
-    addSafeZoneArgumentToElement(popupId, el.querySelector('.output'))
+    addOpenedArgumentToElement(popupId, el.querySelector('.output'))
 
     popupAddHoverClick(popupId, settings.firstElementChild, (pressed) => settings.setAttribute('data-pressed', pressed))
     popupEl.popup.appendChild(popupCont)
@@ -93,24 +93,9 @@ function createOutputElement() {
 
 function insertPopup(par) {
 const el = htmlToElement(`
-<span class='popup-outer2'>
-
-<div class='popup-oter' style="
-    height: 0px;
-    position: absolute;
-    left: 50%;
-    width: 0px;
-    height: 0px;
-    display: flex;
-    justify-content: center; 
-    margin-top: 0.3rem;
-">
-    <div>
-        <div class="safe-zone" style="padding: 2rem; margin-top: -2rem;
-            position: relative;
-            z-index: 999999;
-            pointer-events: none;
-        ">
+<span class='popup-container' shown="false">
+    <div> <!-- nice empty div tat serves no purpose in the doc but needed for propper formating -->
+        <div class="safe-zone" style="padding: 2rem; margin-top: -2rem; pointer-events: none;">
             <div class="popup" style="
                 pointer-events: all;
                 background-color: #4286f1;
@@ -123,13 +108,8 @@ const el = htmlToElement(`
             </div>
         </div>
     </div>
-</div>
-
 </span>
 `)
-    el.style.visibility = 'collapse'
-    el.style.opacity = 0
-
     par.style.position = 'relative'
     par.appendChild(el)
     return { 
@@ -257,48 +237,51 @@ const css = `
     border-color: #00000040;
 }
 
+.popup-container {
+    width: 0px; height: 0px;
+    margin-top: 0.3rem;
+    position: absolute;
+    left: 50%;
+
+    display: flex;
+    justify-content: center; 
+
+    will-change: transform; /*chrome bug*/
+    transition: opacity 300ms, transform 300ms;
+}
+
+.popup-container              { z-index: 997; }
+.popup-container:focus-within { z-index: 998; }
+.popup-container:hover        { z-index: 999; }
+
+.popup-container[shown=true] {
+    transform: translateY(0);
+    opacity: 1;
+    & > * { transform: scale(1); transition: transform 0s; }
+}
+
+.popup-container:not([shown=true]) {
+    transform: translateY(0.7rem);
+    opacity: 0;
+    & > * { transform: scale(0); transition: transform 0s 300ms; }
+}
+
 @media (pointer: fine) {
-    .output:hover .out-overlay, .output[data-popup-safezone=true] .out-overlay { 
+    .output:hover .out-overlay, .output[data-popup-opened=true] .out-overlay { 
         opacity: 1;
         visibility: visible;
         transition: opacity 200ms;
     }
-
-    .popup-outer2 {
-        transition: opacity 500ms, translate 500ms, visibility 500ms;
-    }
-
-    .output:not(:hover):not([data-popup-safezone=true]) .popup-outer2 { 
-        visibility: collapse;
-        transition: opacity 500ms, translate 500ms, visibility 0s 500ms;
-    }
-
 }
 
 @media not (pointer: fine) {
     .output .out-overlay { opacity: 1; visibility: visible; transition: opacity 200ms; }
     .output .download-img { opacity: 0 }
-
-    .popup-outer2 {
-        transition: opacity 500ms, translate 500ms, visibility 500ms;
-    }
-}
-
-
-.out-header > .icons > *:not(.not-icon), .out-overlay .download-img {
-    cursor: pointer;
 }
 
 .out-header > .icons {
     display: flex;
     padding: 0.3rem;
-}
-
-.mag-svg {
-    fill:none;
-    stroke:#eeeeee;
-    stroke-miterlimit:10;
-    stroke-width:1.91px;
 }
 
 .out-header > .icons > *:not(.not-icon) {
@@ -307,9 +290,13 @@ const css = `
     margin-left: 0.2rem;
     fill: #eeeeee;
     stroke: #eeeeee;
-    padding: 0.3rem;
+    padding: 0.4rem;
     border: 0px solid #00000000;
     border-radius: 999999px;
+}
+
+.out-header > .icons > *:not(.not-icon), .out-overlay .download-img {
+    cursor: pointer;
 }
 
 .out-header > .icons > *:not(.not-icon):hover {

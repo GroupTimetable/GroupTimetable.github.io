@@ -85,6 +85,10 @@ function updatePending(newValue) {
     checkShouldProcess()
 }
 
+groupInput.on('blur', function(e) {
+    if(processing) return
+    checkShouldProcess() 
+})
 groupInput.on('keypress', function(e) {
     if(processing) return
     if (e.key === "Enter") updatePending(true)
