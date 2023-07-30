@@ -75,7 +75,13 @@ function checkShouldProcess() {
 
     processing = true;
 
-    processPDF().then(() => { updatePending(false); processing = false; })
+    var startTime = performance.now()
+    processPDF().finally(() => {
+        var endTime = performance.now()
+        console.log(`call took ${endTime - startTime} milliseconds`)
+        updatePending(false);
+        processing = false;
+    })
 }
 
 function updatePending(newValue) {
@@ -142,10 +148,7 @@ function setStatus(msg, warning) {
 }
 
 $('.file-picker').on('click', function() {
-    pickFile(function(e) {
-        console.log(e)
-        loadFromListFiles(e.target.files)
-    })
+    pickFile(e => loadFromListFiles(e.target.files))
 })
 window.addEventListener('drop', function(ev) { 
     ev.preventDefault();
@@ -196,7 +199,14 @@ async function loadFromListFiles(list) {
 
 }
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+//pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+const workerUrl = URL.createObjectURL(new Blob(
+    ['importScripts("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.js")'],
+    { type: 'text/javascript' }
+))
+pdfjsLib.GlobalWorkerOptions.workerPort = new Worker(workerUrl);
+URL.revokeObjectURL(workerUrl)
+
 resetStage()
 updatePending(true)
 
@@ -223,13 +233,14 @@ async function processPDF0() {
 
     const scheme = readScheduleScheme(scheduleLayoutEl.innerHTML.replace(/<\s*[bB][rR]\s*\/?>/g, '\n'))
 
-    let pdf
-    try { pdf = await pdfjsLib.getDocument({ data: contents }).promise }
+    const origTask = pdfjsLib.getDocument({ data: contents }); try {
+    let orig
+    try { orig = await origTask.promise }
     catch (e) { throw ["Документ не распознан как PDF", e] }
 
-    for(let j = 0; j < pdf.numPages; j++) {
+    for(let j = 0; j < orig.numPages; j++) {
         try {
-            const page = await pdf.getPage(j + 1);
+            const page = await orig.getPage(j + 1);
             const cont = (await page.getTextContent()).items;
 
             for(let i = 0; i < cont.length; i++) {
@@ -296,22 +307,18 @@ async function processPDF0() {
             }
         }
         } catch(e) {
-            const add = "[страница] = " + j + '/' + pdf.numPages
+            const add = "[страница] = " + j + '/' + orig.numPages
             if(Array.isArray(e)) { e.push(add); throw e }
             else throw [e, add] 
 
         }
     }
-    throw ["Имя группы не найдено", "количество страниц = " + pdf.numPages];
+    throw ["Имя группы не найдено", "количество страниц = " + orig.numPages];
+    } finally { await origTask.destroy() }
 }
 
-async function processPDF() {
-    try {
-        //TypeError: Cannot perform Construct on a detached ArrayBuffer
-        //index.js:198 DOMException: Failed to execute 'postMessage' on 'Worker': ArrayBuffer at index 0 is already detached.
-        await processPDF0()
-    }
-    catch(e) {
+function processPDF() {
+     return processPDF0().catch(e => {
         let str = ''
         if(Array.isArray(e)) {
             console.error('ERROR')
@@ -328,7 +335,7 @@ async function processPDF() {
         }
 
         setError(str)
-    }
+    })
 }
 
 function pickFile(callback) {

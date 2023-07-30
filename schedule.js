@@ -411,113 +411,108 @@ function drawTextCentered(text, page, font, fontSize, center, precompWidths = un
     }
 }
 
-function measureTexts(text, font, fontSize) {
-    const widths = []
+const textBreak = new (function() {
+    function arr(len) { const a = new Array(len); a.length = 0; return a }
 
-    let largestWidth;
-    for(let i = 0; i < text.length; i++) {
-        const textWidth = font.widthOfTextAtSize(text[i], fontSize)
-        widths.push(textWidth)
-        if(largestWidth == undefined || textWidth > largestWidth) {
-            largestWidth = textWidth;
+    const count = 6
+    const tried = arr(count)
+    const objs = [
+        { width: 0, height: 0, fontSize: 0, texts: arr(4), lineWidths: arr(4) },
+        { width: 0, height: 0, fontSize: 0, texts: arr(4), lineWidths: arr(4) },
+    ]
+
+    let bestI, lastI
+
+    this.reset = function() {
+        tried.length = 0
+        bestI = true
+        lastI = !bestI
+        for(let i = 0; i < objs.length; i++) {
+            const o = objs[i]
+            o.lineWidths.length = o.texts.length = o.width = o.height = o.fontSize = 0
         }
     }
-    const textHeight = font.heightAtSize(fontSize)
+    this.haveTried = function (divs) { return tried.includes(divs) }
+    this.remeasure = function(str, divs, font, bounds) {
+        tried.push(divs)
 
-    return [largestWidth, textHeight * text.length, widths]
-}
+        const tmpI = !bestI
+        const tmp = objs[+tmpI]
+        tmp.lineWidths.length = tmp.texts.length = tmp.width = tmp.height = tmp.fontSize = 0
+        /*break text*/ {
+            const offsets = [0, -1, 1, 2, -2, 3, -3, 4, -4, 5, -5]
+            const lineLen =  Math.floor(str.length / divs)
 
-function divideTextEvenly(str, divs) {
-    const out = []
+            let prev = 0
+            for(let i = 0; i < divs-1; i++) {
+                const base = lineLen * (i+1)
+                for(let j = 0; j < offsets.length; j++) {
+                    const cur = base + offsets[j]
+                    //no bounds checking and break bc we alternate indices
+                    if(str[cur] !== ' ') continue;
 
-    let prev = 0
-    for(let i = 0; i < divs-1; i++) {
-        const orig = Math.floor(str.length / divs * (i+1))
-        for(let j = 0; j < 20; j++) {
-            const cur = orig + Math.floor((j % 2 == 0) ? j*0.5 : -j*0.5)
-
-            if(cur > prev && str[cur] === ' ') {
-                out.push(str.substring(prev, cur));
-                prev = cur+1;
-                break;
+                    tmp.texts.push(str.substring(prev, cur));
+                    prev = cur+1;
+                    break;
+                }
             }
+            tmp.texts.push(str.substring(prev));
+        }
+
+        /*calc sizes*/ {
+            const fontSize = 10
+
+            tmp.lineWidths.length = tmp.texts.length
+            let maxWidth = 0
+            for(let i = 0; i < tmp.texts.length; i++) {
+                const textWidth = font.widthOfTextAtSize(tmp.texts[i], fontSize)
+                tmp.lineWidths[i] = textWidth
+                maxWidth = Math.max(maxWidth, textWidth);
+            }
+            const scaledHeight = Math.min(bounds.h / tmp.texts.length, font.heightAtSize(fontSize) * bounds.w / maxWidth);
+            tmp.fontSize = font.sizeAtHeight(scaledHeight);
+
+            const coeff = tmp.fontSize / fontSize
+            for(let i = 0; i < tmp.lineWidths.length; i++) tmp.lineWidths[i] *= coeff
+            tmp.width = maxWidth * coeff;
+            tmp.height = tmp.texts.length * scaledHeight
+
+            lastI = tmpI
+            if(tmp.fontSize > objs[+bestI].fontSize) bestI = tmpI
         }
     }
 
-    out.push(str.substring(prev));
+    Object.defineProperty(this, 'best', { get: () => objs[+bestI] });
+    Object.defineProperty(this, 'last', { get: () => objs[+lastI] });
+})()
 
-    return out
-}
+function fitTextBreakLines(str, font, size) {
+    textBreak.reset()
 
-function fitTextBreakLines(str, font, size, iters = 5) {
-    const tries = []
-    const haveTried = function(divs) {
-        for(let i = 0; i < tries.length; i++) if(tries[i].text.length === divs) return true;
-        return false
-    }
-    const remeasure = function(text, fontSize) {
-        const [tWidth, tHeight, widths] = measureTexts(text, font, fontSize)
-        tries.push({ text: text, width: tWidth, height: tHeight, lineWidths: widths, fontSize: fontSize })
-    }
+    textBreak.remeasure(str, 1, font, size)
 
-    remeasure([str], font.sizeAtHeight(size.h))
-
-    let fontSize = font.sizeAtHeight(size.h);
-    for(let j = 0; j < iters; j++) {
-        {
-            const el = tries[tries.length-1]
+    for(let j = 0; j < 3; j++) {
+        /*maximize text width*/ {
+            const el = textBreak.last
             const scaledHeight = el.height * size.w / el.width;
-            const nextLines = el.text.length * Math.sqrt(size.h / scaledHeight)
-            const divs = Math.round(nextLines);
             const fontSize = font.sizeAtHeight(scaledHeight);
-            if(haveTried(divs)) break;
-            else {
-                const text = divideTextEvenly(str, divs)
-                remeasure(text, fontSize)
-            }
-            //console.log("a", structuredClone(text), nextLines, divs)
+            const divs = Math.max(1, Math.round(el.texts.length * Math.sqrt(size.h / scaledHeight)));
+            if(textBreak.haveTried(divs)) break;
+            else textBreak.remeasure(str, divs, font, size)
         }
 
-        {
-            const el = tries[tries.length-1]
+        /*maximize text height*/ {
+            const el = textBreak.last
             const scaledWidth = el.width * size.h / el.height;
-            const nextLines = el.text.length * Math.sqrt(scaledWidth / size.w)
-            const divs = Math.round(el.text.length * Math.sqrt(scaledWidth / size.w));
-            fontSize = font.sizeAtHeight(size.h / divs);
-            if(haveTried(divs)) break;
-            else {
-                const text = divideTextEvenly(str, divs)
-                remeasure(text, fontSize)
-            }
-
-            //console.log("b", structuredClone(text), nextLines, divs)
+            const divs = Math.max(1, Math.round(el.texts.length * Math.sqrt(scaledWidth / size.w)));
+            const fontSize = font.sizeAtHeight(size.h / divs);
+            if(textBreak.haveTried(divs)) break;
+            else textBreak.remeasure(str, divs, font, size)
         }
     }
 
-    let maxSize, maxI
-    for(let i = 0; i < tries.length; i++) {
-        const tri = tries[i];
-
-        const lineHeight = font.heightAtSize(tri.fontSize)
-        const [tWidth, tHeight] = [Math.max(...tri.lineWidths), lineHeight*tri.text.length] 
-
-        let scaledHeight = tri.height * size.w / tri.width;
-        if(scaledHeight > size.h) scaledHeight = size.h;
-        scaledHeight = scaledHeight / tri.text.length
-
-        tri.actualFontSize = font.sizeAtHeight(scaledHeight);
-
-        if(maxSize == undefined || tri.actualFontSize > maxSize) {
-            maxSize = tri.actualFontSize
-            maxI = i
-
-            const coeff = tri.actualFontSize / tri.fontSize
-            for(let i = 0; i < tri.lineWidths.length; i++) tri.lineWidths[i] *= coeff
-        }
-    }
-
-    const el = tries[maxI]
-    return [el.text, el.actualFontSize, el.lineWidths]
+    const el = textBreak.best
+    return [el.texts, el.fontSize, el.lineWidths]
 }
 
 function drawLessonText(lesson, secondWeek, page, font, coord, blockSize) {
@@ -686,7 +681,8 @@ function drawDay(day, dayI, page, font, coord, groupSize) {
 }
 
 async function renderPDF(doc, width) {
-    const pdf = await pdfjsLib.getDocument(doc).promise;
+    const pdfTask = pdfjsLib.getDocument(doc); try {
+    const pdf = await pdfTask.promise
     const page = await pdf.getPage(1);
 
     const viewport = page.getViewport({ scale: width / page.getViewport({scale:1}).width })
@@ -705,19 +701,24 @@ async function renderPDF(doc, width) {
     await page.render(renderContext).promise;
 
     return await canvas.convertToBlob();
+    } finally { await pdfTask.destroy() }
 }
 
 
-let fontkitV =  window.fontkit;
-
-async function scheduleToPDF(schedule, renderPattern, width) {
-    const [height, groupSize] = calcSize(schedule, renderPattern, width);
-
+const globalDocument = (async() => {
     const pdfDoc = await PDFLib.PDFDocument.create();
-    pdfDoc.registerFontkit(fontkitV);
-    const page = pdfDoc.addPage([width, height]);
+    pdfDoc.registerFontkit(window.fontkit);
 
-    const url = 'https://fonts.cdnfonts.com/s/57197/times.woff' //cors ocrs ocrs cors cors cors cors cors cors cors cors cors ./font.ttf cors cors cors cors cors cors cors
+    pdfDoc.__saveAndCleanup = async function() {
+        const r = await this.save()
+        let pc
+        while(pc = this.getPageCount()) {
+            this.removePage(pc-1)
+        }
+        return r
+    };
+
+    const url = 'times_new_roman.ttf' //local server required
     const fontBytes = await fetch(url).then(res => res.arrayBuffer()); 
     const font = await pdfDoc.embedFont(fontBytes, {subset:true});
 
@@ -733,6 +734,15 @@ async function scheduleToPDF(schedule, renderPattern, width) {
         return yBottom/1000 * size;
     }
 
+    return [pdfDoc, font]
+})()
+
+async function scheduleToPDF(schedule, renderPattern, width) {
+    const [height, groupSize] = calcSize(schedule, renderPattern, width);
+
+    const [pdfDoc, font] = await globalDocument
+    const page = pdfDoc.addPage([width, height]);
+
     for(let i = 0; i < renderPattern.length; i++) {
         let curY = height;
     
@@ -744,7 +754,7 @@ async function scheduleToPDF(schedule, renderPattern, width) {
         }
     }
 
-    return pdfDoc.save();
+    return pdfDoc.__saveAndCleanup();
 }
 
 const daysOfWeekShortened = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']

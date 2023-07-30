@@ -11,7 +11,7 @@ function createOutputElement() {
 <div class="output-cont" style="display: flex; align-items: center; flex-direction: column;">
 <span style="display: block" class="name"></span>
 <div class="output">
-    <img class="preview"></img>
+    <img style="display: block"></img>
     <div class="out-overlay">
         <div class="out-header">
             <div class="icons">
@@ -156,7 +156,7 @@ function downloadUrl(url, filename) {
 }
 
 function createAndInitOutputElement(scheme, schedule, doc, img, parentElement, name) {
-    const fileURL = window.URL.createObjectURL(new Blob([copy(doc)], { type: 'application/pdf' }));
+    const fileUrl = window.URL.createObjectURL(new Blob([copy(doc)], { type: 'application/pdf' }));
 
     const element = createOutputElement()
     parentElement.appendChild(element.element)
@@ -169,10 +169,10 @@ function createAndInitOutputElement(scheme, schedule, doc, img, parentElement, n
     element.viewPDF.addEventListener('click', function() {
         const tab = window.open();
         if(tab == null) {
-            downloadUrl(fileURL, name + '.pdf')
+            downloadUrl(fileUrl, name + '.pdf')
             return
         }
-        tab.location.href = fileURL;
+        tab.location.href = fileUrl;
     })
     element.del.addEventListener('click', function() {
         parentElement.removeChild(element.element)
@@ -207,7 +207,7 @@ const css = `
 
 .output {
     position: relative;
-    border: 1px solid transparent;
+    border: 0px solid transparent;
 }
 
 .output-cont > .output {
