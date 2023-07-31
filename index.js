@@ -7,6 +7,7 @@ const statusEl = $('#status')
 const warningEl = $('#warning')
 const filenameElement = $('#filename')
 const outputs = $('#outputs')
+const innerTextHack = document.getElementById('inner-text-hack')
 
 const stagesC = 4;
 let currentFileContent;
@@ -28,10 +29,7 @@ popupAddHoverClick(genPopupId, settingsEl.firstElementChild, (pressed) => settin
 
 genPopupEl.popup.appendChild($('<div style="margin-bottom: 0.3rem">Расположение дней:</div>').get()[0])
 scheduleLayoutEl = genPopupEl.popup.appendChild($(`<div contentEditable="true" style="width: 100%; border: none; outline: none; border-bottom: 1px solid white; min-height: 1rem; display: inline-block; font-family: monospace; font-size: 1.0rem"></div>`).get()[0])
-scheduleLayoutEl.innerHTML = 'Пн Чт<br\>Вт Пт<br\>Ср Сб'/*
-    textContent - ignores line breaks,
-    innerText - doesn't read when the element is hidden (nice)  https://stackoverflow.com/a/43740154/18704284
-*/
+scheduleLayoutEl.innerHTML = 'Пн Чт<br\>Вт Пт<br\>Ср Сб'
 }
 
 function hideOverlay() {
@@ -222,6 +220,11 @@ function nameFixup(name) {
     else return newName;
 }
 
+function readElementText(element) {
+    innerTextHack.innerHTML = element.innerHTML
+    return innerTextHack.innerText
+}
+
 async function processPDF0() {
     resetStage()
     setStatus("Начинаем обработку")
@@ -231,7 +234,7 @@ async function processPDF0() {
 
     const nameFixed = nameFixup(name)
 
-    const scheme = readScheduleScheme(scheduleLayoutEl.innerHTML.replace(/<\s*[bB][rR]\s*\/?>/g, '\n'))
+    const scheme = readScheduleScheme(readElementText(scheduleLayoutEl))
 
     const origTask = pdfjsLib.getDocument({ data: contents }); try {
     let orig

@@ -101,5 +101,17 @@
             </svg>
         </div>
     </div>
+
+    <div style="position: absolute; width: 0px; height: 0px; top: 0; left: 0; transform: scale(0);">
+        <!--HTML does not have any way to make resizable multiline prompt
+            the only other option, namely contentEditable=true, has a number of fields for reading text, none of which work:
+              textContent - ignores line breaks,
+              innerText - doesn't read when the element is hidden (nice)  https://stackoverflow.com/a/43740154/18704284
+              innerHTML - returns <br> and $nbsp; and God knows what else
+
+              the idea behind this div is simple, we will use visible element + innerText, and I hope it won't break bc of height 0
+        -->
+        <div id="inner-text-hack"; ></div>
+    </div>
 </body>
 </html>
