@@ -211,7 +211,7 @@ body[data-fileLoaded] #group-input:placeholder-shown {
     flex-wrap: wrap;
     row-gap: 3rem;
     column-gap: 3rem;
-    justify-content: space-between;
+    justify-content: center;
     align-items: flex-start;
 }
 
@@ -220,10 +220,6 @@ body[data-fileLoaded] #group-input:placeholder-shown {
         flex-direction: column-reverse;
         align-items: center;
     }
-}
-
-#outputs > * {
-    flex: 1 1 0px;
 }
 
 #drop-zone {

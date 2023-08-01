@@ -9,11 +9,12 @@ const filenameElement = $('#filename')
 const outputs = $('#outputs')
 const innerTextHack = document.getElementById('inner-text-hack')
 
-const stagesC = 4;
 let currentFileContent;
 let currentFi;
 let currentPending, processing;
-let currentStage;
+
+let prevProgress
+let curStatus = {};
 
 function clearPrompt() {
     groupInput.val('')
@@ -58,16 +59,19 @@ $(window).on("dragover", function (e) {
 
 function checkShouldProcess() {
     if(processing) return;
-    setStatus('')
     if(!currentPending) return;
 
+    resetStage()
     if(currentFileContent == undefined) {
-        setStatus('Для продолжения требуется файл расписания')
+        updInfo({ msg: 'Для продолжения требуется файл расписания', type: 'pending' })
         return
     }
     const name = groupInput.val().toString().trim()
     if(name == '') {
-        setStatus('Для продолжения введите имя группы и нажмите <span style="color: rgb(124 10 144)">Enter</span>')
+        updInfo({
+            msg: 'Для продолжения введите имя группы и нажмите <span style="color: rgb(124 10 144)">Enter</span>', 
+            type: 'pending'
+        })
         return
     }
 
@@ -84,6 +88,9 @@ function checkShouldProcess() {
 
 function updatePending(newValue) {
     currentPending = newValue;
+    if(!currentPending && curStatus.level === 'info'
+        && (curStatus.type == undefined || curStatus.type === 'pending')
+    ) updInfo({ msg: '', type: 'pending' })
     if(currentPending) startButton.attr('data-pending', '')
     else startButton.removeAttr('data-pending')
     checkShouldProcess()
@@ -103,46 +110,67 @@ startButton.on('click', function() {
 })
 
 
-function resizeProgressBar(immediately) {
+function resizeProgressBar(progress, immediately) {
     const w = groupBar.width()
     const b = groupBar.height() * 0.5 
+
+    if(progress < 0 || progress > 1) {
+        console.error('progress out of bounds', progress)
+        progress = Math.min(Math.max(progress, 0), 1)
+    }
 
     moveWithBorder.css({ 'margin-left': b, 'margin-right': b })
 
     let newW;
-    if(currentStage === -1) newW = 0;
-    else if(currentStage+1 === stagesC) newW = w;
-    else newW = (currentStage+1) / stagesC * (w - 2*b) + b;
+    if(progress === undefined) newW = 0;
+    else if(progress === 1) newW = w;
+    else newW = progress * (w - 2*b) + b;
     if(immediately) progressBar.css('transition', 'width: 0ms')
     progressBar.css('width', newW + 'px').css('transition', '')
 }
-new ResizeObserver(() => resizeProgressBar(true)).observe(groupBar.get()[0])
+new ResizeObserver(() => resizeProgressBar(curStatus.progress, true)).observe(groupBar.get()[0])
 function resetStage() {
-    currentStage = -1
-    resizeProgressBar(false)
-    setStatus('')
+    curStatus = { level: 'info' }
+    updStatus()
 }
-function nextStage(msg, warning) {
-    currentStage++;
-    if(currentStage >= stagesC) {
-        console.log("change stagesC! (" + currentStage + ")")
+
+function updStatus() { try {
+    const s = curStatus
+
+    if(s.level === 'error') {
+        progressBar.css('background-color', '#f15642')
+        if(prevProgress !== s.progress) resizeProgressBar(s.progress)
+
+        statusEl.html("Ошибка: " + s.msg).css('color', '#f15642').css({opacity:1})
     }
-    progressBar.css('background-color', '')
-    resizeProgressBar(false)
-    setStatus(msg, warning)
+    else if(s.level === 'info') {
+        progressBar.css('background-color', '')
+        if(prevProgress !== s.progress) resizeProgressBar(s.progress)
+
+        if(!s.msg || s.msg.trim() === '') statusEl.text('\u200c').css({opacity:0})
+        else statusEl.html(s.msg).css('color', '#202020').css({opacity:1})
+    }
+    else throw "Неизвестный уровень статуса: `" + s.level + "`"
+
+    if(!s.warning || s.warning.trim() === '') warningEl.text('').css({opacity:0})
+    else warningEl.html(s.warning).css({opacity:1})
+
+} finally { prevProgress = curStatus.progress } }
+
+function updIfndef(obj, prop, value) {
+    if(!obj.hasOwnProperty(prop)) obj[prop] = value
 }
-function setError(msg) {
-    if(currentStage == -1) currentStage = stagesC-1
-    progressBar.css('background-color', '#f15642')
-    resizeProgressBar(false)
-    statusEl.html("Ошибка: " + msg).css('color', '#f15642').css({opacity:1})
-    warningEl.text('').css({opacity:0})
+function updError(statusParams) {
+    statusParams.level = 'error'
+    updIfndef(statusParams, 'progress', curStatus.progress)
+    curStatus = statusParams
+    updStatus()
 }
-function setStatus(msg, warning) {
-    if(!msg || msg.trim() === '') statusEl.text('\u200c').css({opacity:0})
-    else statusEl.html(msg).css('color', '#202020').css({opacity:1})
-    if(!warning || warning.trim() === '') warningEl.text('').css({opacity:0})
-    else warningEl.html(warning).css({opacity:1})
+
+function updInfo(statusParams) {
+    statusParams.level = 'info'
+    curStatus = statusParams
+    updStatus()
 }
 
 $('.file-picker').on('click', function() {
@@ -151,16 +179,14 @@ $('.file-picker').on('click', function() {
 window.addEventListener('drop', function(ev) { 
     ev.preventDefault();
     hideOverlay()
-
     loadFromListFiles(ev.dataTransfer.files)
 })
-
 async function loadFromListFiles(list) {
     if(list.length === 0) {
         //if you drop files fast enough sometimes files list would be empty
-        setError("Не удалось получить файлы. Попробуйте перетащить их ещё раз");
+        updError({ msg: 'Не удалось получить файлы. Попробуйте перетащить их ещё раз', type: 'fieldUpdate', progress: undefined });
         return
-    }
+    } 
 
     resetStage()
 
@@ -181,7 +207,7 @@ async function loadFromListFiles(list) {
             }
             else {
                 filenameElement.text('Файл' + (list.length === 1 ? '' : ' №' + (i+1)) + ': ' + file.name).css({opacity:1})
-                setStatus("Файл загружен")
+                updInfo({ msg: 'Файл загружен', type: 'fieldUpdate' })
                 $(document.body).attr('data-fileLoaded', '')
 
                 checkShouldProcess()
@@ -191,7 +217,7 @@ async function loadFromListFiles(list) {
 
         if(i < list.length) continue
 
-        setError(errorReason)
+        updError({ msg: errorReason, type: 'fieldUpdate', progress: undefined })
         return
     }
 
@@ -226,14 +252,14 @@ function readElementText(element) {
 }
 
 async function processPDF0() {
-    resetStage()
-    setStatus("Начинаем обработку")
+    const stagesC = 4
+    let stage = 0
+    const ns = () => { return ++stage / (stagesC+1) }
+    updInfo({ msg: 'Начинаем обработку', type: 'processing', progress: ns() })
 
     const contents = copy(currentFileContent)
     const name = groupInput.val().toString().trim()
-
     const nameFixed = nameFixup(name)
-
     const scheme = readScheduleScheme(readElementText(scheduleLayoutEl))
 
     const origTask = pdfjsLib.getDocument({ data: contents }); try {
@@ -276,9 +302,9 @@ async function processPDF0() {
 
                 const boundsH = findItemBoundsH(cont, i);
                 const vBounds = findDaysOfWeekHoursBoundsV(cont);
-                nextStage("Достаём расписание из файла")
+                updInfo({ msg: 'Достаём расписание из файла', type: 'processing', progress: ns() })
                 const [schedule, bigFields] = makeSchedule(cont, vBounds, boundsH);
-                nextStage("Создаём PDF файл расписания")
+                updInfo({ msg: 'Создаём PDF файл расписания', type: 'processing', progress: ns() })
                 const doc = await scheduleToPDF(schedule, scheme, 1000)
 
                 let warningText = ''
@@ -295,12 +321,12 @@ async function processPDF0() {
                 }
 
 
-                nextStage("Создаём предпросмотр")
+                updInfo({ msg: 'Создаём предпросмотр', type: 'processing', progress: ns() })
                 const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
                 const img = await renderPDF(copy(doc), 250)
                 createAndInitOutputElement(scheme, schedule, doc, img, outputs.get()[0], outFilename)
 
-                nextStage("Готово", warningText)
+                updInfo({ msg: 'Готово', warning: warningText, type: 'processing', progress: ns() })
                 return
             }
             catch(e) {
@@ -316,7 +342,7 @@ async function processPDF0() {
 
         }
     }
-    throw ["Имя группы не найдено", "количество страниц = " + orig.numPages];
+    throw ["Имя группы не найдено `" + name + "`", "количество страниц = " + orig.numPages];
     } finally { await origTask.destroy() }
 }
 
@@ -337,7 +363,7 @@ function processPDF() {
             console.error(e)
         }
 
-        setError(str)
+        updError({ msg: str, type: 'processing' })
     })
 }
 

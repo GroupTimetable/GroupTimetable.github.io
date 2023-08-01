@@ -704,23 +704,17 @@ async function renderPDF(doc, width) {
     } finally { await pdfTask.destroy() }
 }
 
+const url = 'times_new_roman.ttf' //local server required
+const fontBytes = fetch(url).then(res => res.arrayBuffer()); 
 
-const globalDocument = (async() => {
-    const pdfDoc = await PDFLib.PDFDocument.create();
-    pdfDoc.registerFontkit(window.fontkit);
+const getDocument = (async() => {
+    const pdfDoc = await PDFLib.PDFDocument.create() /*
+        we can't reuse the document and glyph cache because of 
+        library issue: https://github.com/Hopding/pdf-lib/issues/1492
+    */
+    pdfDoc.registerFontkit(window.fontkit)
 
-    pdfDoc.__saveAndCleanup = async function() {
-        const r = await this.save()
-        let pc
-        while(pc = this.getPageCount()) {
-            this.removePage(pc-1)
-        }
-        return r
-    };
-
-    const url = 'times_new_roman.ttf' //local server required
-    const fontBytes = await fetch(url).then(res => res.arrayBuffer()); 
-    const font = await pdfDoc.embedFont(fontBytes, {subset:true});
+    const font = await pdfDoc.embedFont(await fontBytes, {subset:true});
 
     font.embedder.__descenderAtHeight = function(size, options) {
         if (options === void 0) { options = {}; }
@@ -735,13 +729,13 @@ const globalDocument = (async() => {
     }
 
     return [pdfDoc, font]
-})()
+})
 
 async function scheduleToPDF(schedule, renderPattern, width) {
     const [height, groupSize] = calcSize(schedule, renderPattern, width);
 
-    const [pdfDoc, font] = await globalDocument
-    const page = pdfDoc.addPage([width, height]);
+    const [pdfDoc, font] = await getDocument()
+    const page = pdfDoc.addPage([width, height])
 
     for(let i = 0; i < renderPattern.length; i++) {
         let curY = height;
@@ -754,7 +748,7 @@ async function scheduleToPDF(schedule, renderPattern, width) {
         }
     }
 
-    return pdfDoc.__saveAndCleanup();
+    return pdfDoc.save();
 }
 
 const daysOfWeekShortened = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
