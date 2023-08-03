@@ -151,8 +151,9 @@ function resizeProgressBar(progress, immediately) {
     if(progress === undefined) newW = 0;
     else if(progress === 1) newW = w;
     else newW = progress * (w - 2*b) + b;
-    if(immediately) progressBar.css('transition', 'width: 0ms')
-    progressBar.css('width', newW + 'px').css('transition', '')
+    //https://stackoverflow.com/a/21594219/18704284
+    progressBar.attr('data-transition', !immediately)
+    progressBar.css('width', newW + 'px')
 }
 new ResizeObserver(() => resizeProgressBar(curStatus.progress, true)).observe(groupBar.get()[0])
 function resetStage() {

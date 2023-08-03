@@ -201,7 +201,10 @@ body[data-fileLoaded] #group-input:placeholder-shown {
     border: 0px solid transparent;
     border-radius: 999999px;
     width: 0%;
-    transition: width 100ms; 
+
+    &[data-transition=true] {
+        transition: width 100ms; 
+    }
 }
 
 
