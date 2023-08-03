@@ -9,6 +9,8 @@ const daysOfWeek = [
 ]; 
 
 const daysOfWeekLower = daysOfWeek.map(a => a.toLowerCase())
+const daysOfWeekShortened = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+const daysOfWeekShortenedLower = daysOfWeekShortened.map(it => it.toLowerCase())
 
 function findItemBoundsH(cont, itemI) {
     const item = cont[itemI];
@@ -705,7 +707,7 @@ async function renderPDF(doc, width, type = 'image/png', quality = 1) {
 const url = 'times_new_roman.ttf' //local server required
 const fontBytes = fetch(url).then(res => res.arrayBuffer()); 
 
-const getDocument = (async() => {
+async function getDocument() {
     const pdfDoc = await PDFLib.PDFDocument.create() /*
         we can't reuse the document and glyph cache because of 
         library issue: https://github.com/Hopding/pdf-lib/issues/1492
@@ -727,7 +729,7 @@ const getDocument = (async() => {
     }
 
     return [pdfDoc, font]
-})
+}
 
 async function scheduleToPDF(schedule, renderPattern, width, rowRatio) {
     const [height, groupSize] = calcSize(schedule, renderPattern, width, rowRatio);
@@ -749,10 +751,8 @@ async function scheduleToPDF(schedule, renderPattern, width, rowRatio) {
     return pdfDoc.save();
 }
 
-const daysOfWeekShortened = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
-
 function readScheduleScheme(text) {
-    const dowa = daysOfWeekShortened
+    const dowa = daysOfWeekShortenedLower
     text = text.split('\n')
 
     const scheme = []
@@ -776,7 +776,7 @@ function readScheduleScheme(text) {
 
         for(let j = 0; j < count; j++) {
             const sp = j*3;
-            const p = line.substring(sp, sp+2)
+            const p = line.substring(sp, sp+2).toLowerCase()
 
             if(p.trim() === '');
             else {
@@ -793,6 +793,5 @@ function readScheduleScheme(text) {
         }
     }
 
-    //let daysScheme = [[0, 1, 2], [3, 4]]
     return scheme
 }

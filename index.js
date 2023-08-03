@@ -15,7 +15,7 @@ the only other option, namely contentEditable=true, has a number of fields for r
   innerHTML - returns <br> and $nbsp; and God knows what else
 
   the idea behind this div is simple, we will use visible element + innerText, and I hope it won't break bc of height 0*/
-const innerTextHack = hiddenElement.appendChild(document.createElement('div'))
+const innerTextHack = hiddenElement/*not actually hidden*/.appendChild(document.createElement('div'))
 
 let currentFileContent;
 let currentFi;
@@ -278,6 +278,19 @@ function readElementText(element) {
     return innerTextHack.innerText
 }
 
+function makeWarningText(schedule, bigFields) {
+    if(!bigFields.length) return ''
+    let prevDay
+    let warningText = ''
+    for(let i = 0; i < bigFields.length; i++) {
+        const f = bigFields[i]
+        if(prevDay === f.day) warningText += ', ' + minuteOfDayToString(schedule[f.day][f.hours].sTime)
+        else warningText += '; ' + daysOfWeekShortened[f.day] + ' ' + minuteOfDayToString(schedule[f.day][f.hours].sTime)
+        prevDay = f.day
+    }
+    return "Внимание, обнаружены большие поля названий уроков (" + warningText.substring(2) + "). Проверьте полученное расписание на их корркетность."
+}
+
 async function processPDF0() {
     const stagesC = 4
     let stage = 0
@@ -291,75 +304,43 @@ async function processPDF0() {
     if(!(rowRatio < 1000 && rowRatio > 0.001)) throw ['Неправильное значение высоты строки', heightEl.value]
     const scheme = readScheduleScheme(readElementText(scheduleLayoutEl))
 
-    const origTask = pdfjsLib.getDocument({ data: contents }); try {
+    const origTask = pdfjsLib.getDocument({ data: contents });
+    const origDestructor = [call1(origTask.destroy.bind(origTask))]
+    const destroyOrig = () => Promise.all(origDestructor.map(it => it()))
+    try {
     let orig
     try { orig = await origTask.promise }
     catch (e) { throw ["Документ не распознан как PDF", e] }
+
+    origDestructor.push(call1(orig.cleanup.bind(orig))) //do I even need this?
 
     for(let j = 0; j < orig.numPages; j++) {
         try {
             const page = await orig.getPage(j + 1);
             const cont = (await page.getTextContent()).items;
+            const contLength = cont.length
 
             for(let i = 0; i < cont.length; i++) {
                 if(nameFixup(cont[i].str) === nameFixed) try {
-
-                if(false) {
-                    var viewport = page.getViewport({ scale: 1, });
-                    // Support HiDPI-screens.
-                    var outputScale = window.devicePixelRatio || 1;
-
-                    var canvas = document.getElementById('the-canvas');
-                    var context = canvas.getContext('2d');
-
-                    canvas.width = Math.floor(viewport.width * outputScale);
-                    canvas.height = Math.floor(viewport.height * outputScale);
-                    canvas.style.width = Math.floor(viewport.width) + "px";
-                    canvas.style.height =  Math.floor(viewport.height) + "px";
-
-                    var transform = outputScale !== 1
-                        ? [outputScale, 0, 0, outputScale, 0, 0]
-                        : null;
-
-                    var renderContext = {
-                        canvasContext: context,
-                        transform: transform,
-                        viewport: viewport
-                    };
-                    await page.render(renderContext).promise
-                }
 
                 const boundsH = findItemBoundsH(cont, i);
                 const vBounds = findDaysOfWeekHoursBoundsV(cont);
                 updInfo({ msg: 'Достаём расписание из файла', type: 'processing', progress: ns() })
                 const [schedule, bigFields] = makeSchedule(cont, vBounds, boundsH);
+                destroyOrig()
                 updInfo({ msg: 'Создаём PDF файл расписания', type: 'processing', progress: ns() })
                 const doc = await scheduleToPDF(schedule, scheme, 1000, rowRatio)
-
-                let warningText = ''
-                if(bigFields.length !== 0) {
-                    warningText += "Внимание, обнаружены большие поля названий уроков (" 
-                    for(let i = 0; i < bigFields.length; i++) {
-                        const f = bigFields[i]
-                        const d = schedule[f.day]
-                        const h = d[f.hours]
-                        warningText += daysOfWeek[f.day] + '-' + minuteOfDayToString(h.sTime) +  '; '
-                    }
-                    warningText = warningText.substring(0, warningText.length-2)
-                    warningText += "). Проверьте полученное расписание на их корркетность"
-                }
-
-
+                const warningText = makeWarningText(schedule, bigFields)
+                await destroyOrig() //https://github.com/mozilla/pdf.js/issues/16777
                 updInfo({ msg: 'Создаём предпросмотр', type: 'processing', progress: ns() })
                 const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
-                const img = await renderPDF(copy(doc), 250)
-                createAndInitOutputElement(scheme, schedule, doc, img, outputs.get()[0], outFilename)
+                await createAndInitOutputElement(scheme, schedule, doc, outputs.get()[0], outFilename)
 
                 updInfo({ msg: 'Готово', warning: warningText, type: 'processing', progress: ns() })
                 return
             }
             catch(e) {
-                const add = "[название группы] = " + i + '/' + cont.length
+                const add = "[название группы] = " + i + '/' + contLength
                 if(Array.isArray(e)) { e.push(add); throw e }
                 else throw [e, add] 
             }
@@ -372,8 +353,35 @@ async function processPDF0() {
         }
     }
     throw ["Имя группы не найдено `" + name + "`", "количество страниц = " + orig.numPages];
-    } finally { await origTask.destroy() }
+    } finally { await destroyOrig() }
 }
+
+/*
+if(false) {
+    var viewport = page.getViewport({ scale: 1, });
+    // Support HiDPI-screens.
+    var outputScale = window.devicePixelRatio || 1;
+
+    var canvas = document.getElementById('the-canvas');
+    var context = canvas.getContext('2d');
+
+    canvas.width = Math.floor(viewport.width * outputScale);
+    canvas.height = Math.floor(viewport.height * outputScale);
+    canvas.style.width = Math.floor(viewport.width) + "px";
+    canvas.style.height =  Math.floor(viewport.height) + "px";
+
+    var transform = outputScale !== 1
+        ? [outputScale, 0, 0, outputScale, 0, 0]
+        : null;
+
+    var renderContext = {
+        canvasContext: context,
+        transform: transform,
+        viewport: viewport
+    };
+    await page.render(renderContext).promise
+}
+*/
 
 function processPDF() {
      return processPDF0().catch(e => {

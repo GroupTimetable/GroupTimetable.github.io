@@ -225,7 +225,6 @@ async function processEdit() {
 
     const pdf = await scheduleToPDF(schedule, scheme, 1000)
     const outs = document.getElementById('outputs')
-    const img = await renderPDF(copy(pdf), 250)
-    createAndInitOutputElement(scheme, schedule, pdf, img, outs, '') 
+    createAndInitOutputElement(scheme, schedule, pdf, outs, '') 
 }
 

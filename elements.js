@@ -8,19 +8,10 @@ function htmlToElement(html) {
 
 const hiddenElement = document.body.appendChild(htmlToElement(`<div style="position: absolute; width: 0px; height: 0px; top: 0; left: 0; transform: scale(0);"></div>`))
 
-function scriptToElementPromise(src) { return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-
-    s.setAttribute('type', 'text/javascript') 
-    s.setAttribute('charset', 'windows-1251')
-    s.setAttribute('src', src);
-    s.addEventListener('load', resolve);
-    s.addEventListener('error', reject);
-
-    document.head.appendChild(s);
-}) }
-
-const vkScript = scriptToElementPromise("https://vk.com/js/api/share.js?93");
+function call1(func) {
+    let result;
+    return () => (result ??= [func()])[0]
+}
 
 function createOutputElement() {
     const el = htmlToElement(`
@@ -185,7 +176,7 @@ function downloadUrl(url, filename) {
     }, 0);
 }
 
-function createAndInitOutputElement(scheme, schedule, doc, preview, parentElement, name) {
+async function createAndInitOutputElement(scheme, schedule, doc, parentElement, name) {
     const fileUrl = window.URL.createObjectURL(new Blob([copy(doc)], { type: 'application/pdf' }));
     const imagesForWidth = []
 
@@ -196,18 +187,16 @@ function createAndInitOutputElement(scheme, schedule, doc, preview, parentElemen
         for(let i = 0; i < ifw.length; i++) if(ifw[i].width === width) return retOrig ? ifw[i].img : ifw[i].url
 
         if(ifw.length > 4) URL.revokeObjectURL(ifw.pop().img);
-        const img = new Blob([await renderPDF(copy(doc), width, undefined, 0)], { type: "image/png" })
+        const img = await renderPDF(copy(doc), width)
         const url = URL.createObjectURL(img);
         ifw.unshift({ width, img, url })
         return retOrig ? img : url
     }
 
     const element = createOutputElement()
-    parentElement.appendChild(element.element)
 
-    const previewUrl = URL.createObjectURL(preview)
-    element.image.src = previewUrl 
     element.widthInput.value = 1000
+    element.image.src = await getImage()
 
     element.name.textContent = name
     element.viewPdf.addEventListener('click', function() {
@@ -230,7 +219,6 @@ function createAndInitOutputElement(scheme, schedule, doc, preview, parentElemen
     element.del.addEventListener('click', function() {
         parentElement.removeChild(element.element)
         unregisterPopup(element.popupId)
-        window.URL.revokeObjectURL(previewUrl);
         window.URL.revokeObjectURL(fileUrl);
         const ifw = imagesForWidth
         for(let i = 0; i < ifw.length; i++) URL.revokeObjectURL(ifw[i].img);
@@ -268,6 +256,8 @@ function createAndInitOutputElement(scheme, schedule, doc, preview, parentElemen
         sessionStorage.setItem(storageId, parms);
         window.open("./fix.html" + "?sid=" + storageId);
     })
+
+    parentElement.appendChild(element.element)
 }
 
 
@@ -292,6 +282,16 @@ const css = `
         grid-row: 1;
         grid-column: 1;
     }
+}
+
+@keyframes opacity01 {
+    from { opacity: 0 } to { opacity: 1 }
+}
+
+.output-cont {
+    animation: opacity01;
+    animation-duration: 200ms;
+    animation-fill-mode: both;
 }
 
 .out-overlay {
@@ -396,13 +396,13 @@ const css = `
             &[data-anim] {
                 animation: opacity-inc2;
                 animation-duration: 0.4s;
-                animation-timing-function: ease-out;
-                animation-delay: 0.08s;
+                animation-timing-function: cubic-bezier(0, 0, 0.33, 1);
+                animation-delay: 0.05s;
                 animation-fill-mode: both;
 
                 & > * { 
                     animation: opacity-inc1; 
-                    animation-duration: 0.08s;
+                    animation-duration: 0.05s;
                     animation-timing-function: cubic-bezier(1, 0, 1, 1);
                     animation-fill-mode: both;
                 }
