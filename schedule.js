@@ -366,7 +366,7 @@ function makeSchedule(cont, vBounds, hBounds) {
 }
 
 
-function calcSize(schedule, renderPattern, width) {
+function calcSize(schedule, renderPattern, width, rowRatio/*height/width*/) {
     let maxLessonsInCol = 1;
     for(let i = 0; i < renderPattern.length; i++) {
         let maxCount = 0;
@@ -380,7 +380,7 @@ function calcSize(schedule, renderPattern, width) {
         if(maxCount > maxLessonsInCol) maxLessonsInCol = maxCount;
     }
 
-    const height = width / renderPattern.length * maxLessonsInCol*(1 / 5.2);
+    const height = width / renderPattern.length * maxLessonsInCol * rowRatio;
     const groupSize = { h: height / maxLessonsInCol, w: width / renderPattern.length };
 
     return [height, groupSize];
@@ -554,31 +554,29 @@ function minuteOfDayToString(it) {
 function drawTime(lesson, page, font, coord, blockSize) {
     const innerSize = { w: blockSize.w*0.8, h: blockSize.h*0.9 }
 
-    const text = [
+    const texts = [
         minuteOfDayToString(lesson.sTime),
         "–",
         minuteOfDayToString(lesson.eTime)
     ];
-    let fontSize = font.sizeAtHeight(innerSize.w);
+    const textHeight = innerSize.w
+    let fontSize = font.sizeAtHeight(textHeight);
     const widths = []
-    let largestWidth;
-    for(let i = 0; i < text.length; i++) {
-        const textWidth = font.widthOfTextAtSize(text[i], fontSize)
+    let largestWidth = 0
+    for(let i = 0; i < texts.length; i++) {
+        const textWidth = font.widthOfTextAtSize(texts[i], fontSize)
         widths.push(textWidth)
-        if(largestWidth == undefined || textWidth > largestWidth) {
-            largestWidth = textWidth;
-        }
+        if(textWidth > largestWidth) largestWidth = textWidth;
     }
-    const textHeight = font.heightAtSize(fontSize)
 
-    const scaledHeight = Math.min(textHeight * innerSize.w / largestWidth, innerSize.h);
+    const scaledHeight = Math.min(textHeight * innerSize.w / largestWidth, innerSize.h / texts.length);
     fontSize = font.sizeAtHeight(scaledHeight);
 
     const coeff = scaledHeight / textHeight;
     for(let i = 0; i < widths.length; i++) widths[i] *= coeff
 
     drawTextCentered(
-        text, page, font, fontSize, 
+        texts, page, font, fontSize, 
         { x: coord.x + blockSize.w*0.5, y: coord.y - blockSize.h*0.5 },
         widths
     );
@@ -680,7 +678,7 @@ function drawDay(day, dayI, page, font, coord, groupSize) {
     })
 }
 
-async function renderPDF(doc, width) {
+async function renderPDF(doc, width, type = 'image/png', quality = 1) {
     const pdfTask = pdfjsLib.getDocument(doc); try {
     const pdf = await pdfTask.promise
     const page = await pdf.getPage(1);
@@ -700,7 +698,7 @@ async function renderPDF(doc, width) {
     
     await page.render(renderContext).promise;
 
-    return await canvas.convertToBlob();
+    return await canvas.convertToBlob({ type, quality });
     } finally { await pdfTask.destroy() }
 }
 
@@ -731,8 +729,8 @@ const getDocument = (async() => {
     return [pdfDoc, font]
 })
 
-async function scheduleToPDF(schedule, renderPattern, width) {
-    const [height, groupSize] = calcSize(schedule, renderPattern, width);
+async function scheduleToPDF(schedule, renderPattern, width, rowRatio) {
+    const [height, groupSize] = calcSize(schedule, renderPattern, width, rowRatio);
 
     const [pdfDoc, font] = await getDocument()
     const page = pdfDoc.addPage([width, height])

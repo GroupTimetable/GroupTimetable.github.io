@@ -7,7 +7,15 @@ const statusEl = $('#status')
 const warningEl = $('#warning')
 const filenameElement = $('#filename')
 const outputs = $('#outputs')
-const innerTextHack = document.getElementById('inner-text-hack')
+
+/*HTML does not have any way to make resizable multiline prompt
+the only other option, namely contentEditable=true, has a number of fields for reading text, none of which work:
+  textContent - ignores line breaks,
+  innerText - doesn't read when the element is hidden (nice)  https://stackoverflow.com/a/43740154/18704284
+  innerHTML - returns <br> and $nbsp; and God knows what else
+
+  the idea behind this div is simple, we will use visible element + innerText, and I hope it won't break bc of height 0*/
+const innerTextHack = hiddenElement.appendChild(document.createElement('div'))
 
 let currentFileContent;
 let currentFi;
@@ -21,16 +29,34 @@ function clearPrompt() {
 }
 
 let scheduleLayoutEl
+let heightEl
 {
-const settingsEl = document.querySelector('.generation-settings')
-const genPopupEl = insertPopup(settingsEl)
-const genPopupId = registerPopup(genPopupEl)
+    const settingsEl = document.querySelector('.generation-settings')
+    const genPopupEl = insertPopup(settingsEl)
+    const genPopupId = registerPopup(genPopupEl)
 
-popupAddHoverClick(genPopupId, settingsEl.firstElementChild, (pressed) => settingsEl.setAttribute('data-pressed', pressed))
+    const genPopupHTML = htmlToElement(`<div>
+        <div style="margin-bottom: 0.3rem">Расположение дней:</div>
+        <div class="days-scheme" contentEditable="true" style="border:none;outline:none; border-bottom: 1px solid white; 
+            white-space: nowrap;
+            width: 100%; min-height: 1rem; display: inline-block; font-family: monospace; font-size: 1.0rem"></div>
+        <div style="margin-top: 0.6rem; display: flex; align-items: baseline">
+            <div style="text-align: right; flex-grow: 1">Высота&nbsp;строки:&nbsp;</div>
+            <input class="height-input" type="number" style="
+                text-align: right; font-size: 1rem; color: white;
+                border-bottom: 0.1rem solid white"
+                max="6" min="0"/>
+            <div>%</div>
+        </div>
+    </div>`)
 
-genPopupEl.popup.appendChild($('<div style="margin-bottom: 0.3rem">Расположение дней:</div>').get()[0])
-scheduleLayoutEl = genPopupEl.popup.appendChild($(`<div contentEditable="true" style="width: 100%; border: none; outline: none; border-bottom: 1px solid white; min-height: 1rem; display: inline-block; font-family: monospace; font-size: 1.0rem"></div>`).get()[0])
-scheduleLayoutEl.innerHTML = 'Пн Чт<br\>Вт Пт<br\>Ср Сб'
+    popupAddHoverClick(genPopupId, settingsEl.firstElementChild, (pressed) => settingsEl.setAttribute('data-pressed', pressed))
+
+    genPopupEl.popup.appendChild(genPopupHTML)
+    scheduleLayoutEl = genPopupHTML.querySelector('.days-scheme') 
+    scheduleLayoutEl.innerHTML = 'Пн Чт<br\>Вт Пт<br\>Ср Сб'
+    heightEl = genPopupHTML.querySelector('.height-input')
+    heightEl.value = (1/5.2 * 100).toFixed(2)
 }
 
 function hideOverlay() {
@@ -260,6 +286,8 @@ async function processPDF0() {
     const contents = copy(currentFileContent)
     const name = groupInput.val().toString().trim()
     const nameFixed = nameFixup(name)
+    const rowRatio = Number.parseFloat(heightEl.value) / 100
+    if(!(rowRatio < 1000 && rowRatio > 0.001)) throw ['Неправильное значение высоты строки', heightEl.value]
     const scheme = readScheduleScheme(readElementText(scheduleLayoutEl))
 
     const origTask = pdfjsLib.getDocument({ data: contents }); try {
@@ -305,7 +333,7 @@ async function processPDF0() {
                 updInfo({ msg: 'Достаём расписание из файла', type: 'processing', progress: ns() })
                 const [schedule, bigFields] = makeSchedule(cont, vBounds, boundsH);
                 updInfo({ msg: 'Создаём PDF файл расписания', type: 'processing', progress: ns() })
-                const doc = await scheduleToPDF(schedule, scheme, 1000)
+                const doc = await scheduleToPDF(schedule, scheme, 1000, rowRatio)
 
                 let warningText = ''
                 if(bigFields.length !== 0) {
