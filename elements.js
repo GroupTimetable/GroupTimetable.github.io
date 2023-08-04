@@ -6,8 +6,6 @@ function htmlToElement(html) {
     return template.content.firstChild;
 }
 
-const hiddenElement = document.body.appendChild(htmlToElement(`<div style="position: absolute; width: 0px; height: 0px; top: 0; left: 0; transform: scale(0);"></div>`))
-
 function call1(func) {
     let result;
     return () => (result ??= [func()])[0]
@@ -73,7 +71,7 @@ function createOutputElement() {
     </div>
 </div>
 </div>
-`);
+    `);
 
     const popupCont = htmlToElement(`
         <div style="display: flex;align-items: baseline;">
@@ -113,7 +111,7 @@ function createOutputElement() {
 }
 
 function insertPopup(par) {
-const el = htmlToElement(`
+    const el = htmlToElement(`
 <span class='popup-container' shown="false">
     <div> <!-- nice empty div tat serves no purpose in the doc but needed for propper formating -->
         <div class="safe-zone" style="padding: 2rem; margin-top: -2rem; pointer-events: none;">
@@ -130,7 +128,7 @@ const el = htmlToElement(`
         </div>
     </div>
 </span>
-`)
+    `)
     par.style.position = 'relative'
     par.appendChild(el)
     return { 
@@ -141,42 +139,7 @@ const el = htmlToElement(`
 
 }
 
-//https://stackoverflow.com/a/22114687/18704284
-function copy(src) {
-    var dst = new ArrayBuffer(src.byteLength);
-    new Uint8Array(dst).set(new Uint8Array(src));
-    return dst;
-}
-
-function download(file, filename) {
-    if (window.navigator.msSaveOrOpenBlob) // IE10+
-        window.navigator.msSaveOrOpenBlob(file, filename);
-    else { // Others
-        var a = document.createElement("a"),
-        url = URL.createObjectURL(file);
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(function() {
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        }, 0);
-    }
-}
-
-function downloadUrl(url, filename) {
-    var a = document.createElement("a")
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function() {
-        document.body.removeChild(a);
-    }, 0);
-}
-
-async function createAndInitOutputElement(scheme, schedule, doc, parentElement, name) {
+async function createAndInitOutputElement(rowRatio, scheme, schedule, doc, parentElement, name) {
     const fileUrl = window.URL.createObjectURL(new Blob([copy(doc)], { type: 'application/pdf' }));
     const imagesForWidth = []
 
@@ -217,11 +180,19 @@ async function createAndInitOutputElement(scheme, schedule, doc, parentElement, 
         tab.location.href = img;
     })
     element.del.addEventListener('click', function() {
-        parentElement.removeChild(element.element)
-        unregisterPopup(element.popupId)
-        window.URL.revokeObjectURL(fileUrl);
-        const ifw = imagesForWidth
-        for(let i = 0; i < ifw.length; i++) URL.revokeObjectURL(ifw[i].img);
+        const el = element.element
+        el.style.animation = 'none'
+        el.offsetHeight;
+        el.style.animation = null
+        el.style.animationDirection = 'reverse'
+        el.style.animationDuration = '125ms'
+        el.addEventListener('animationend', _ => { 
+            parentElement.removeChild(element.element)
+            unregisterPopup(element.popupId)
+            window.URL.revokeObjectURL(fileUrl);
+            const ifw = imagesForWidth
+            for(let i = 0; i < ifw.length; i++) URL.revokeObjectURL(ifw[i].img);
+        })
     })
     element.downloadImg.addEventListener('click', async function() {
         downloadUrl(await getImage(), name + '.png')
@@ -235,7 +206,6 @@ async function createAndInitOutputElement(scheme, schedule, doc, parentElement, 
             navigator.clipboard.write([
                 new ClipboardItem(obj)
             ])
-            console.log('done')
             //https://stackoverflow.com/a/45036752/18704284
             const el = element.mainActionAnim
             const ch = el.firstElementChild 
@@ -251,7 +221,7 @@ async function createAndInitOutputElement(scheme, schedule, doc, parentElement, 
         }
     })
     element.edit.addEventListener('click', function() {
-        const parms = JSON.stringify({ schedule: schedule, scheme: scheme });
+        const parms = JSON.stringify({ schedule: schedule, scheme: scheme, rowRatio: rowRatio });
         const storageId = "parms" + String(Date.now());
         sessionStorage.setItem(storageId, parms);
         window.open("./fix.html" + "?sid=" + storageId);
@@ -262,44 +232,6 @@ async function createAndInitOutputElement(scheme, schedule, doc, parentElement, 
 
 
 const css = `
-
-.popup input::-webkit-outer-spin-button,
-.popup input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.popup input[type=number] {
-  -moz-appearance: textfield;
-}
-.popup input { border: none; outline: none; background: none; }
-
-.output {
-    display: grid;
-    align-items: center;
-    justify-items: center;
-    box-shadow: 0px 0px 0.5rem 0px #00000030;
-    & > * {
-        grid-row: 1;
-        grid-column: 1;
-    }
-}
-
-@keyframes opacity01 {
-    from { opacity: 0 } to { opacity: 1 }
-}
-
-.output-cont {
-    animation: opacity01;
-    animation-duration: 200ms;
-    animation-fill-mode: both;
-}
-
-.out-overlay {
-    width: 100%; height: 100%; 
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-}
 
 .popup-container {
     width: 0px; height: 0px;
@@ -312,43 +244,108 @@ const css = `
 
     will-change: transform; /*chrome bug*/
     transition: opacity 300ms, transform 300ms;
-}
 
-.popup-container              { z-index: 997; }
-.popup-container:focus-within { z-index: 998; }
-.popup-container:hover        { z-index: 999; }
+    z-index: 997;
+    &:focus-within { z-index: 998; }
+    &:hover        { z-index: 999; }
 
-.popup-container[shown=true] {
-    transform: translateY(0);
-    opacity: 1;
-    & > * { transform: scale(1); transition: transform 0s; }
-}
+    &[shown=true] {
+        transform: translateY(0);
+        opacity: 1;
+        & > * { transform: scale(1); transition: transform 0s; }
+    }
 
-.popup-container:not([shown=true]) {
-    transform: translateY(0.7rem);
-    opacity: 0;
-    & > * { transform: scale(0); transition: transform 0s 300ms; }
-}
+    &:not([shown=true]) {
+        transform: translateY(0.7rem);
+        opacity: 0;
+        & > * { transform: scale(0); transition: transform 0s 300ms; }
+    }
 
-.main-action-img {
-    width: 100%; height: 100%;
-    display: flex; 
-    justify-content: center; 
-    align-items: center;
-
-    & > * {
-        position: relative;
-        z-index: 1;
-
-        min-width: 3rem;
-        min-height: 3rem;
-        max-width: max(30%, 3rem);
-        max-height: max(30%, 3rem);
+    .popup {
+        & input::-webkit-outer-spin-button,
+        & input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        & input[type=number] { -moz-appearance: textfield; }
+        & input { border: none; outline: none; background: none; }
+        &:hover { outline: 1px solid white; }
     }
 }
 
+@keyframes opacity01 {
+    from { opacity: 0 } to { opacity: 1 }
+}
 
-@keyframes opacity-inc1 {
+.output-cont {
+    animation: opacity01;
+    animation-duration: 200ms;
+    animation-fill-mode: both;
+
+    & .output {
+        display: grid;
+        align-items: center;
+        justify-items: center;
+        box-shadow: 0px 0px 0.5rem 0px #00000030;
+        & > * { grid-row: 1; grid-column: 1; }
+    }
+
+    & .out-overlay {
+        width: 100%; height: 100%; 
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+
+        & .main-action-img {
+            width: 100%; height: 100%;
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+
+            & > * {
+                position: relative;
+                z-index: 1;
+
+                min-width: 3rem;
+                min-height: 3rem;
+                max-width: max(30%, 3rem);
+                max-height: max(30%, 3rem);
+            }
+        }
+    }
+
+    & .out-icons {
+        display: flex;
+        padding: 0.3rem;
+
+        & > *:not(.not-icon) {
+            overflow: visible;
+            height: 1.4rem;
+            margin-left: 0.2rem;
+            fill: #f8f8f8;
+            stroke: #f8f8f8;
+            padding: 0.4rem;
+            border: 0px solid #00000000;
+            border-radius: 999999px;
+
+            &:hover {
+                background-color: #ffffff30;
+            }
+
+            &[data-pressed=true] {
+                background-color: #fff;
+                fill: #4286f1;
+                stroke: #4286f1;
+            }
+        }
+    }
+
+    & .out-icons > *:not(.not-icon), & .main-action-img {
+        cursor: pointer;
+    }
+}
+
+@keyframes opacity-inc {
     from { opacity: 0.5 }
     to { opacity: 1 }
 }
@@ -358,9 +355,10 @@ const css = `
 }
 
 @media (pointer: fine) {
-    .out-overlay { background: #00000080; }
 
-    .out-overlay {
+.output-cont {
+    & .out-overlay { 
+        background: #00000080;
         opacity: 0;
         transition: opacity 200ms;
     }
@@ -401,7 +399,7 @@ const css = `
                 animation-fill-mode: both;
 
                 & > * { 
-                    animation: opacity-inc1; 
+                    animation: opacity-inc; 
                     animation-duration: 0.05s;
                     animation-timing-function: cubic-bezier(1, 0, 1, 1);
                     animation-fill-mode: both;
@@ -411,48 +409,17 @@ const css = `
     }
 }
 
+}
+
 @media not (pointer: fine) {
-    .output .out-overlay { opacity: 1; }
-    .output .main-action-img { opacity: 0 }
-    .out-icons { background: #00000080; }
+
+.output-cont .out-overlay { opacity: 1; }
+.output-cont .main-action-img { opacity: 0 }
+.output-cont .out-icons { background: #00000080; }
+
 }
 
-.out-icons {
-    display: flex;
-    padding: 0.3rem;
-
-    & > *:not(.not-icon) {
-        overflow: visible;
-        height: 1.4rem;
-        margin-left: 0.2rem;
-        fill: #f8f8f8;
-        stroke: #f8f8f8;
-        padding: 0.4rem;
-        border: 0px solid #00000000;
-        border-radius: 999999px;
-
-        &:hover {
-            background-color: #ffffff30;
-        }
-
-        &[data-pressed=true] {
-            background-color: #fff;
-            fill: #4286f1;
-            stroke: #4286f1;
-        }
-    }
-}
-
-.out-icons > *:not(.not-icon), .main-action-img {
-    cursor: pointer;
-}
-
-
-.popup:hover { 
-    outline: 1px solid white;
-}
 `
-
 
 { //https://stackoverflow.com/a/524721/18704284
     const head = document.head || document.getElementsByTagName('head')[0],

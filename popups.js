@@ -2,7 +2,6 @@ const stateHidden = 0;
 const stateShown = 1;
 const popupList = {}
 let popupTop = 0
-
 let curActor = 0
 
 function timeout(ms) {
@@ -83,6 +82,33 @@ function isHidden(elem) { //not position: fixed   !
     return !( elem.offsetWidth || elem.offsetHeight || elem.getClientRects().length );
 }
 
+function popupAddHoverClick(id, onElement, whenToggled) {
+    addOwner('hover', id)
+    addOwner('click', id)
+
+    let keepPopupOpen = false, ignoreHover = false
+    onElement.addEventListener('click', () => {
+        keepPopupOpen = !keepPopupOpen;
+
+        if(!window.matchMedia('(pointer: fine)').matches) {
+            ignoreHover = true
+            updatePopup('hover', id, stateHidden)
+        }
+        else ignoreHover = false
+
+        if(keepPopupOpen) updatePopup('click', id, stateShown)
+        else updatePopup('click', id, stateHidden)
+
+        whenToggled(keepPopupOpen)
+    })
+    onElement.addEventListener('mouseenter', () => {
+        if(!ignoreHover) updatePopupAfterMs('hover', id, stateShown, 300)
+    })
+    onElement.addEventListener('mouseleave', () => {
+        if(!ignoreHover) updatePopupAfterMs('hover', id, stateHidden, 500)
+    })
+}
+
 window.addEventListener('mousemove', function(ev) {
     if(popupList.length === 0) return
 
@@ -110,31 +136,3 @@ window.addEventListener('mousemove', function(ev) {
         }
     }
 })
-
-
-function popupAddHoverClick(id, onElement, whenToggled) {
-    addOwner('hover', id)
-    addOwner('click', id)
-
-    let keepPopupOpen = false, ignoreHover = false
-    onElement.addEventListener('click', () => {
-        keepPopupOpen = !keepPopupOpen;
-
-        if(!window.matchMedia('(pointer: fine)').matches) {
-            ignoreHover = true
-            updatePopup('hover', id, stateHidden)
-        }
-        else ignoreHover = false
-
-        if(keepPopupOpen) updatePopup('click', id, stateShown)
-        else updatePopup('click', id, stateHidden)
-
-        whenToggled(keepPopupOpen)
-    })
-    onElement.addEventListener('mouseenter', () => {
-        if(!ignoreHover) updatePopupAfterMs('hover', id, stateShown, 300)
-    })
-    onElement.addEventListener('mouseleave', () => {
-        if(!ignoreHover) updatePopupAfterMs('hover', id, stateHidden, 500)
-    })
-}

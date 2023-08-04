@@ -1,5 +1,6 @@
 let origSchedule;
 let origScheme;
+let origRowRatio;
 
 {
     const prmstr = window.location.search.split("=");
@@ -9,6 +10,7 @@ let origScheme;
         sessionStorage.removeItem(sid);
         origSchedule = args.schedule
         origScheme = args.scheme
+        origRowRatio = args.rowRatio
     }
     else {
         origSchedule = [
@@ -28,6 +30,7 @@ let origScheme;
             [],[],[]
         ]
         origScheme = [[0, 1, 2], [3, 4, 5]]
+        origRowRatio = 0.19
     }
 }
 
@@ -91,6 +94,7 @@ function dayToSimple(day, indent) {
 function scheduleToSimple(schedule) {
     let result = '';
 
+    result += '"Высота/ширину строки": ' + origRowRatio + ',\n'
     result += '"Расположение дней": [';
     for(let j = 0;; j++) {
         let line = ''
@@ -160,6 +164,10 @@ async function processEdit() {
 
     const schedule = new Array(7)
 
+    const rowRatioS = si['Высота/ширину строки']
+    const rowRatio = Number.parseFloat(rowRatioS)
+    if(!(rowRatio < 1000 && rowRatio > 0.001)) throw ['неправильное значение высоты строки', rowRatioS]
+
     const schemeSA = si['Расположение дней'] 
     let schemeS = ''
     for(let i = 0; i < schemeSA.length; i++) {
@@ -223,8 +231,8 @@ async function processEdit() {
         }
     }
 
-    const pdf = await scheduleToPDF(schedule, scheme, 1000)
+    const pdf = await scheduleToPDF(schedule, scheme, 1000, rowRatio)
     const outs = document.getElementById('outputs')
-    createAndInitOutputElement(scheme, schedule, pdf, outs, '') 
+    await createAndInitOutputElement(rowRatio, scheme, schedule, pdf, outs, '') 
 }
 

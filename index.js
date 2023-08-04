@@ -1,12 +1,18 @@
-const groupInput = $('#group-input') 
-const startButton = $('.start-button')
-const groupBar = $('.group-bar')
-const moveWithBorder = $('.move-with-border')
-const progressBar = $('.progress-bar')
-const statusEl = $('#status')
-const warningEl = $('#warning')
-const filenameElement = $('#filename')
-const outputs = $('#outputs')
+const dom = {}
+loadDom.then(_ => {
+    const qs = document.getElementById.bind(document)
+
+    dom.groupInputEl = qs('group-input') 
+    dom.startButtonEl = qs('start-button')
+    dom.groupBarEl = qs('group-bar')
+    dom.moveWithBorderEls = document.body.querySelectorAll('.move-with-border')
+    dom.progressBarEl = qs('progress-bar')
+    dom.statusEl = qs('status')
+    dom.warningEl = qs('warning')
+    dom.filenameEl = qs('filename')
+    dom.outputsEl = qs('outputs')
+    dom.dropZoneEl = qs('drop-zone')
+})
 
 /*HTML does not have any way to make resizable multiline prompt
 the only other option, namely contentEditable=true, has a number of fields for reading text, none of which work:
@@ -15,7 +21,10 @@ the only other option, namely contentEditable=true, has a number of fields for r
   innerHTML - returns <br> and $nbsp; and God knows what else
 
   the idea behind this div is simple, we will use visible element + innerText, and I hope it won't break bc of height 0*/
-const innerTextHack = hiddenElement/*not actually hidden*/.appendChild(document.createElement('div'))
+let innerTextHack
+Promise.all([loadDom, loadCommon]).then(_ => {
+    innerTextHack = document.body.appendChild(htmlToElement(`<div style="position: absolute; width: 0px; height: 0px; top: 0; left: 0; transform: scale(0);"></div>`))
+})
 
 let currentFileContent;
 let currentFi;
@@ -24,17 +33,8 @@ let currentPending, processing;
 let prevProgress
 let curStatus = {};
 
-function clearPrompt() {
-    groupInput.val('')
-}
-
-let scheduleLayoutEl
-let heightEl
-{
-    const settingsEl = document.querySelector('.generation-settings')
-    const genPopupEl = insertPopup(settingsEl)
-    const genPopupId = registerPopup(genPopupEl)
-
+const genSettings = {}
+const createGenSettings = Promise.all([loadDom, loadCommon]).then(_ => {
     const genPopupHTML = htmlToElement(`<div>
         <div style="margin-bottom: 0.3rem">Расположение дней:</div>
         <div class="days-scheme" contentEditable="true" style="border:none;outline:none; border-bottom: 1px solid white; 
@@ -50,38 +50,56 @@ let heightEl
         </div>
     </div>`)
 
-    popupAddHoverClick(genPopupId, settingsEl.firstElementChild, (pressed) => settingsEl.setAttribute('data-pressed', pressed))
+    genSettings.popupEl = genPopupHTML
+    genSettings.scheduleLayoutEl = genPopupHTML.querySelector('.days-scheme') 
+    genSettings.scheduleLayoutEl.innerHTML = 'Пн Чт<br\>Вт Пт<br\>Ср Сб'
+    genSettings.heightEl = genPopupHTML.querySelector('.height-input')
+    genSettings.heightEl.value = (1/5.2 * 100).toFixed(2)
+})
 
-    genPopupEl.popup.appendChild(genPopupHTML)
-    scheduleLayoutEl = genPopupHTML.querySelector('.days-scheme') 
-    scheduleLayoutEl.innerHTML = 'Пн Чт<br\>Вт Пт<br\>Ср Сб'
-    heightEl = genPopupHTML.querySelector('.height-input')
-    heightEl.value = (1/5.2 * 100).toFixed(2)
-}
+Promise.all([loadDom, loadElements, loadPopups, createGenSettings]).then(_ => {
+    const settingsEl = document.querySelector('#generation-settings')
+    const genPopupEl = insertPopup(settingsEl)
+    const genPopupId = registerPopup(genPopupEl)
+    genPopupEl.popup.appendChild(genSettings.popupEl)
+    popupAddHoverClick(genPopupId, settingsEl.firstElementChild, (pressed) => settingsEl.setAttribute('data-pressed', pressed))
+})
 
 function hideOverlay() {
-    $('#drop-zone').css('visibility', 'hidden').css('opacity', '0') 
+    assertDep('dom')
+    dom.dropZoneEl.style.visibility = 'hidden'
+    dom.dropZoneEl.style.opacity = 0
 }
 
 function showOverlay() {
-    $("#drop-zone").css('visibility', '').css('opacity', '1')
+    assertDep('dom')
+    dom.dropZoneEl.style.visibility = ''
+    dom.dropZoneEl.style.opacity = 1
 }
 
-let lastTarget
-window.addEventListener("dragenter", function(event) {
-    event.preventDefault()
-    lastTarget = event.target
-    showOverlay()
-})
+/*drag and drop*/ {
+    let lastTarget
+    window.addEventListener("dragenter", function(event) {
+        event.preventDefault()
+        lastTarget = event.target
+        showOverlay()
+    })
 
-window.addEventListener('dragleave', function(event) {
-    event.preventDefault()
-    if(event.target === lastTarget || event.target === document) hideOverlay()
-})
+    window.addEventListener('dragleave', function(event) {
+        event.preventDefault()
+        if(event.target === lastTarget || event.target === document) hideOverlay()
+    })
 
-$(window).on("dragover", function (e) {
-    e.preventDefault();
-});
+    window.addEventListener("dragover", function (e) {
+        e.preventDefault();
+    });
+
+    window.addEventListener('drop', function(ev) { 
+        ev.preventDefault();
+        hideOverlay()
+        loadFromListFiles(ev.dataTransfer.files)
+    })
+}
 
 function checkShouldProcess() {
     if(processing) return;
@@ -92,7 +110,7 @@ function checkShouldProcess() {
         updInfo({ msg: 'Для продолжения требуется файл расписания', type: 'pending' })
         return
     }
-    const name = groupInput.val().toString().trim()
+    const name = dom.groupInputEl.value.trim()
     if(name == '') {
         updInfo({
             msg: 'Для продолжения введите имя группы и нажмите <span style="color: rgb(124 10 144)">Enter</span>', 
@@ -113,74 +131,104 @@ function checkShouldProcess() {
 }
 
 function updatePending(newValue) {
+    assertDep('dom')
     currentPending = newValue;
     if(!currentPending && curStatus.level === 'info'
         && (curStatus.type == undefined || curStatus.type === 'pending')
     ) updInfo({ msg: '', type: 'pending' })
-    if(currentPending) startButton.attr('data-pending', '')
-    else startButton.removeAttr('data-pending')
+    if(currentPending) dom.startButtonEl.setAttribute('data-pending', '')
+    else dom.startButtonEl.removeAttribute('data-pending')
     checkShouldProcess()
 }
 
-groupInput.on('blur', function(e) {
-    if(processing) return
-    checkShouldProcess() 
-})
-groupInput.on('keypress', function(e) {
-    if(processing) return
-    if (e.key === "Enter") updatePending(true)
-})
-startButton.on('click', function() {
-    if(processing) return;
-    updatePending(!currentPending)
-})
+loadDom.then(_ => {
+    dom.groupInputEl.addEventListener('blur', e => {
+        if(processing) return
+        checkShouldProcess() 
+    })
+    dom.groupInputEl.addEventListener('keypress', e => {
+        if(processing) return
+        if (e.key === "Enter") updatePending(true)
+    })
+    dom.startButtonEl.addEventListener('click', _ => {
+        if(processing) return;
+        updatePending(!currentPending)
+    })
 
+    new ResizeObserver(() => resizeProgressBar(curStatus.progress, true)).observe(dom.groupBarEl)
+
+    document.querySelector('#file-picker').addEventListener('click', function() {
+        pickFile(e => loadFromListFiles(e.target.files))
+    })
+
+    resetStage()
+    updatePending(true)
+})
 
 function resizeProgressBar(progress, immediately) {
-    const w = groupBar.width()
-    const b = groupBar.height() * 0.5 
+    assertDep('dom')
+    const w = dom.groupBarEl.offsetWidth
+    const b = dom.groupBarEl.offsetHeight * 0.5 
 
     if(progress < 0 || progress > 1) {
         console.error('progress out of bounds', progress)
         progress = Math.min(Math.max(progress, 0), 1)
     }
 
-    moveWithBorder.css({ 'margin-left': b, 'margin-right': b })
+    dom.moveWithBorderEls.forEach(it => it.style.marginRight = it.style.marginLeft = b + 'px')
 
     let newW;
     if(progress === undefined) newW = 0;
     else if(progress === 1) newW = w;
     else newW = progress * (w - 2*b) + b;
     //https://stackoverflow.com/a/21594219/18704284
-    progressBar.attr('data-transition', !immediately)
-    progressBar.css('width', newW + 'px')
+    dom.progressBarEl.setAttribute('data-transition', !immediately)
+    dom.progressBarEl.style.width = newW + 'px'
 }
-new ResizeObserver(() => resizeProgressBar(curStatus.progress, true)).observe(groupBar.get()[0])
+
 function resetStage() {
     curStatus = { level: 'info' }
     updStatus()
 }
 
 function updStatus() { try {
+    assertDep('dom')
     const s = curStatus
 
+    const { progressBarEl, statusEl, warningEl } = dom
+
     if(s.level === 'error') {
-        progressBar.css('background-color', '#f15642')
+        progressBarEl.style.backgroundColor = '#f15642'
         if(prevProgress !== s.progress) resizeProgressBar(s.progress)
 
-        statusEl.html("Ошибка: " + s.msg).css('color', '#f15642').css({opacity:1})
+        statusEl.innerHTML = "Ошибка: " + s.msg
+        statusEl.style.color = '#f15642'
+        statusEl.style.opacity = 1
     }
     else if(s.level === 'info') {
-        progressBar.css('background-color', '')
+        progressBarEl.style.backgroundColor = '#4286f1'
         if(prevProgress !== s.progress) resizeProgressBar(s.progress)
 
-        if(!s.msg || s.msg.trim() === '') statusEl.text('\u200c').css({opacity:0})
-        else statusEl.html(s.msg).css('color', '#202020').css({opacity:1})
+        if(!s.msg || s.msg.trim() === '') { 
+            statusEl.innerHTML = '\u200c'
+            statusEl.style.opacity = 0
+        }
+        else {
+            statusEl.innerHTML = s.msg
+            statusEl.style.color = '#202020'
+            statusEl.style.opacity = 1
+        }
     }
     else throw "Неизвестный уровень статуса: `" + s.level + "`"
 
-    if(!s.warning || s.warning.trim() === '') warningEl.text('').css({opacity:0})
-    else warningEl.html(s.warning).css({opacity:1})
+    if(!s.warning || s.warning.trim() === '') {
+        warningEl.innerHTML = ''
+        warningEl.style.opacity = 0
+    }
+    else {
+        warningEl.innerHTML = s.warning
+        warningEl.style.opacity = 1
+    }
 
 } finally { prevProgress = curStatus.progress } }
 
@@ -200,14 +248,18 @@ function updInfo(statusParams) {
     updStatus()
 }
 
-$('.file-picker').on('click', function() {
-    pickFile(e => loadFromListFiles(e.target.files))
-})
-window.addEventListener('drop', function(ev) { 
-    ev.preventDefault();
-    hideOverlay()
-    loadFromListFiles(ev.dataTransfer.files)
-})
+function nameFixup(name) {
+    const alphanumeric = /[\p{L})\p{N}]/u
+
+    let newName = ''
+    for(let i = 0; i < name.length; i++) {
+        let a = name[i]
+        if(alphanumeric.test(a)) newName += a.toLowerCase()
+    }
+    if(newName.length === 0) return name
+    else return newName;
+}
+
 async function loadFromListFiles(list) {
     if(list.length === 0) {
         //if you drop files fast enough sometimes files list would be empty
@@ -233,9 +285,10 @@ async function loadFromListFiles(list) {
                 errorReason = 'Получен пустой файл'
             }
             else {
-                filenameElement.text('Файл' + (list.length === 1 ? '' : ' №' + (i+1)) + ': ' + file.name).css({opacity:1})
+                dom.filenameEl.innerText = 'Файл' + (list.length === 1 ? '' : ' №' + (i+1)) + ': ' + file.name
+                dom.filenameEl.style.opacity = 1
                 updInfo({ msg: 'Файл загружен', type: 'fieldUpdate' })
-                $(document.body).attr('data-fileLoaded', '')
+                document.body.setAttribute('data-fileLoaded', '')
 
                 checkShouldProcess()
                 return
@@ -247,30 +300,6 @@ async function loadFromListFiles(list) {
         updError({ msg: errorReason, type: 'fieldUpdate', progress: undefined })
         return
     }
-
-}
-
-//pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
-const workerUrl = URL.createObjectURL(new Blob(
-    ['importScripts("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.js")'],
-    { type: 'text/javascript' }
-))
-pdfjsLib.GlobalWorkerOptions.workerPort = new Worker(workerUrl);
-URL.revokeObjectURL(workerUrl)
-
-resetStage()
-updatePending(true)
-
-function nameFixup(name) {
-    const alphanumeric = /[\p{L})\p{N}]/u
-
-    let newName = ''
-    for(let i = 0; i < name.length; i++) {
-        let a = name[i]
-        if(alphanumeric.test(a)) newName += a.toLowerCase()
-    }
-    if(newName.length === 0) return name
-    else return newName;
 }
 
 function readElementText(element) {
@@ -295,14 +324,21 @@ async function processPDF0() {
     const stagesC = 4
     let stage = 0
     const ns = () => { return ++stage / (stagesC+1) }
+
+    updInfo({ msg: 'Ожидаем зависимости', type: 'processing', progress: 0 })
+    await Promise.all([
+        loadSchedule, loadCommon, loadElements, loadPopups, createGenSettings, 
+        loadPdfjs, loadPdflibJs, loadFontkit
+    ]).catch(e => { throw "не удалось загрузить зависомость: `" + e + "`" })
+
     updInfo({ msg: 'Начинаем обработку', type: 'processing', progress: ns() })
 
     const contents = copy(currentFileContent)
-    const name = groupInput.val().toString().trim()
+    const name = dom.groupInputEl.value.trim()
     const nameFixed = nameFixup(name)
-    const rowRatio = Number.parseFloat(heightEl.value) / 100
-    if(!(rowRatio < 1000 && rowRatio > 0.001)) throw ['Неправильное значение высоты строки', heightEl.value]
-    const scheme = readScheduleScheme(readElementText(scheduleLayoutEl))
+    const rowRatio = Number.parseFloat(genSettings.heightEl.value) / 100
+    if(!(rowRatio < 1000 && rowRatio > 0.001)) throw ['неправильное значение высоты строки', genSettings.heightEl.value]
+    const scheme = readScheduleScheme(readElementText(genSettings.scheduleLayoutEl))
 
     const origTask = pdfjsLib.getDocument({ data: contents });
     const origDestructor = [call1(origTask.destroy.bind(origTask))]
@@ -334,7 +370,7 @@ async function processPDF0() {
                 await destroyOrig() //https://github.com/mozilla/pdf.js/issues/16777
                 updInfo({ msg: 'Создаём предпросмотр', type: 'processing', progress: ns() })
                 const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
-                await createAndInitOutputElement(scheme, schedule, doc, outputs.get()[0], outFilename)
+                await createAndInitOutputElement(rowRatio, scheme, schedule, doc, dom.outputsEl, outFilename)
 
                 updInfo({ msg: 'Готово', warning: warningText, type: 'processing', progress: ns() })
                 return
@@ -352,7 +388,7 @@ async function processPDF0() {
 
         }
     }
-    throw ["Имя группы не найдено `" + name + "`", "количество страниц = " + orig.numPages];
+    throw ["имя группы не найдено `" + name + "`", "количество страниц = " + orig.numPages];
     } finally { await destroyOrig() }
 }
 
@@ -409,11 +445,10 @@ function pickFile(callback) {
     f.style.display='none';
     f.type='file';
     f.name='file';
-    $(f).on('change', callback)
+    f.addEventListener('change', callback)
     document.body.appendChild(f);
     f.click();
     setTimeout(function() {
         document.body.removeChild(f);
     }, 0);
 }
-
