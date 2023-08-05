@@ -139,7 +139,11 @@ function insertPopup(par) {
 
 }
 
-async function createAndInitOutputElement(rowRatio, scheme, schedule, doc, parentElement, name) {
+async function createAndInitOutputElement(rowRatio, scheme, schedule, doc, parentElement, name, usedFunc, userdata) {
+    const usedFunction = (type) => { try { try {
+        usedFunc(...userdata, type)
+    } catch(e) { console.error(e) } } catch(e) {} }
+
     const fileUrl = window.URL.createObjectURL(new Blob([copy(doc)], { type: 'application/pdf' }));
     const imagesForWidth = []
 
@@ -163,6 +167,7 @@ async function createAndInitOutputElement(rowRatio, scheme, schedule, doc, paren
 
     element.name.textContent = name
     element.viewPdf.addEventListener('click', function() {
+        usedFunction('vpdf')
         const tab = window.open();
         if(tab == null) {
             downloadUrl(fileUrl, name + '.pdf')
@@ -171,6 +176,7 @@ async function createAndInitOutputElement(rowRatio, scheme, schedule, doc, paren
         tab.location.href = fileUrl;
     })
     element.viewImg.addEventListener('click', async function() {
+        usedFunction('vimg')
         const img = await getImage()
         const tab = window.open();
         if(tab == null) {
@@ -179,25 +185,12 @@ async function createAndInitOutputElement(rowRatio, scheme, schedule, doc, paren
         }
         tab.location.href = img;
     })
-    element.del.addEventListener('click', function() {
-        const el = element.element
-        el.style.animation = 'none'
-        el.offsetHeight;
-        el.style.animation = null
-        el.style.animationDirection = 'reverse'
-        el.style.animationDuration = '125ms'
-        el.addEventListener('animationend', _ => { 
-            parentElement.removeChild(element.element)
-            unregisterPopup(element.popupId)
-            window.URL.revokeObjectURL(fileUrl);
-            const ifw = imagesForWidth
-            for(let i = 0; i < ifw.length; i++) URL.revokeObjectURL(ifw[i].img);
-        })
-    })
     element.downloadImg.addEventListener('click', async function() {
+        usedFunction('dimg')
         downloadUrl(await getImage(), name + '.png')
     })
     element.mainActionImg.addEventListener('click', async function() {
+        usedFunction('cimg')
         const img = await getImage(true)
 
         try {
@@ -221,10 +214,28 @@ async function createAndInitOutputElement(rowRatio, scheme, schedule, doc, paren
         }
     })
     element.edit.addEventListener('click', function() {
-        const parms = JSON.stringify({ schedule: schedule, scheme: scheme, rowRatio: rowRatio });
+        const parms = JSON.stringify({ 
+            schedule: schedule, scheme: scheme, rowRatio: rowRatio,
+            userdata
+        });
         const storageId = "parms" + String(Date.now());
         sessionStorage.setItem(storageId, parms);
         window.open("./fix.html" + "?sid=" + storageId);
+    })
+    element.del.addEventListener('click', function() {
+        const el = element.element
+        el.style.animation = 'none'
+        el.offsetHeight;
+        el.style.animation = null
+        el.style.animationDirection = 'reverse'
+        el.style.animationDuration = '125ms'
+        el.addEventListener('animationend', _ => { 
+            parentElement.removeChild(element.element)
+            unregisterPopup(element.popupId)
+            window.URL.revokeObjectURL(fileUrl);
+            const ifw = imagesForWidth
+            for(let i = 0; i < ifw.length; i++) URL.revokeObjectURL(ifw[i].img);
+        })
     })
 
     parentElement.appendChild(element.element)

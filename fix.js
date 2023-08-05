@@ -1,38 +1,46 @@
 let origSchedule;
 let origScheme;
 let origRowRatio;
+let origUserdata
 
-{
+(_ => {
     const prmstr = window.location.search.split("=");
     const sid = prmstr[1];
-    if(sid) {
+    if(sid) try {
         const args = JSON5.parse(sessionStorage.getItem(sid));
         sessionStorage.removeItem(sid);
         origSchedule = args.schedule
         origScheme = args.scheme
         origRowRatio = args.rowRatio
+        origUserdata = args.userdata
+        return 
     }
-    else {
-        origSchedule = [
-            [
-                {sTime: 510, eTime: 600, lessons: ['Общая пара', 'Общая пара', 'Общая пара', 'Общая пара', ]},
-                {sTime: 620, eTime: 710, lessons: ['Пара 1 группы', 'Пара 2 группы', 'Пара 1 группы', 'Пара 2 группы']},
-                {sTime: 730, eTime: 820, lessons: ['', '', '', '']},
-                {sTime: 840, eTime: 930, lessons: ['Пара числителя', 'Пара числителя', 'Пара знаменателя', 'Пара знаменателя']},
-                {sTime: 950, eTime: 1040, lessons: ['Числитель 1 группы', 'Числитель 2 группы', 'Знаменатель 1 группы', 'Знаменатель 2 группы']}
-            ],
-            [],[],
-            [
-                {sTime: 620, eTime: 710, lessons: ['', '', '', '']},
-                {sTime: 730, eTime: 820, lessons: ['Числитель 1 группы', '', '', 'Знаменатель 2 группы']},
-                {sTime: 840, eTime: 930, lessons: ['', '', '', '']}
-            ],
-            [],[],[]
-        ]
-        origScheme = [[0, 1, 2], [3, 4, 5]]
-        origRowRatio = 0.19
+    catch(e) {
+        const st = document.getElementById('status')
+        st.style.color = 'red'
+        st.innerHTML = '' + e
     }
-}
+
+    origSchedule = [
+        [
+            {sTime: 510, eTime: 600, lessons: ['Общая пара', 'Общая пара', 'Общая пара', 'Общая пара', ]},
+            {sTime: 620, eTime: 710, lessons: ['Пара 1 группы', 'Пара 2 группы', 'Пара 1 группы', 'Пара 2 группы']},
+            {sTime: 730, eTime: 820, lessons: ['', '', '', '']},
+            {sTime: 840, eTime: 930, lessons: ['Пара числителя', 'Пара числителя', 'Пара знаменателя', 'Пара знаменателя']},
+            {sTime: 950, eTime: 1040, lessons: ['Числитель 1 группы', 'Числитель 2 группы', 'Знаменатель 1 группы', 'Знаменатель 2 группы']}
+        ],
+        [],[],
+        [
+            {sTime: 620, eTime: 710, lessons: ['', '', '', '']},
+            {sTime: 730, eTime: 820, lessons: ['Числитель 1 группы', '', '', 'Знаменатель 2 группы']},
+            {sTime: 840, eTime: 930, lessons: ['', '', '', '']}
+        ],
+        [],[],[]
+    ]
+    origScheme = [[0, 1, 2], [3, 4, 5]]
+    origRowRatio = 0.19
+    origUserdata = ['new document', 'no group']
+})()
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
 
@@ -118,6 +126,8 @@ function scheduleToSimple(schedule) {
 
     return result;
 }
+
+window.updateUserdataF ??= () => { console.error('no function defined') }
 
 document.getElementById('reset').addEventListener('click', function() {
     document.getElementById('edit-input').value = scheduleToSimple(origSchedule)
@@ -231,8 +241,12 @@ async function processEdit() {
         }
     }
 
+    let userdata;
+    try { try { userdata = [...structuredClone(origUserdata)] } catch(e) { console.log(e) } } catch(e) {}
+
     const pdf = await scheduleToPDF(schedule, scheme, 1000, rowRatio)
+    updateUserdataF('regDocumentEdited')(...userdata) 
     const outs = document.getElementById('outputs')
-    await createAndInitOutputElement(rowRatio, scheme, schedule, pdf, outs, '') 
+    await createAndInitOutputElement(rowRatio, scheme, schedule, pdf, outs, '', updateUserdataF('regDocumentUsed'), userdata) 
 }
 

@@ -11,11 +11,12 @@
         function assertDep(name) { if(!depStatus[name]) throw `Зависимость \`${name}\` еще не загружена` }
 
         const scripts = []
-        function addScript(name, src) { return new Promise((resolve, reject) => {
+        function addScript(name, src, isModule) { return new Promise((resolve, reject) => {
 
             const s = document.createElement('script');
             s.setAttribute('src', src);
             s.setAttribute('async', '');
+            if(isModule) s.setAttribute('type', 'module')
             s.addEventListener('load', () => { depStatus[name] = true; resolve() });
             s.addEventListener('error', () => { reject(name) });
             scripts.push(s)
@@ -32,6 +33,7 @@
         const loadCommon   = addScript('common', "./common.js")
         const loadElements = addScript('elements', "./elements.js")
         const loadPopups   = addScript('popups', "./popups.js")
+        const loadUserdata = addScript('userdata', './userdata.js', true)
         const loadIndex    = addScript('index', "./index.js")
 
         ;(async() => {
@@ -54,7 +56,7 @@
     <div style="min-width: 100vw; min-height: 100vh; display: flex; flex-direction: column">
         <div class="centerel-vert" style="flex: 1 1 auto">
             <div class="before" style="display: flex; flex-direction: column; align-items: stretch;">
-                <div class="header">Создание и&nbsp;<a href="./fix.html" target="_blank">изменение</a>&nbspрасписания группы</div>
+                <div class="header">Создание и <a href="./fix.html" target="_blank">изменение</a> расписания группы</div>
                 <div class="h-text" style="padding-bottom: 1rem; padding-top: 1rem; flex: 1 1 auto">
                     <div id="file-picker">
                         <span>Перетащите файл или нажмите здесь чтобы</span> <span id="load-file-text">загрузить PDF файл расписания</span> 

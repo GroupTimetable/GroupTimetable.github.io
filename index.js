@@ -14,6 +14,7 @@ loadDom.then(_ => {
     dom.dropZoneEl = qs('drop-zone')
 })
 
+
 /*HTML does not have any way to make resizable multiline prompt
 the only other option, namely contentEditable=true, has a number of fields for reading text, none of which work:
   textContent - ignores line breaks,
@@ -26,8 +27,7 @@ Promise.all([loadDom, loadCommon]).then(_ => {
     innerTextHack = document.body.appendChild(htmlToElement(`<div style="position: absolute; width: 0px; height: 0px; top: 0; left: 0; transform: scale(0);"></div>`))
 })
 
-let currentFileContent;
-let currentFi;
+let currentFilename, currentFileContent;
 let currentPending, processing;
 
 let prevProgress
@@ -320,6 +320,15 @@ function makeWarningText(schedule, bigFields) {
     return "Внимание, обнаружены большие поля названий уроков (" + warningText.substring(2) + "). Проверьте полученное расписание на их корркетность."
 }
 
+function updateUserdataF2(...params) {
+    if(!depStatus['userdata']) {
+        console.error('Dependency not loaded')
+        return () => {}
+    }
+    else return updateUserdataF(...params)
+}
+
+
 async function processPDF0() {
     const stagesC = 4
     let stage = 0
@@ -339,6 +348,9 @@ async function processPDF0() {
     const rowRatio = Number.parseFloat(genSettings.heightEl.value) / 100
     if(!(rowRatio < 1000 && rowRatio > 0.001)) throw ['неправильное значение высоты строки', genSettings.heightEl.value]
     const scheme = readScheduleScheme(readElementText(genSettings.scheduleLayoutEl))
+
+    let userdata;
+    try { try { userdata = ['' + currentFilename, '' + name] } catch(e) { console.log(e) } } catch(e) {}
 
     const origTask = pdfjsLib.getDocument({ data: contents });
     const origDestructor = [call1(origTask.destroy.bind(origTask))]
@@ -370,9 +382,13 @@ async function processPDF0() {
                 await destroyOrig() //https://github.com/mozilla/pdf.js/issues/16777
                 updInfo({ msg: 'Создаём предпросмотр', type: 'processing', progress: ns() })
                 const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
-                await createAndInitOutputElement(rowRatio, scheme, schedule, doc, dom.outputsEl, outFilename)
+                await createAndInitOutputElement(
+                    rowRatio, scheme, schedule, doc, dom.outputsEl, outFilename,
+                    updateUserdataF2('regDocumentUsed'), userdata
+                )
 
                 updInfo({ msg: 'Готово', warning: warningText, type: 'processing', progress: ns() })
+                updateUserdataF2('regDocumentCreated')(...userdata) 
                 return
             }
             catch(e) {
@@ -389,7 +405,12 @@ async function processPDF0() {
         }
     }
     throw ["имя группы не найдено `" + name + "`", "количество страниц = " + orig.numPages];
-    } finally { await destroyOrig() }
+    } catch(e) {
+        updateUserdataF2('regDocumentError')(...userdata, e) 
+        throw e
+    } finally { 
+        await destroyOrig() 
+    }
 }
 
 /*
