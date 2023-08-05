@@ -16,7 +16,7 @@ function createOutputElement() {
 <div class="output-cont">
 <div class="name" style="text-align: center"></div>
 <div class="output">
-    <img style="max-height: 17rem"></img>
+    <img style="max-width: 17rem; max-height: 17rem"></img>
     <div class="out-overlay">
         <div class="out-header out-icons">
             <div class="settings" title="Настройки изображения">
