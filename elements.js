@@ -120,7 +120,7 @@ function insertPopup(par) {
                 background-color: #4286f1;
                 border: 0px solid transparent;
                 border-radius: 10px;
-                box-shadow: 0px 0px 0.3rem 0px #00000030;
+                box-shadow: 0px 0px 0.6rem 0px #00000030;
                 padding: 0.8rem;
                 color: white;
             ">
@@ -129,15 +129,14 @@ function insertPopup(par) {
     </div>
 </span>
     `)
-    par.style.position = 'relative'
     par.appendChild(el)
     return { 
         element: el, 
         popup: el.querySelector('.popup'), 
         safeZone: el.querySelector('.safe-zone')
     };
-
 }
+
 
 async function createAndInitOutputElement(rowRatio, scheme, schedule, doc, parentElement, name, usedFunc, userdata) {
     const usedFunction = (type) => { try { try {
@@ -246,9 +245,8 @@ const css = `
 
 .popup-container {
     width: 0px; height: 0px;
-    margin-top: 0.3rem;
-    position: absolute;
-    left: 50%;
+    top: 0.3rem; left: 50%;
+    position: relative;
 
     display: flex;
     justify-content: center; 
@@ -291,7 +289,17 @@ const css = `
 .output-cont {
     animation: opacity01;
     animation-duration: 200ms;
-    animation-fill-mode: both;
+
+    /*https://stackoverflow.com/questions/26099421/css-animation-fill-mode-and-z-index-issue*/
+    /*This is the closest reason for this to happen      
+    https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_positioned_layout/Understanding_z-index/Stacking_context#:~:text=Element%20with%20an%20opacity%20value%20less%20than%201%20(See%20the%20specification%20for%20opacity).
+    cool behavior! even if the animation uses opacity only once, even if animates from 1 to 1,
+    the browser still creates stacking context for the element.
+    All of these would trigger this behavoir:
+      @keyframes aaa { from{ opacity: 1 } to { opacity: 1 } }
+      @keyframes AAA { from{} to { opacity: 1 } }
+    */
+    /*animation-fill-mode: both*/ 
 
     & .output {
         display: grid;

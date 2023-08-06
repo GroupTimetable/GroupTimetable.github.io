@@ -263,9 +263,10 @@ function updStatus() { try {
 
     if(!s.warning || s.warning.trim() === '') {
         warningEl.innerHTML = ''
-        warningEl.style.opacity = 0
+        warningEl.style.display = 'none'
     }
     else {
+        warningEl.style.display = ''
         warningEl.innerHTML = s.warning
         warningEl.style.opacity = 1
     }

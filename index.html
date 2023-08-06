@@ -56,18 +56,21 @@
     <div style="min-width: 100vw; min-height: 100vh; display: flex; flex-direction: column">
         <div class="centerel-vert" style="flex: 1 1 auto">
             <div class="before" style="display: flex; flex-direction: column; align-items: stretch;">
-                <div class="header">Создание и <a href="./fix.html" target="_blank">изменение</a> расписания группы</div>
+                <div class="header">Создание и изменение расписания группы</div>
                 <div class="h-text" style="padding-bottom: 1rem; padding-top: 1rem; flex: 1 1 auto">
                     <div id="file-picker">
                         <span>Перетащите файл или нажмите здесь чтобы</span> <span id="load-file-text">загрузить PDF файл расписания</span> 
                     </div>
                 </div>
+
+                <div class="group-bar-formatting">
+                    <div id="filename" class="move-with-border" style="margin-bottom: 0.3rem; color: #a0a0a0; opacity: 0; transition: opacity 100ms;">
+                        &ZeroWidthSpace;
+                    </div>
+                </div>
             </div>
 
             <div class="center group-bar-formatting">
-                <div id="filename" class="move-with-border" style="margin-bottom: 0.3rem; color: #a0a0a0; opacity: 0; transition: opacity 100ms;">
-                    &ZeroWidthSpace;
-                </div>
                 <div id="group-bar"> 
                     <div style="visibility: hidden; overflow: clip; position: absolute; top: 0; bottom: 0; right: 0; left: 0; border-radius: 999999px; border: 0px solid transparent; display: flex; flex-direction: column-reverse;">
                         <div id="progress-bar" class="progress-bar-height" style="visibility: visible"></div>
@@ -94,12 +97,16 @@
                     </div>
                 </div>
             </div>
-            <div class="after" style="margin-bottom: 1rem">
+            <div class="after" style="display: flex; flex-direction: column; gap: 1rem;">
                 <div class="group-bar-formatting" style="margin-top: 0.3rem;">
                     <div id="status" class="move-with-border" style="opacity: 0; transition: opacity 100ms;">&ZeroWidthSpace;</div>
                 </div>
-                <div id="warning" style="max-width: min(45rem, 90vw); margin: 0 auto; margin-top: 1rem; color: rgb(124 10 144); opacity: 0; transition: opacity 100ms;"></div>
-                <div id="outputs" style="margin-top: 2rem">
+                <div id="warning" style="display: none; max-width: min(45rem, 90vw); margin: 0 auto; color: rgb(124 10 144); opacity: 0; transition: opacity 100ms;"></div>
+                <div id="outputs" style="flex: 1 0 auto;"></div>
+                <div id="footer">
+                    <a href="./fix.html" target="_blank">Расписание из текста</a>
+                    <a href="./help-page.html" target="_blank">Обратная связь</a>
+                    <a href="https://github.com/VanaIgr/ScheduleRenderingJs" target="_blank">Проект на GitHub</a>
                 </div>
             </div>
         </div>
