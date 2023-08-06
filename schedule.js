@@ -386,31 +386,68 @@ function calcSize(schedule, renderPattern, colWidth, rowRatio/*height/width*/) {
         if(newCol.length) newRenderPattern.push(newCol)
     }
 
-    if(!renderPattern.length) return [newRenderPattern, [1, 1], [1, 1]]
-
-    const m1 = (num) => { if(num > 1 && num < Infinity) return num; else return 1 }
-    const pageSize = [m1(colWidth * newRenderPattern.length), m1(colWidth * maxLessonsInCol * rowRatio)]
-    const groupSize = { w: m1(colWidth), h: m1(colWidth * rowRatio) };
+    const pageSize = [colWidth * newRenderPattern.length, colWidth * maxLessonsInCol * rowRatio]
+    const groupSize = { w: colWidth, h: colWidth * rowRatio };
 
     return [newRenderPattern, pageSize, groupSize];
 }
 
+function heightAtSize(font, size) {
+    try { return font.heightAtSize(size) }
+    catch(e) { console.error(e); return NaN }
+}
+
+function sizeAtHeight(font, height) {
+    try { return font.sizeAtHeight(height) }
+    catch(e) { console.error(e); return NaN }
+}
+
+function descenderAtHeight(font, size) {
+    try { return font.embedder.__descenderAtHeight(size) }
+    catch(e) { console.error(e); return NaN }
+}
+
+function drawRectangle(page, params) {
+    try{ page.drawRectangle(params) } catch(e) { console.error(e) }
+}
+
+function drawText(page, text, params) {
+    try{ page.drawText(text, params) } catch(e) { console.error(e) }
+}
+
+function widthOfTextAtSize(font, text, size) {
+    if(size != undefined && checkValid(size)) return font.widthOfTextAtSize(text, size)
+    else {
+        console.lor('invalid size: ', size)
+        return NaN
+    }
+}
+
+function checkValid(...params) {
+    for(let i = 0; i < params.length; i++) {
+        const p = params[i]
+        if(p != undefined && !(p > 0 && p < Infinity)) return false
+    }
+    return true
+}
+
+
 function drawTextCentered(text, page, font, fontSize, center, precompWidths = undefined) {
-    const lineHeight = font.heightAtSize(fontSize);
+    const lineHeight = heightAtSize(font, fontSize);
     let widths = precompWidths
     if(widths === undefined) {
         widths = Array(text.length)
         for(let i = 0; i < text.length; i++) {
-            const textWidth = font.widthOfTextAtSize(text[i], fontSize)
+            const textWidth = widthOfTextAtSize(font, text[i], fontSize)
             widths[i] = textWidth;
         }
     }
     
-    const d = font.embedder.__descenderAtHeight(fontSize);
+    const d = descenderAtHeight(font, fontSize);
     const offY = center.y - d + lineHeight*text.length * 0.5;
 
     for(let i = 0; i < text.length; i++) {
-        page.drawText(text[i], {
+        drawText(page, text[i], {
             x: center.x - widths[i] * 0.5,
             y: offY - i*lineHeight - lineHeight,
             size: fontSize,
@@ -474,12 +511,12 @@ const textBreak = new (function() {
             tmp.lineWidths.length = tmp.texts.length
             let maxWidth = 0
             for(let i = 0; i < tmp.texts.length; i++) {
-                const textWidth = font.widthOfTextAtSize(tmp.texts[i], fontSize)
+                const textWidth = widthOfTextAtSize(font, tmp.texts[i], fontSize)
                 tmp.lineWidths[i] = textWidth
                 maxWidth = Math.max(maxWidth, textWidth);
             }
-            const scaledHeight = Math.min(bounds.h / tmp.texts.length, font.heightAtSize(fontSize) * bounds.w / maxWidth);
-            tmp.fontSize = font.sizeAtHeight(scaledHeight);
+            const scaledHeight = Math.min(bounds.h / tmp.texts.length, heightAtSize(font, fontSize) * bounds.w / maxWidth);
+            tmp.fontSize = sizeAtHeight(font, scaledHeight);
 
             const coeff = tmp.fontSize / fontSize
             for(let i = 0; i < tmp.lineWidths.length; i++) tmp.lineWidths[i] *= coeff
@@ -504,7 +541,7 @@ function fitTextBreakLines(str, font, size) {
         /*maximize text width*/ {
             const el = textBreak.last
             const scaledHeight = el.height * size.w / el.width;
-            const fontSize = font.sizeAtHeight(scaledHeight);
+            const fontSize = sizeAtHeight(font, scaledHeight);
             const divs = Math.max(1, Math.round(el.texts.length * Math.sqrt(size.h / scaledHeight)));
             if(textBreak.haveTried(divs)) break;
             else textBreak.remeasure(str, divs, font, size)
@@ -514,7 +551,7 @@ function fitTextBreakLines(str, font, size) {
             const el = textBreak.last
             const scaledWidth = el.width * size.h / el.height;
             const divs = Math.max(1, Math.round(el.texts.length * Math.sqrt(scaledWidth / size.w)));
-            const fontSize = font.sizeAtHeight(size.h / divs);
+            const fontSize = sizeAtHeight(font, size.h / divs);
             if(textBreak.haveTried(divs)) break;
             else textBreak.remeasure(str, divs, font, size)
         }
@@ -525,14 +562,12 @@ function fitTextBreakLines(str, font, size) {
 }
 
 function drawLessonText(lesson, secondWeek, page, font, coord, blockSize) {
-    if(secondWeek && lesson.trim() !== '') page.drawRectangle({
+    if(secondWeek && lesson.trim() !== '') drawRectangle(page, {
         x: coord.x,
         y: coord.y,
         width: blockSize.w,
         height: -blockSize.h,
-        borderColor: PDFLib.rgb(0, 0, 0),
         color: PDFLib.rgb(1, 1, 0),
-        borderWidth: 2,
     })
     if(lesson.trim() !== '') {
         const t = lesson;
@@ -546,7 +581,7 @@ function drawLessonText(lesson, secondWeek, page, font, coord, blockSize) {
         );
     }
 
-    page.drawRectangle({
+    drawRectangle(page, {
         x: coord.x,
         y: coord.y,
         width: blockSize.w,
@@ -569,17 +604,17 @@ function drawTime(lesson, page, font, coord, blockSize) {
         minuteOfDayToString(lesson.eTime)
     ];
     const textHeight = innerSize.w
-    let fontSize = font.sizeAtHeight(textHeight);
+    let fontSize = sizeAtHeight(font, textHeight);
     const widths = []
     let largestWidth = 0
     for(let i = 0; i < texts.length; i++) {
-        const textWidth = font.widthOfTextAtSize(texts[i], fontSize)
+        const textWidth = widthOfTextAtSize(font, texts[i], fontSize)
         widths.push(textWidth)
         if(textWidth > largestWidth) largestWidth = textWidth;
     }
 
     const scaledHeight = Math.min(textHeight * innerSize.w / largestWidth, innerSize.h / texts.length);
-    fontSize = font.sizeAtHeight(scaledHeight);
+    fontSize = sizeAtHeight(font, scaledHeight);
 
     const coeff = scaledHeight / textHeight;
     for(let i = 0; i < widths.length; i++) widths[i] *= coeff
@@ -590,7 +625,7 @@ function drawTime(lesson, page, font, coord, blockSize) {
         widths
     );
 
-    page.drawRectangle({
+    drawRectangle(page, {
         x: coord.x,
         y: coord.y,
         width: blockSize.w,
@@ -639,24 +674,25 @@ function drawLessons(lesson, page, font, coord, size) {
     if(!eqh2 && !eqv1) drawLessonText(lesson.lessons[2], true, page, font, points[2], sizes[0])
     if(!eqh2 && !eqv2) drawLessonText(lesson.lessons[3], true, page, font, points[3], sizes[0])
 }
+
 function drawLesson(lesson, page, font, coord, size, timeWidth) {
     drawTime(lesson, page, font, coord, { w: timeWidth, h: size.h })
     drawLessons(lesson, page, font, { x: coord.x + timeWidth, y: coord.y }, { w: size.w - timeWidth, h: size.h })
 }
 
 function drawDayOfWeek(dayI, page, font, coord, size) {
-    let fontSize = font.sizeAtHeight(size.w * 0.9);
+    let fontSize = sizeAtHeight(font, size.w * 0.9);
     const text = daysOfWeek[dayI]
-    const largestWidth = font.widthOfTextAtSize(text, fontSize);
-    const textHeight = font.heightAtSize(fontSize)
+    const largestWidth = widthOfTextAtSize(font, text, fontSize);
+    const textHeight = heightAtSize(font, fontSize)
     const scaledHeight = Math.min(textHeight * 0.9 * size.h / largestWidth, size.w*0.95);
     const scaledWidth = largestWidth * scaledHeight / textHeight;
-    fontSize = font.sizeAtHeight(scaledHeight);
+    fontSize = sizeAtHeight(font, scaledHeight);
 
-    const d = font.embedder.__descenderAtHeight(fontSize);
+    const d = descenderAtHeight(font, fontSize);
     const offX = coord.x + d + textHeight + (size.w - textHeight) * 0.5;
 
-    page.drawText(text, {
+    drawText(page, text, {
         x: offX,
         y: coord.y - size.h*0.5 - scaledWidth*0.5,
         size: fontSize,
@@ -664,39 +700,52 @@ function drawDayOfWeek(dayI, page, font, coord, size) {
         color: PDFLib.rgb(0, 0, 0),
         rotate: PDFLib.degrees(90)
     });
-}
 
-function drawDay(day, dayI, page, font, coord, groupSize) {
-    const dayOfWeekWidth = groupSize.w*0.1;
-    const size = { w: groupSize.w - dayOfWeekWidth, h: groupSize.h };
-    const x = coord.x + dayOfWeekWidth;
-
-    drawDayOfWeek(dayI, page, font, coord, { w: dayOfWeekWidth, h : groupSize.h*day.length })
-
-    for(let i = 0; i < day.length; i++) {
-        drawLesson(day[i], page, font, { x: x, y: coord.y - i*groupSize.h }, size, groupSize.w*0.1);
-    }
-
-    page.drawRectangle({
+    drawRectangle(page, {
         x: coord.x,
         y: coord.y,
+        width: size.w,
+        height: -size.h,
+        borderColor: PDFLib.rgb(0, 0, 0),
+        borderWidth: 2,
+    })
+}
+
+function drawDay(day, dayI, page, font, outerCoord, groupSize, borderFactor, drawBorder) {
+    const borderWidth = groupSize.w * borderFactor
+    const x = outerCoord.x + borderWidth * 0.5
+    const y = outerCoord.y - borderWidth * 0.5
+    const w = groupSize.w - borderWidth
+    const fullH = groupSize.h * day.length - borderWidth
+    const h = fullH / day.length
+
+    const dayOfWeekWidth = w*0.1;
+    const size = { w: w - dayOfWeekWidth, h: h };
+    drawDayOfWeek(dayI, page, font, { x, y }, { w: dayOfWeekWidth, h : fullH })
+
+    for(let i = 0; i < day.length; i++) {
+        drawLesson(day[i], page, font, { x: x + dayOfWeekWidth, y: y - i*h }, size, dayOfWeekWidth/*same value*/);
+    }
+
+    if(drawBorder) drawRectangle(page, {
+        x: outerCoord.x,
+        y: outerCoord.y,
         width: groupSize.w,
         height: -groupSize.h * day.length,
         borderColor: PDFLib.rgb(0, 0, 0),
-        borderWidth: 3,
+        borderWidth: borderWidth,
     })
 }
 
 async function renderPDF(doc, width, type = 'image/png', quality = 1) {
     const pdfTask = pdfjsLib.getDocument(doc); try {
     const pdf = await pdfTask.promise
-    const page = await pdf.getPage(1);
+    const page = await pdf.getPage(1)
 
     const m1 = (num) => { if(num > 1 && num < Infinity) return num; else return 1 }
-    const viewport = page.getViewport({ scale: m1(width / page.getViewport({scale:1}).width) })
+    const viewport = page.getViewport({ scale: m1(width) / page.getViewport({scale:1}).width })
 
     const canvas = new OffscreenCanvas(
-
         m1(Math.floor(viewport.width)),
         m1(Math.floor(viewport.height))
     )
@@ -740,8 +789,17 @@ async function getDocument() {
     return [pdfDoc, font]
 }
 
-async function scheduleToPDF(schedule, origPattern, rowRatio) {
-    const [renderPattern, size, groupSize] = calcSize(schedule, origPattern, 500, rowRatio);
+
+//border factor is used inaccurately, but the difference should not be that big
+async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, drawBorder) {
+    const [renderPattern, size, groupSize] = calcSize(schedule, origPattern, 500, rowRatio, borderFactor);
+
+    const ch = (num) => !(num >= 1 && num < Infinity)
+    if(ch(size[0]) || ch(size[1])) {
+        const [pdfDoc, font] = await getDocument()
+        const page = pdfDoc.addPage([1, 1])
+        return [1, await pdfDoc.save()]
+    }
 
     const [pdfDoc, font] = await getDocument()
     const page = pdfDoc.addPage(size)
@@ -752,7 +810,7 @@ async function scheduleToPDF(schedule, origPattern, rowRatio) {
         for(let j = 0; j < renderPattern[i].length; j++) { 
             const index = renderPattern[i][j];
             if(index == undefined || schedule[index] == undefined) continue;
-            drawDay(schedule[index], index, page, font, { x: i*groupSize.w, y: curY }, groupSize);
+            drawDay(schedule[index], index, page, font, { x: i*groupSize.w, y: curY }, groupSize, borderFactor, drawBorder);
             curY = curY - schedule[index].length * groupSize.h;
         }
     }
