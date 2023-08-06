@@ -367,31 +367,6 @@ function makeSchedule(cont, vBounds, hBounds) {
     return [schedule, bigFields]
 }
 
-function calcSize(schedule, renderPattern, colWidth, rowRatio/*height/width*/) {
-    const newRenderPattern = []
-    let maxLessonsInCol = 0;
-    for(let i = 0; i < renderPattern.length; i++) {
-        const newCol = []
-        let maxCount = 0;
-        for(let j = 0; j < renderPattern[i].length; j++) {
-            const index = renderPattern[i][j];
-            if(index === -1) continue;
-            const day = schedule[index];
-            if(!day || !day.length) continue;
-
-            maxCount += day.length;
-            newCol.push(index)
-        }
-        if(maxCount > maxLessonsInCol) maxLessonsInCol = maxCount;
-        if(newCol.length) newRenderPattern.push(newCol)
-    }
-
-    const pageSize = [colWidth * newRenderPattern.length, colWidth * maxLessonsInCol * rowRatio]
-    const groupSize = { w: colWidth, h: colWidth * rowRatio };
-
-    return [newRenderPattern, pageSize, groupSize];
-}
-
 function heightAtSize(font, size) {
     try { return font.heightAtSize(size) }
     catch(e) { console.error(e); return NaN }
@@ -680,25 +655,32 @@ function drawLesson(lesson, page, font, coord, size, timeWidth) {
     drawLessons(lesson, page, font, { x: coord.x + timeWidth, y: coord.y }, { w: size.w - timeWidth, h: size.h })
 }
 
-function drawDayOfWeek(dayI, page, font, coord, size) {
-    let fontSize = sizeAtHeight(font, size.w * 0.9);
+function drawDayOfWeek(dayI, page, font, coord, size, rotated) {
     const text = daysOfWeek[dayI]
-    const largestWidth = widthOfTextAtSize(font, text, fontSize);
-    const textHeight = heightAtSize(font, fontSize)
-    const scaledHeight = Math.min(textHeight * 0.9 * size.h / largestWidth, size.w*0.95);
-    const scaledWidth = largestWidth * scaledHeight / textHeight;
-    fontSize = sizeAtHeight(font, scaledHeight);
+    const calcParams = (maxWidth, maxHeight) => {
+        const offWidth = maxWidth * 0.9
+        const offHeight = maxHeight * 0.9
+        const fontSize = sizeAtHeight(font, offHeight);
+        const largestWidth = widthOfTextAtSize(font, text, fontSize);
+        const textHeight = heightAtSize(font, fontSize)
+        const scaledHeight = Math.min(textHeight * offWidth / largestWidth, offHeight);
+        const scaledWidth = largestWidth * scaledHeight / offHeight;
+        const newSize = sizeAtHeight(font, scaledHeight);
 
-    const d = descenderAtHeight(font, fontSize);
-    const offX = coord.x + d + textHeight + (size.w - textHeight) * 0.5;
+        const d = descenderAtHeight(font, newSize);
+        const offsetWidth = (maxWidth - scaledWidth) * 0.5;
+        const offsetHeight = d + (offHeight + maxHeight) * 0.5;
+        return [offsetWidth, offsetHeight, newSize]
+    };
+    const [offsetWidth, offsetHeight, fontSize] = rotated ? calcParams(size.h, size.w) : calcParams(size.w, size.h)
 
     drawText(page, text, {
-        x: offX,
-        y: coord.y - size.h*0.5 - scaledWidth*0.5,
+        x: coord.x + (rotated ? offsetHeight : offsetWidth),
+        y: coord.y + (rotated ? -size.h + offsetWidth : -offsetHeight),
         size: fontSize,
         font: font,
         color: PDFLib.rgb(0, 0, 0),
-        rotate: PDFLib.degrees(90)
+        rotate: PDFLib.degrees(rotated ? 90 : 0)
     });
 
     drawRectangle(page, {
@@ -711,27 +693,43 @@ function drawDayOfWeek(dayI, page, font, coord, size) {
     })
 }
 
-function drawDay(day, dayI, page, font, outerCoord, groupSize, borderFactor, drawBorder) {
+function drawDay(
+    page, font, 
+    day, dayI, 
+    outerCoord, groupSize, 
+    borderFactor, drawBorder, dowOnTop
+) {
     const borderWidth = groupSize.w * borderFactor
-    const x = outerCoord.x + borderWidth * 0.5
-    const y = outerCoord.y - borderWidth * 0.5
-    const w = groupSize.w - borderWidth
     const fullH = groupSize.h * day.length - borderWidth
+
+    let x = outerCoord.x + borderWidth * 0.5
+    let y = outerCoord.y - borderWidth * 0.5
+    let w = groupSize.w - borderWidth
     const h = fullH / day.length
+    const addColWidth = w*0.1
 
-    const dayOfWeekWidth = w*0.1;
-    const size = { w: w - dayOfWeekWidth, h: h };
-    drawDayOfWeek(dayI, page, font, { x, y }, { w: dayOfWeekWidth, h : fullH })
+    if(dowOnTop) {
+        const size = { w, h }
+        drawDayOfWeek(dayI, page, font, { x, y }, size, false)
+        y -= size.h
+    }
+    else {
+        const size = { w: addColWidth, h : fullH }
+        drawDayOfWeek(dayI, page, font, { x, y }, size, true)
+        x += size.w
+        w -= addColWidth
+    }
 
+    const size = { w, h }
     for(let i = 0; i < day.length; i++) {
-        drawLesson(day[i], page, font, { x: x + dayOfWeekWidth, y: y - i*h }, size, dayOfWeekWidth/*same value*/);
+        drawLesson(day[i], page, font, { x: x, y: y - i*h }, size, addColWidth);
     }
 
     if(drawBorder) drawRectangle(page, {
         x: outerCoord.x,
         y: outerCoord.y,
         width: groupSize.w,
-        height: -groupSize.h * day.length,
+        height: -groupSize.h * (day.length + (dowOnTop ? 1 : 0)),
         borderColor: PDFLib.rgb(0, 0, 0),
         borderWidth: borderWidth,
     })
@@ -791,31 +789,59 @@ async function getDocument() {
 
 
 //border factor is used inaccurately, but the difference should not be that big
-async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, drawBorder) {
-    const [renderPattern, size, groupSize] = calcSize(schedule, origPattern, 500, rowRatio, borderFactor);
+async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, drawBorder, dowOnTop) {
+    const colWidth = 500
+    const renderPattern = []
+
+    let maxRows = 0;
+    for(let i = 0; i < origPattern.length; i++) {
+        const newCol = []
+        let curRows = 0;
+        for(let j = 0; j < origPattern[i].length; j++) {
+            const index = origPattern[i][j];
+            if(index === -1) continue;
+            const day = schedule[index];
+            if(!day || !day.length) continue;
+
+            curRows += day.length;
+            newCol.push(index)
+        }
+        if(dowOnTop) curRows += newCol.length;
+
+        if(curRows > maxRows) maxRows = curRows;
+        if(newCol.length) renderPattern.push(newCol)
+    }
+
+    const pageSize = [colWidth * renderPattern.length, colWidth * maxRows * rowRatio]
+    const groupSize = { w: colWidth, h: colWidth * rowRatio };
 
     const ch = (num) => !(num >= 1 && num < Infinity)
-    if(ch(size[0]) || ch(size[1])) {
+    if(ch(pageSize[0]) || ch(pageSize[1])) {
         const [pdfDoc, font] = await getDocument()
         const page = pdfDoc.addPage([1, 1])
         return [1, await pdfDoc.save()]
     }
 
     const [pdfDoc, font] = await getDocument()
-    const page = pdfDoc.addPage(size)
+    const page = pdfDoc.addPage(pageSize)
 
     for(let i = 0; i < renderPattern.length; i++) {
-        let curY = size[1];
+        let curY = pageSize[1];
     
         for(let j = 0; j < renderPattern[i].length; j++) { 
             const index = renderPattern[i][j];
             if(index == undefined || schedule[index] == undefined) continue;
-            drawDay(schedule[index], index, page, font, { x: i*groupSize.w, y: curY }, groupSize, borderFactor, drawBorder);
-            curY = curY - schedule[index].length * groupSize.h;
+            drawDay(
+                page, font, 
+                schedule[index], index, 
+                { x: i*groupSize.w, y: curY }, groupSize, 
+                borderFactor, drawBorder, dowOnTop
+            );
+            curY = curY - groupSize.h * (schedule[index].length + (dowOnTop ? 1 : 0));
         }
     }
 
-    return [size[0], await pdfDoc.save()];
+    return [pageSize[0], await pdfDoc.save()];
 }
 
 function readScheduleScheme(text) {

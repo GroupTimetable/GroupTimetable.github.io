@@ -418,7 +418,7 @@ async function processPDF0() {
                 const [schedule, bigFields] = makeSchedule(cont, vBounds, boundsH);
                 destroyOrig()
                 updInfo({ msg: 'Создаём PDF файл расписания', type: 'processing', progress: ns() })
-                const [width, doc] = await scheduleToPDF(schedule, scheme, rowRatio, 4/500, true)
+                const [width, doc] = await scheduleToPDF(schedule, scheme, rowRatio, 4/500, false, false)
                 const warningText = makeWarningText(schedule, bigFields)
                 await destroyOrig() //https://github.com/mozilla/pdf.js/issues/16777
                 updInfo({ msg: 'Создаём предпросмотр', type: 'processing', progress: ns() })
