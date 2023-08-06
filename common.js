@@ -18,30 +18,30 @@ function copy(src) {
     return dst;
 }
 
+let prevA
+
 function download(file, filename) {
     if (window.navigator.msSaveOrOpenBlob) // IE10+
         window.navigator.msSaveOrOpenBlob(file, filename);
     else { // Others
-        var a = document.createElement("a"),
-        url = URL.createObjectURL(file);
+        if(prevA) document.body.removeChild(prevA)
+        var a = prevA = document.createElement("a")
+        const url = URL.createObjectURL(file);
         a.href = url;
         a.download = filename;
         document.body.appendChild(a);
         a.click();
         setTimeout(function() {
-            document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
         }, 0);
     }
 }
 
 function downloadUrl(url, filename) {
-    var a = document.createElement("a")
+    if(prevA) document.body.removeChild(prevA)
+    var a = prevA = document.createElement("a")
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
-    setTimeout(function() {
-        document.body.removeChild(a);
-    }, 0);
 }

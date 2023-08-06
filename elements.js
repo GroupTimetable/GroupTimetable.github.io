@@ -210,6 +210,7 @@ async function createAndInitOutputElement(defWidth, rowRatio, scheme, schedule, 
             el.style.animation = null
         } catch (error) {
             console.error(error);
+            downloadUrl(img, name + '.png')
         }
     })
     element.edit.addEventListener('click', function() {
