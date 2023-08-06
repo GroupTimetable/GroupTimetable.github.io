@@ -186,6 +186,43 @@ body[data-fileLoaded] #group-input:placeholder-shown {
     background-color: hsl(250deg 86% 60% / 10%);
 }
 
+.gen-settings-switch {
+    display: flex;
+    justify-content: stretch;
+    cursor: pointer;
+
+    & > * {
+        display: flex;
+        align-items: center;
+
+        border: 0px solid transparent;
+        border-radius: 999999px 0px 0px 999999px;
+
+        background: #5d3ff100;
+        transition: background 0.2s, transform 0.2s;
+        transition-timing-function: ease-out;
+    }
+
+    &:hover > * { 
+        transform: translateX(-0.1rem);
+        background: #5d3ff170; 
+    }
+
+    & svg {
+        transform: rotate(270deg);
+        width: 1.4rem;
+        height: 1.4em;
+        fill: none;
+        stroke: white;
+        stroke-width: 0.2;
+        stroke-linecap: round;
+    }
+
+    &.gen-settings-next {
+        transform: rotate(180deg);
+    }
+}
+
 #outputs {
     margin: 0 auto;
     display: flex;

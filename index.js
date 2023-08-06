@@ -74,27 +74,119 @@ let prevProgress
 let curStatus = {};
 
 const genSettings = {}
-const createGenSettings = Promise.all([loadDom, loadCommon]).then(_ => {
-    const genPopupHTML = htmlToElement(`<div>
-        <div style="margin-bottom: 0.3rem">Расположение дней:</div>
-        <div class="days-scheme" contentEditable="true" style="border:none;outline:none; border-bottom: 1px solid white; 
-            white-space: nowrap;
-            width: 100%; min-height: 1rem; display: inline-block; font-family: monospace; font-size: 1.0rem"></div>
-        <div style="margin-top: 0.6rem; display: flex; align-items: baseline">
-            <div style="text-align: right; flex-grow: 1">Высота&nbsp;строки:&nbsp;</div>
-            <input class="height-input" type="number" style="
-                text-align: right; font-size: 1rem; color: white;
-                border-bottom: 0.1rem solid white"
-                max="6" min="0"/>
-            <div>%</div>
+const createGenSettings = Promise.all([loadDom, loadCommon, loadPopups]).then(_ => {
+    const genPopupHTML = htmlToElement(`
+<div>
+    <div style="margin-bottom: 0.6rem;">Расположение дней:</div>
+    <div class="days-scheme" contenteditable="true" style="border:none;outline:none; border-bottom: 1px solid white;
+        white-space: nowrap; width: 100%; min-height: 1rem; display: inline-block; font-family: monospace; font-size: 1.0rem">
+        Пн Чт<br>Вт Пт<br>Ср Сб
+    </div>
+
+    <div style="display: flex; margin-top: 0.9em; gap: 0.2em;">
+        <div class="gen-settings-switch gen-settings-prev">
+            <div><svg xmlns="http://www.w3.org/2000/svg" viewBox="-.2 -.2 1.4 1.4"><path d="M0 .75L.5 .25L1 0.75"></path></svg></div>
         </div>
-    </div>`)
+
+        <div style="display: grid; grid-template-columns: auto auto">
+            <span style="text-align: right;">Высота&nbsp;строки:</span>
+            <span style="display: flex;align-items: baseline;">
+                &nbsp;
+                <input class="height-input" type="number" style="
+                    text-align: right; font-size: 1rem;
+                    color: white; border-bottom: 0.1rem solid white;
+                    padding: 0; padding-right: 0.1em;" max="6" min="0">
+                %
+            </span>
+
+            <span style="text-align: right; margin-top: 0.9em;">Граница&nbsp;дней:</span>
+            <span style="display: flex;align-items: baseline;margin-top: 0.9em;">
+                &nbsp;
+                <input class="border-input" type="number" style="
+                    text-align: right; font-size: 1em; color: white;
+                    border-bottom: 0.1rem solid white;
+                    padding: 0; padding-right: 0.1em;
+                    " max="6" min="0">
+                ‰
+            </span>
+
+            <span style="text-align: right; margin-top: 0.6em;">Цвет:</span>
+            <span style="display: flex; margin-top: 0.6em;">
+                &nbsp;<div class="border-color" style="cursor: pointer; border-bottom: 0.1rem solid white;"></div>
+             </span>
+
+            <span style="text-align: right; margin-top: 0.9em">Расположение дней недели:</span>
+            <span style="display: flex;align-items: end;margin-top: 0.9em;">
+                &nbsp;<div class="dow-position" style="cursor: pointer; border-bottom: 0.1rem solid white;"></div>
+            </span>
+       </div>
+
+        <div class="gen-settings-switch gen-settings-next">
+            <div><svg xmlns="http://www.w3.org/2000/svg" viewBox="-.2 -.2 1.4 1.4"><path d="M0 .75L.5 .25L1 0.75"></path></svg></div>
+        </div>
+</div>
+    `)
 
     genSettings.popupEl = genPopupHTML
     genSettings.scheduleLayoutEl = genPopupHTML.querySelector('.days-scheme') 
-    genSettings.scheduleLayoutEl.innerHTML = 'Пн Чт<br\>Вт Пт<br\>Ср Сб'
     genSettings.heightEl = genPopupHTML.querySelector('.height-input')
-    genSettings.heightEl.value = (1/5.2 * 100).toFixed(2)
+    genSettings.borderSizeEl = genPopupHTML.querySelector('.border-input')
+    genSettings.borderColorEl = genPopupHTML.querySelector('.border-color')
+    genSettings.dowPositionEl = genPopupHTML.querySelector('.dow-position')
+
+    const savedSettings = [
+        [(1/5.2 * 100).toFixed(2),  '8', true, false],
+        [(1/5.2 * 100).toFixed(2), '20', false, true],
+    ]
+    let curSettings = 0;
+
+    function updBorderCol(value) { 
+        genSettings.drawBorder = value
+        genSettings.borderColorEl.innerText = value ? 'чёрный' : 'никакой'
+    }
+    function updDowOnTop(value) {
+        genSettings.dowOnTop = value
+        genSettings.dowPositionEl.innerText = value ? 'сверху' : 'сбоку'
+    }
+    function updHeight(value) {
+        genSettings.heightEl.value = value
+    }
+    function updBorderSize(value) {
+        genSettings.borderSizeEl.value = value
+    }
+    function setFromSettings() {
+        const s = savedSettings[curSettings]
+        updHeight(s[0])
+        updBorderSize(s[1])
+        updBorderCol(s[2])
+        updDowOnTop(s[3])
+    }
+    function updSettings(newSettings) {
+        const s = savedSettings[curSettings]
+        s[0] = genSettings.heightEl.value
+        s[1] = genSettings.borderSizeEl.value
+        s[2] = genSettings.drawBorder
+        s[3] = genSettings.dowOnTop
+        if(newSettings === -1) curSettings = savedSettings.length - 1
+        else if(newSettings === savedSettings.length) curSettings = 0
+        else curSettings = newSettings
+        setFromSettings()
+    }
+
+    genSettings.borderColorEl.addEventListener('click', () => {
+        updBorderCol(!genSettings.drawBorder)
+    })
+    genSettings.dowPositionEl.addEventListener('click', () => {
+        updDowOnTop(!genSettings.dowOnTop)
+    })
+    genPopupHTML.querySelector('.gen-settings-prev').addEventListener('click', () => {
+        updSettings(curSettings-1)
+    })
+    genPopupHTML.querySelector('.gen-settings-next').addEventListener('click', () => {
+        updSettings(curSettings+1)
+    })
+
+    setFromSettings()
 })
 
 Promise.all([loadDom, loadElements, loadPopups, createGenSettings]).then(_ => {
@@ -387,7 +479,11 @@ async function processPDF0() {
     const name = dom.groupInputEl.value.trim()
     const nameFixed = nameFixup(name)
     const rowRatio = Number.parseFloat(genSettings.heightEl.value) / 100
+    const borderFactor = Number.parseFloat(genSettings.borderSizeEl.value) / 1000
     if(!(rowRatio < 1000 && rowRatio > 0.001)) throw ['неправильное значение высоты строки', genSettings.heightEl.value]
+    if(!(borderFactor < 1000 && borderFactor >= 0)) throw ['неправильное значение ширины границы', genSettings.borderSizeEl.value]
+    const drawBorder = genSettings.drawBorder
+    const dowOnTop = genSettings.dowOnTop
     const scheme = readScheduleScheme(readElementText(genSettings.scheduleLayoutEl))
 
     let userdata;
@@ -418,7 +514,7 @@ async function processPDF0() {
                 const [schedule, bigFields] = makeSchedule(cont, vBounds, boundsH);
                 destroyOrig()
                 updInfo({ msg: 'Создаём PDF файл расписания', type: 'processing', progress: ns() })
-                const [width, doc] = await scheduleToPDF(schedule, scheme, rowRatio, 4/500, false, false)
+                const [width, doc] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
                 const warningText = makeWarningText(schedule, bigFields)
                 await destroyOrig() //https://github.com/mozilla/pdf.js/issues/16777
                 updInfo({ msg: 'Создаём предпросмотр', type: 'processing', progress: ns() })
