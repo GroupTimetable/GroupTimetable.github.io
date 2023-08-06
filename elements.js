@@ -365,11 +365,8 @@ const css = `
     to { opacity: 0.5 }
 }
 
-@media (pointer: fine) {
-
 .output-cont {
     & .out-overlay { 
-        background: #00000080;
         opacity: 0;
         transition: opacity 200ms;
     }
@@ -420,14 +417,16 @@ const css = `
     }
 }
 
+@media (pointer: fine) {
+    .output-cont .out-overlay { 
+        background: #00000080;
+    }
 }
 
 @media not (pointer: fine) {
-
-.output-cont .out-overlay { opacity: 1; }
-.output-cont .main-action-img { opacity: 0 }
-.output-cont .out-icons { background: #00000080; }
-
+    .output-cont .out-overlay { opacity: 1; }
+    .output-cont .main-action-img { opacity: 0 }
+    .output-cont .out-icons { background: #00000080; }
 }
 
 `

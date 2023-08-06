@@ -11,9 +11,49 @@ loadDom.then(_ => {
     dom.warningEl = qs('warning')
     dom.filenameEl = qs('filename')
     dom.outputsEl = qs('outputs')
+    dom.dataAccept = qs('data-acc')
+    dom.dataDecline = qs('data-dec')
+    dom.dataUsageOpen = qs('open-data-usage')
     dom.dropZoneEl = qs('drop-zone')
 })
 
+Promise.all([loadDom, loadUserdata]).then(_ => {
+    const { dataAccept, dataDecline, dataUsageOpen } = dom
+
+    updateUserdataElements(true, getUserdataAllowed())
+
+    dataAccept.querySelector('.close-button').addEventListener('click', _ => {
+        updateUserdataElements(false, getUserdataAllowed())
+    })
+    dataDecline.querySelector('.close-button').addEventListener('click', _ => {
+        updateUserdataElements(false, getUserdataAllowed())
+    })
+
+    dataUsageOpen.addEventListener('click', _ => {
+        updateUserdataElements(true, getUserdataAllowed())
+    })
+
+    dataAccept.querySelector('span').addEventListener('click', _ => {
+        window.setUserdataAllowed(false)
+        updateUserdataElements(false, false)
+    })
+    dataDecline.querySelector('span').addEventListener('click', _ => {
+        window.setUserdataAllowed(true)
+        updateUserdataElements(false, true)
+    })
+
+    function updateUserdataElements(open, accepted) {
+        dataAccept.setAttribute('data-transition', '')
+        dataDecline.setAttribute('data-transition', '')
+        dataUsageOpen.setAttribute('data-transition', '')
+
+        dataAccept  .setAttribute('data-visible', open && accepted)
+        dataDecline .setAttribute('data-visible', open && !accepted)
+        dataUsageOpen.setAttribute('data-visible', !open)
+
+        dataUsageOpen.setAttribute('data-usage-accepted', accepted)
+    }
+})
 
 /*HTML does not have any way to make resizable multiline prompt
 the only other option, namely contentEditable=true, has a number of fields for reading text, none of which work:

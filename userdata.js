@@ -118,6 +118,28 @@ function getCookie() {
     }
 }
 
+const userData = (() => {
+    let userData;
+    try { userData = getCookie() } catch(e) { console.error(e) }
+    if(!userData || !userData.uuid) {
+         //preserving the fields
+        userData ??= {}
+        userData.uuid ??= genUUID()
+        userData.noUserdata ??= false
+    }
+    try { setCookie(userData) } catch(e) { console.error(e) }
+    return userData
+})()
+
+window.setUserdataAllowed = (isAllowed) => {
+    userData.noUserdata = !isAllowed
+    try { setCookie(userData) } catch(e) { console.error(e) }
+}
+
+window.getUserdataAllowed = () => {
+    return !userData.noUserdata
+}
+
 window.updateUserdataF = (userdataFuncName) => { 
     try{ try {
         const func = regFunctions[userdataFuncName]
@@ -125,13 +147,6 @@ window.updateUserdataF = (userdataFuncName) => {
         const funcName = '' + userdataFuncName
 
         return (...params) => { try { try {
-            let userData;
-            try { userData = getCookie() } catch(e) { console.error(e) }
-            if(!userData || !userData.uuid) {
-                userData ??= {} //preserving other fields
-                userData.uuid ??= genUUID()
-                try { setCookie(userData) } catch(e) { console.error(e) }
-            }
             if(userData.noUserdata) return;
             const userUUID = userData.uuid
 
