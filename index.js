@@ -418,13 +418,14 @@ async function processPDF0() {
                 const [schedule, bigFields] = makeSchedule(cont, vBounds, boundsH);
                 destroyOrig()
                 updInfo({ msg: 'Создаём PDF файл расписания', type: 'processing', progress: ns() })
-                const doc = await scheduleToPDF(schedule, scheme, 1000, rowRatio)
+                const [width, doc] = await scheduleToPDF(schedule, scheme, rowRatio)
                 const warningText = makeWarningText(schedule, bigFields)
                 await destroyOrig() //https://github.com/mozilla/pdf.js/issues/16777
                 updInfo({ msg: 'Создаём предпросмотр', type: 'processing', progress: ns() })
                 const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
                 await createAndInitOutputElement(
-                    rowRatio, scheme, schedule, doc, dom.outputsEl, outFilename,
+                    width, rowRatio, 
+                    scheme, schedule, doc, dom.outputsEl, outFilename,
                     updateUserdataF2('regDocumentUsed'), userdata
                 )
 

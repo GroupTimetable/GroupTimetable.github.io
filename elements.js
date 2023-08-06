@@ -138,7 +138,7 @@ function insertPopup(par) {
 }
 
 
-async function createAndInitOutputElement(rowRatio, scheme, schedule, doc, parentElement, name, usedFunc, userdata) {
+async function createAndInitOutputElement(defWidth, rowRatio, scheme, schedule, doc, parentElement, name, usedFunc, userdata) {
     const usedFunction = (type) => { try { try {
         usedFunc(...userdata, type)
     } catch(e) { console.error(e) } } catch(e) {} }
@@ -161,7 +161,7 @@ async function createAndInitOutputElement(rowRatio, scheme, schedule, doc, paren
 
     const element = createOutputElement()
 
-    element.widthInput.value = 1000
+    element.widthInput.value = defWidth
     element.image.src = await getImage()
 
     element.name.textContent = name

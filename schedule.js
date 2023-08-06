@@ -367,25 +367,32 @@ function makeSchedule(cont, vBounds, hBounds) {
     return [schedule, bigFields]
 }
 
-
-function calcSize(schedule, renderPattern, width, rowRatio/*height/width*/) {
-    let maxLessonsInCol = 1;
+function calcSize(schedule, renderPattern, colWidth, rowRatio/*height/width*/) {
+    const newRenderPattern = []
+    let maxLessonsInCol = 0;
     for(let i = 0; i < renderPattern.length; i++) {
+        const newCol = []
         let maxCount = 0;
         for(let j = 0; j < renderPattern[i].length; j++) {
             const index = renderPattern[i][j];
             if(index === -1) continue;
             const day = schedule[index];
-            if(day == undefined) continue;
+            if(!day || !day.length) continue;
+
             maxCount += day.length;
+            newCol.push(index)
         }
         if(maxCount > maxLessonsInCol) maxLessonsInCol = maxCount;
+        if(newCol.length) newRenderPattern.push(newCol)
     }
 
-    const height = width / renderPattern.length * maxLessonsInCol * rowRatio;
-    const groupSize = { h: height / maxLessonsInCol, w: width / renderPattern.length };
+    if(!renderPattern.length) return [newRenderPattern, [1, 1], [1, 1]]
 
-    return [height, groupSize];
+    const m1 = (num) => { if(num > 1 && num < Infinity) return num; else return 1 }
+    const pageSize = [m1(colWidth * newRenderPattern.length), m1(colWidth * maxLessonsInCol * rowRatio)]
+    const groupSize = { w: m1(colWidth), h: m1(colWidth * rowRatio) };
+
+    return [newRenderPattern, pageSize, groupSize];
 }
 
 function drawTextCentered(text, page, font, fontSize, center, precompWidths = undefined) {
@@ -685,11 +692,13 @@ async function renderPDF(doc, width, type = 'image/png', quality = 1) {
     const pdf = await pdfTask.promise
     const page = await pdf.getPage(1);
 
-    const viewport = page.getViewport({ scale: width / page.getViewport({scale:1}).width })
+    const m1 = (num) => { if(num > 1 && num < Infinity) return num; else return 1 }
+    const viewport = page.getViewport({ scale: m1(width / page.getViewport({scale:1}).width) })
 
     const canvas = new OffscreenCanvas(
-        Math.floor(viewport.width),
-        Math.floor(viewport.height)
+
+        m1(Math.floor(viewport.width)),
+        m1(Math.floor(viewport.height))
     )
     const context = canvas.getContext("2d");
 
@@ -731,14 +740,14 @@ async function getDocument() {
     return [pdfDoc, font]
 }
 
-async function scheduleToPDF(schedule, renderPattern, width, rowRatio) {
-    const [height, groupSize] = calcSize(schedule, renderPattern, width, rowRatio);
+async function scheduleToPDF(schedule, origPattern, rowRatio) {
+    const [renderPattern, size, groupSize] = calcSize(schedule, origPattern, 500, rowRatio);
 
     const [pdfDoc, font] = await getDocument()
-    const page = pdfDoc.addPage([width, height])
+    const page = pdfDoc.addPage(size)
 
     for(let i = 0; i < renderPattern.length; i++) {
-        let curY = height;
+        let curY = size[1];
     
         for(let j = 0; j < renderPattern[i].length; j++) { 
             const index = renderPattern[i][j];
@@ -748,7 +757,7 @@ async function scheduleToPDF(schedule, renderPattern, width, rowRatio) {
         }
     }
 
-    return pdfDoc.save();
+    return [size[0], await pdfDoc.save()];
 }
 
 function readScheduleScheme(text) {
