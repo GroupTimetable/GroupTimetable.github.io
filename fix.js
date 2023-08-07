@@ -17,7 +17,7 @@ let origUserdata
     }
     catch(e) {
         const st = document.getElementById('status')
-        st.style.color = 'red'
+        st.style.color = 'var(--error-color)'
         st.innerHTML = '' + e
     }
 
@@ -154,7 +154,7 @@ document.getElementById('create').addEventListener('click', async function() {
         }
 
         const st = document.getElementById('status')
-        st.style.color = 'red'
+        st.style.color = 'var(--error-color)'
         st.innerHTML = '' + e
         return;
     }

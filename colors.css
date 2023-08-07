@@ -1,0 +1,61 @@
+body {
+    --primary-color: #4286f1;
+    --primary-contrast-color: #f8f8f8;
+
+    --header-color1: var(--primary-color);
+    --header-color2: #6bb5f5;
+
+    --bg1-startbutton: #367dee;
+    --bg2-startbutton: #458cff;
+
+    --shadow1-size: 0.3rem;
+    --shadow2-size: 0.5rem;
+    --shadow1-color: #00000030;
+    --shadow2-color: #00000050;
+
+    --hint-color   : #ad44ff;
+    --hint-color-50: #ad44ff80;
+    --hint-color-15: #ad44ff26;
+    --hint-color-0 : #ad44ff00;
+
+    --link-color: #0095ff;
+    
+    --error-color   : #f15642;
+    --error-color-20: #f1564233;
+    --error-color-0 : #f1564200;
+
+    --bg-hover-text: #95959550;
+    --bg-hover-outputicon: #ffffff30;
+    --bg-hover-outputmainimage: #ffffff60;
+    --bg-hover-outputmainimage-0: #ffffff00;
+    --outputoverlay-color: #00000080;
+
+    --bg-color-light: white;
+    --bg2-color-light: #f8f8f8;
+    --outline-color-light: #ccc;
+    --text-color-light: #202020;
+    --secondary-text-color-light: #a0a0a0;
+
+    --bg-color-dark: #202020;
+    --bg2-color-dark: #333;
+    --outline-color-dark: #777;
+    --text-color-dark: #f8f8f8;
+    --secondary-text-color-dark: #5f5f5f;
+
+    --bg-color: var(--bg-color-light);
+    --bg2-color: var(--bg2-color-light);
+    --outline-color: var(--outline-color-light);
+    --text-color: var(--text-color-light);
+    --secondary-text-color: var(--secondary-text-color-light);
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        --bg-color: var(--bg-color-dark);
+        --bg2-color: var(--bg2-color-dark);
+        --outline-color: var(--outline-color-dark);
+        --text-color: var(--text-color-dark);
+        --secondary-text-color: var(--secondary-text-color-dark);
+    }
+}
+

@@ -41,14 +41,12 @@ function createOutputElement() {
         </div>
         <div class="main-action-cont">
             <div title="Скопировать изображение" class="main-action-img">
-                <svg viewBox="0 0 24 24" style="fill: #f8f8f8" xmlns="http://www.w3.org/2000/svg">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path fill-rule="evenodd" clip-rule="evenodd" d="M21 8C21 6.34315 19.6569 5 18 5H10C8.34315 5 7 6.34315 7 8V20C7 21.6569 8.34315 23 10 23H18C19.6569 23 21 21.6569 21 20V8ZM19 8C19 7.44772 18.5523 7 18 7H10C9.44772 7 9 7.44772 9 8V20C9 20.5523 9.44772 21 10 21H18C18.5523 21 19 20.5523 19 20V8Z"></path> 
                         <path d="M6 3H16C16.5523 3 17 2.55228 17 2C17 1.44772 16.5523 1 16 1H6C4.34315 1 3 2.34315 3 4V18C3 18.5523 3.44772 19 4 19C4.55228 19 5 18.5523 5 18V4C5 3.44772 5.44772 3 6 3Z"></path> 
                 </svg>
             </div>
-            <div class="anim-background">
-                <div></div>
-            </div>
+            <div class="anim-background"><div></div></div>
         </div>
         <div class="out-footer out-icons">
             <div class="view-pdf" title="Открыть как PDF">
@@ -85,8 +83,8 @@ function createOutputElement() {
             <input type="number" style="
                 text-align: right;
                 font-size: 1rem;
-                color: white;
-                border-bottom: 0.1rem solid white;" 
+                color: var(--primary-contrast-color);
+                border-bottom: 0.1rem solid var(--primary-contrast-color);" 
                 max="4" min="0"></input>
             пикс.
         </div>
@@ -120,17 +118,8 @@ function insertPopup(par) {
     const el = htmlToElement(`
 <span class='popup-container' shown="false">
     <div> <!-- nice empty div tat serves no purpose in the doc but needed for propper formating -->
-        <div class="safe-zone" style="padding: 2rem; margin-top: -2rem; pointer-events: none;">
-            <div class="popup" style="
-                pointer-events: all;
-                background-color: #4286f1;
-                border: 0px solid transparent;
-                border-radius: 10px;
-                box-shadow: 0px 0px 0.6rem 0px #00000030;
-                padding: 0.8rem;
-                color: white;
-            ">
-            </div>
+        <div class="safe-zone">
+            <div class="popup"></div>
         </div>
     </div>
 </span>
@@ -308,15 +297,32 @@ const css = `
         & > * { transform: scale(0); transition: transform 0s 300ms; }
     }
 
-    .popup {
-        & input::-webkit-outer-spin-button,
-        & input::-webkit-inner-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
+    & > * > .safe-zone {
+        padding: 2rem; 
+        margin-top: -2rem; 
+        pointer-events: none;
+
+        & > .popup {
+            border: 0px solid transparent;
+            border-radius: 10px;
+            padding: 0.8rem;
+
+            background-color: var(--primary-color);
+            color: var(--primary-contrast-color);
+
+            box-shadow: 0px 0px var(--shadow2-size) 0px var(--shadow1-color);
+
+            pointer-events: all;
+
+            & input::-webkit-outer-spin-button,
+            & input::-webkit-inner-spin-button {
+              -webkit-appearance: none;
+              margin: 0;
+            }
+            & input[type=number] { -moz-appearance: textfield; }
+            & input { border: none; outline: none; background: none; }
+            &:hover { outline: 1px solid var(--primary-contrast-color); }
         }
-        & input[type=number] { -moz-appearance: textfield; }
-        & input { border: none; outline: none; background: none; }
-        &:hover { outline: 1px solid white; }
     }
 }
 
@@ -325,8 +331,8 @@ const css = `
 }
 
 @keyframes error-anim {
-    from { background: #f15642; }
-    to { background: #f1564200; }
+    from { background: var(--error-color); }
+    to { background: var(--error-color-0); }
 }
 
 .output-cont {
@@ -344,11 +350,16 @@ const css = `
     */
     /*animation-fill-mode: both*/ 
 
+    & > .name {
+        color: var(--text-color);
+    }
+
     & .output {
         display: grid;
         align-items: center;
         justify-items: center;
-        box-shadow: 0px 0px 0.5rem 0px #00000030;
+        background: white;
+        box-shadow: 0px 0px var(--shadow2-size) 0px var(--shadow1-color);
         & > * { grid-row: 1; grid-column: 1; }
     }
 
@@ -365,6 +376,7 @@ const css = `
             align-items: center;
 
             & > * {
+                fill: var(--text-color-dark);
                 position: relative;
                 z-index: 1;
 
@@ -384,25 +396,25 @@ const css = `
             /*overflow: visible;*/
             margin-left: 0.2rem;
             padding: 0.4rem;
-            border: 0px solid #00000000;
+            border: 0px solid transparent;
             border-radius: 999999px;
 
             &:hover {
-                background-color: #ffffff30;
+                background-color: var(--bg-hover-outputicon);
             }
 
             & > *:first-child {
                 display: block;
                 height: 1.4rem;
-                fill: #f8f8f8;
-                stroke: #f8f8f8;
+                fill: var(--text-color-dark);
+                stroke: var(--text-color-dark);
             }
 
             &[data-pressed=true] {
-                background-color: #fff;
+                background-color: var(--primary-contrast-color);
                 & > *:first-child {
-                    fill: #4286f1;
-                    stroke: #4286f1;
+                    fill: var(--primary-color);
+                    stroke: var(--primary-color);
                 }
             }
 
@@ -442,7 +454,7 @@ const css = `
         flex: 1 0 auto;
 
         &:hover > .anim-background > * {
-            background: #ffffff80;
+            background: var(--bg-hover-outputmainimage);
         }
 
         & > .anim-background {
@@ -457,12 +469,12 @@ const css = `
 
                 opacity: 0.5;
 
-                background: #ffffff00;
+                background: var(--bg-hover-outputmainimage-0);
                 transition: background 200ms;
             }
 
             &[data-error=true] > * {
-                background: #f15642;
+                background: var(--error-color);
             }
 
             &[data-anim] {
@@ -485,14 +497,14 @@ const css = `
 
 @media (pointer: fine) {
     .output-cont .out-overlay { 
-        background: #00000080;
+        background: var(--outputoverlay-color);
     }
 }
 
 @media not (pointer: fine) {
     .output-cont .out-overlay { opacity: 1; }
     .output-cont .main-action-img { opacity: 0 }
-    .output-cont .out-icons { background: #00000080; }
+    .output-cont .out-icons { background: var(--outputoverlay-color); }
 }
 
 `

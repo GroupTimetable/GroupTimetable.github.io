@@ -16,31 +16,59 @@
         <script defer src="./userdata.js" type="module"></script>
         <script defer src="fix.js"></script>
 
-            <style>
+        <link rel="stylesheet" href="colors.css">
+        <style>
 @media (orientation: landscape) {
     .main-flex {
         display: flex;
     }
 }
-            </style>
+
+button {
+    padding: 0.5em;
+    appearance: none;
+    background: var(--primary-color);
+    color: var(--primary-contrast-color);
+    border: 0px solid transparent;
+    border-radius: 999999px;
+    outline: none;
+
+    &:hover { cursor: pointer; filter: brightness(115%); }
+}
+
+textarea {
+    appearance: none; 
+    resize: none; 
+    outline: none; 
+
+    overflow: scroll; 
+    flex: 1 1 auto; 
+    border: 0px solid transparent;
+    border-radius: 0.5em;
+
+    font-family: monospace; 
+    background: var(--bg2-color); 
+    color: var(--text-color);
+}
+        </style>
     </head>
-    <body style="margin: 0">
+    <body style="margin: 0; background: var(--bg-color); color: var(--text-color)">
         <div class="main-flex" style="width: 100vw; min-height: 100vh; align-items: stretch">
             <div style="min-height: 90vh; padding: 1rem; flex: 1 1 auto; display: flex; flex-direction: column; align-items: stretch">
                 <div style="margin-bottom: 1rem">
                     <div>
-                        Окно изменения созданного расписания.
+                        Окно изменения расписания.
                         <br/> Положение в расписании записывается как "<i>группа</i> - <i>неделя</i>", где <i>группа</i> = 1 или 2, а <i>неделя</i> = ч или з.
                         <br/> Если не написать неделю или группу, то пара будет использоваться для обеих недель/групп.
                         <br/> "Окна" (незанятые уроки) можно добавить так: "<i>время от</i>-<i>время до</i>": {} 
                     </div>
-                    <div style="margin-top: 1rem; display: flex; gap: 0.8rem">
+                    <div style="margin-top: 1rem; display: flex; gap: 0.8rem; align-items: baseline;">
                         <button id="reset">Сбросить</button>
                         <div id="status" style="flex: 1 1 0px"></div>
                         <button id="create">Создать</button>
                     </div>
                 </div>
-                <textarea id="edit-input" wrap="off" style="font-family: monospace; background-color: #f0f0f0; overflow: scroll; flex: 1 1 auto; resize: none; -webkit-appearance: none; border: none; outline: none;"></textarea>
+                <textarea id="edit-input" wrap="off"></textarea>
             </div>
             <!-- apparently we can't have overflow-x: visible; overflow-y: scroll so the parent would be scrollable now -->
             <div id="outputs" style="flex: 0 0 auto; overflow-x: visible; display: flex; flex-direction: column; align-items: center; gap: 1.5rem; padding: 1rem">

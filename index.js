@@ -112,12 +112,12 @@ const createGenSettings = Promise.all([loadDom, loadCommon, loadPopups]).then(_ 
 
             <span style="text-align: right; margin-top: 0.6em;">Цвет:</span>
             <span style="display: flex; margin-top: 0.6em;">
-                &nbsp;<div class="border-color" style="cursor: pointer; border-bottom: 0.1rem solid white;"></div>
+                &nbsp;<div class="border-color" style="cursor: pointer; border-bottom: 0.1rem solid var(--primary-contrast-color);"></div>
              </span>
 
             <span style="text-align: right; margin-top: 0.9em">Расположение дней недели:</span>
             <span style="display: flex;align-items: end;margin-top: 0.9em;">
-                &nbsp;<div class="dow-position" style="cursor: pointer; border-bottom: 0.1rem solid white;"></div>
+                &nbsp;<div class="dow-position" style="cursor: pointer; border-bottom: 0.1rem solid var(--orimary-contrast-color);"></div>
             </span>
        </div>
 
@@ -245,7 +245,7 @@ function checkShouldProcess() {
     const name = dom.groupInputEl.value.trim()
     if(name == '') {
         updInfo({
-            msg: 'Для продолжения введите имя группы (имгр123 и т.п.) и нажмите <span style="color: rgb(124 10 144)">Enter</span>', 
+            msg: 'Для продолжения введите имя группы (имгр123 и т.п.) и нажмите <span style="color: var(--hint-color)">Enter</span>', 
             type: 'pending'
         })
         return
@@ -330,15 +330,15 @@ function updStatus() { try {
     const { progressBarEl, statusEl, warningEl } = dom
 
     if(s.level === 'error') {
-        progressBarEl.style.backgroundColor = '#f15642'
+        progressBarEl.style.backgroundColor = 'var(--error-color)'
         if(prevProgress !== s.progress) resizeProgressBar(s.progress)
 
         statusEl.innerHTML = "Ошибка: " + s.msg
-        statusEl.style.color = '#f15642'
+        statusEl.style.color = 'var(--error-color)'
         statusEl.style.opacity = 1
     }
     else if(s.level === 'info') {
-        progressBarEl.style.backgroundColor = '#4286f1'
+        progressBarEl.style.backgroundColor = 'var(--primary-color)'
         if(prevProgress !== s.progress) resizeProgressBar(s.progress)
 
         if(!s.msg || s.msg.trim() === '') { 
@@ -347,7 +347,7 @@ function updStatus() { try {
         }
         else {
             statusEl.innerHTML = s.msg
-            statusEl.style.color = '#202020'
+            statusEl.style.color = 'var(--text-color)'
             statusEl.style.opacity = 1
         }
     }
@@ -441,6 +441,8 @@ function readElementText(element) {
 }
 
 function makeWarningText(schedule, bigFields) {
+    //should this print only chosen days and not all of them?
+    
     if(!bigFields.length) return ''
     let prevDay
     let warningText = ''

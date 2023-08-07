@@ -1,5 +1,6 @@
 body {
     font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background-color: var(--bg-color);
 }
 
 .centerel-vert {
@@ -21,20 +22,12 @@ body {
 .header {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
         'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-    color: white;
+    color: var(--primary-contrast-color);
     font-size: 1.5rem;
     text-align: right;
     font-weight: bold;
-    box-shadow: 0px 0px 0.5rem 0px #00000050;
-    background: linear-gradient(140deg, #4286f1, #6bb5f5);
-
-    & > a {
-        color: #eee; 
-        transition: color 100ms;
-        &:hover {
-            color: #fff;
-        }
-    }
+    box-shadow: 0px 0px var(--shadow2-size) 0px var(--shadow2-color);
+    background: linear-gradient(140deg, var(--header-color1), var(--header-color2));
 
     padding: 0.5rem;
     padding-right: 2rem;
@@ -54,7 +47,7 @@ body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
             'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
         text-align: center; 
-        color: #4286f1;
+        color: var(--primary-color);
 
         max-width: max(40rem, 114vh);
         font-size: 2rem;
@@ -66,6 +59,25 @@ body {
     cursor: pointer;
     margin: 0 auto;
     & > span { word-wrap:break-word; }
+}
+
+#filename {
+    color: var(--secondary-text-color); 
+    opacity: 0;
+    transition: opacity 100ms;
+}
+
+#status {
+    opacity: 0;
+    transition: opacity 100ms;
+}
+
+#warning {
+    max-width: min(45rem, 90vw); 
+    margin: 0 auto; 
+    color: var(--hint-color); 
+    opacity: 0; 
+    transition: opacity 100ms;
 }
 
 .group-bar-formatting {
@@ -86,22 +98,24 @@ body {
     display: flex;
     flex-direction: column;
     align-items: stretch;
+    margin-top: 0.3em;
+    margin-bottom: 0.3em;
 
-    background-color: #f8f8f8;
+    background-color: var(--bg2-color);
 
     border-radius: 999999px;
     border: 0px solid transparent;
-    box-shadow: 0px 0px 0.3rem 0px #00000030;
+    box-shadow: 0px 0px var(--shadow1-size) 0px var(--shadow1-color);
 
-    &:hover { outline: 1px solid #cccccc; }
+    &:hover { outline: 1px solid var(--outline-color); }
 
     #group-input {
         width: 100%; 
         flex: 1 1 0px; 
         -webkit-appearance: none; border: none; outline: none;
         margin: 0.1rem 0px 0.1rem;
-        color: #202020;
-        background: none;
+        color: var(--text-color);
+        background: none; /*default is white*/
         font-size: 1.3em;
     }
 
@@ -111,19 +125,19 @@ body {
 
         & > svg {
             cursor: pointer;
-            border: 0px solid #00000000;
+            border: 0px solid transparent;
             border-radius: 999999px;
             overflow: hidden;
 
             display: block;
             height: 1.4rem; 
             width: auto;
-            fill: #202020;
+            fill: var(--text-color);
             padding: 0.4rem;
         }
 
         &:hover > svg {
-            background-color: #dcdcdc;
+            background-color: var(--bg-hover-text);
         }
     }
 
@@ -131,15 +145,15 @@ body {
         stroke-width: 5%;
     }
     #start-button:not([data-pending]) > svg {
-        fill: #4286f1;
-        stroke: #4286f1;
+        fill: var(--primary-color);
+        stroke: var(--primary-color);
     }
     #start-button[data-pending] > svg {
-        fill: white;
-        stroke: white;
+        fill: var(--primary-contrast-color);
+        stroke: var(--primary-contrast-color);
 
-        --color1: #367dee;
-        --color2: #458cff;
+        --color1: var(--bg1-startbutton);
+        --color2: var(--bg2-startbutton);
         --scale: 0.5rem;
         --blur: 6%;
         background-image: linear-gradient(
@@ -156,12 +170,12 @@ body {
         background-size: calc(4.619*var(--scale)) calc(8.0 * var(--scale));
         animation: start-pending 1s linear infinite;
 
-        &:hover { filter: brightness(110%); }
+        &:hover { filter: brightness(115%); }
     }
 
     & #generation-settings[data-pressed=true] > svg {
-        fill: white;
-        background-color: #4286f1;
+        fill: var(--primary-contrast-color);
+        background-color: var(--primary-color);
 
         &:hover {
             filter: brightness(110%);
@@ -174,16 +188,24 @@ body {
         width: 0%;
         &[data-transition=true] { transition: width 100ms; }
     }
-}
 
-body:not([data-fileLoaded]) #load-file-text {
-    color: hsl(250deg 86% 60% / 1);
-}
+    & > .group-bar-double {
+        position: absolute; 
+        top: 0; bottom: 0; right: 0; left: 0; 
 
-body[data-fileLoaded] #group-input:placeholder-shown {
-    border: 0px solid transparent;
-    border-radius: 0.5rem;
-    background-color: hsl(250deg 86% 60% / 10%);
+        visibility: hidden; 
+        overflow: clip; 
+
+        border-radius: inherit; 
+        border: inherit; 
+
+        display: flex; 
+        flex-direction: column-reverse;
+
+        & > * {
+            visibility: visible;
+        }
+    }
 }
 
 .gen-settings-switch {
@@ -198,14 +220,14 @@ body[data-fileLoaded] #group-input:placeholder-shown {
         border: 0px solid transparent;
         border-radius: 999999px 0px 0px 999999px;
 
-        background: #5d3ff100;
+        background: var(--hint-color-0);
         transition: background 0.2s, transform 0.2s;
         transition-timing-function: ease-out;
     }
 
     &:hover > * { 
         transform: translateX(-0.1rem);
-        background: #5d3ff170; 
+        background: var(--hint-color-50);
     }
 
     & svg {
@@ -213,7 +235,7 @@ body[data-fileLoaded] #group-input:placeholder-shown {
         width: 1.4rem;
         height: 1.4em;
         fill: none;
-        stroke: white;
+        stroke: var(--primary-contrast-color);
         stroke-width: 0.2;
         stroke-linecap: round;
     }
@@ -244,7 +266,7 @@ body[data-fileLoaded] #group-input:placeholder-shown {
 
     & > a {
         padding: 0.5rem;
-        color: #0080ff;
+        color: var(--link-color);
 
         &:not(:hover) {
             text-decoration: none;
@@ -267,27 +289,27 @@ body[data-fileLoaded] #group-input:placeholder-shown {
         padding: 0.3em;
         padding-bottom: 0.1em;
 
-        background: #f8f8f8;
+        background: var(--bg2-color);
         border: 0px solid transparent;
         border-radius: 999px 999px 0px 0px;
-        box-shadow: 0px 0px 0.3em 0px #00000060;
+        box-shadow: 0px 0px var(--shadow1-size) 0px var(--shadow2-color);
 
         & > svg {
             height: 100%;
 
             fill: none;
-            stroke: #4286f1;
+            stroke: var(--primary-color);
             stroke-width: 0.2;
             stroke-linecap: round;
         }
     }
 
     &[data-usage-accepted=false] svg {
-        stroke: #f15642;
+        stroke: var(--error-color);
     }
 
     &:hover >  * { 
-        background: #dcdcdc;
+        background: var(--bg-hover-text);
     }
 }
 
@@ -306,10 +328,10 @@ body[data-fileLoaded] #group-input:placeholder-shown {
          width: 100%;
     }
 
-    background: #f8f8f8;
+    background: var(--bg2-color);
     border: 0px solid transparent;
     border-radius: 0.6em 0.6em 0px 0px;
-    box-shadow: 0px 0px 0.5rem 0px #00000030;
+    box-shadow: 0px 0px var(--shadow2-size) 0px var(--shadow1-color);
 
     font-size: 0.75em;
 
@@ -337,14 +359,14 @@ body[data-fileLoaded] #group-input:placeholder-shown {
             }
         }
 
-        &:hover svg { stroke: #2f2f2f; }
+        &:hover svg { stroke: var(--text-color); }
     }
 
     & > span {
         display: block;
         margin-top: 1em;
         margin-left: 1em;
-        color: #2f2f2f;
+        color: var(--text-color);
 
         cursor: pointer;
 
@@ -360,7 +382,7 @@ body[data-fileLoaded] #group-input:placeholder-shown {
     padding: 2vmin 2vmin 2vmin 2vmin;
     z-index: 999999;
 
-    background-color: #F1564230;
+    background-color: var(--error-color-20);
     transition: visibility 150ms, opacity 150ms;
 
     & > * {
@@ -381,5 +403,15 @@ body[data-fileLoaded] #group-input:placeholder-shown {
             height: 25%;
         }
     }
+}
+
+body:not([data-fileLoaded]) #load-file-text {
+    color: var(--hint-color);
+}
+
+body[data-fileLoaded] #group-input:placeholder-shown {
+    border: 0px solid transparent;
+    border-radius: 0.5rem;
+    background-color: var(--hint-color-15) !important;
 }
 

@@ -87,6 +87,8 @@ function popupAddHoverClick(id, onElement, whenToggled) {
     addOwner('click', id)
     addOwner('focus', id)
 
+    //doesn't work if mouse is already over the element
+
     const popupEl = popupList[id].popup.element
     popupEl.addEventListener('focusin', () => {
         updatePopup('focus', id, stateShown)
