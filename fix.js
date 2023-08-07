@@ -44,6 +44,21 @@ let origUserdata
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
 
+let collapsed = false;
+const collapseContent = document.querySelector('#collapse-content')
+const collapseButton = document.querySelector('#collapse-button')
+collapseButton.addEventListener('click', _ => {
+    collapsed = !collapsed;
+
+    collapseButton.setAttribute('collapsed', collapsed)
+    if(collapsed) {
+        collapseContent.style.display = 'none';
+    }
+    else {
+        collapseContent.style.display = '';
+    }
+})
+
 function lessonToSimple(lesson, indent) {
     let result = ''
 
