@@ -454,29 +454,52 @@ const textBreak = new (function() {
         }
     }
     this.haveTried = function (divs) { return tried.includes(divs) }
-    this.remeasure = function(str, divs, font, bounds) {
+    this.remeasure = function(strOrig, divs, font, bounds) {
+        let prevSpace = true //trimStart
+        let str = ''
+        for(let i = 0; i < strOrig.length; i++) {
+            if(prevSpace & (prevSpace = strOrig[i] === ' ')) continue;
+            else str += strOrig[i]
+        }
+        str = str.trimEnd()
+
         tried.push(divs)
+
 
         const tmpI = !bestI
         const tmp = objs[+tmpI]
         tmp.lineWidths.length = tmp.texts.length = tmp.width = tmp.height = tmp.fontSize = 0
         /*break text*/ {
-            const offsets = [0, -1, 1, 2, -2, 3, -3, 4, -4, 5, -5]
+            const maxOffset = Math.max(1, Math.log(str.length+1)) * Math.sqrt(str.length)
             const lineLen =  Math.floor(str.length / divs)
 
-            let prev = 0
+            let prev = 0, startFrom = 0
             for(let i = 0; i < divs-1; i++) {
                 const base = lineLen * (i+1)
-                for(let j = 0; j < offsets.length; j++) {
-                    const cur = base + offsets[j]
-                    //no bounds checking and break bc we alternate indices
-                    if(str[cur] !== ' ') continue;
 
-                    tmp.texts.push(str.substring(prev, cur));
-                    prev = cur+1;
+                startFrom = Math.max(startFrom, base - maxOffset)
+
+                let foundPos
+                for(let cur = base; cur >= startFrom; cur--) if(str[cur] === ' ') {
+                    foundPos = cur;
                     break;
                 }
+                                
+                for(startFrom = Math.max(startFrom, base+1); 
+                    startFrom <= Math.min(str.length-1, base + maxOffset)
+                        && !(startFrom - base >= base - foundPos); 
+                    startFrom++
+                ) if(str[startFrom] === ' ') {
+                    foundPos = startFrom++;
+                    break;
+                }
+
+                if(foundPos) {
+                    tmp.texts.push(str.substring(prev, foundPos));
+                    prev = foundPos+1;
+                }
             }
+
             tmp.texts.push(str.substring(prev));
         }
 
