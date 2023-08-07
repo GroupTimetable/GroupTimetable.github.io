@@ -393,7 +393,7 @@ function drawText(page, text, params) {
 function widthOfTextAtSize(font, text, size) {
     if(size != undefined && checkValid(size)) return font.widthOfTextAtSize(text, size)
     else {
-        console.lor('invalid size: ', size)
+        console.log('invalid size: ', size)
         return NaN
     }
 }
@@ -655,11 +655,14 @@ function drawLesson(lesson, page, font, coord, size, timeWidth) {
     drawLessons(lesson, page, font, { x: coord.x + timeWidth, y: coord.y }, { w: size.w - timeWidth, h: size.h })
 }
 
-function drawDayOfWeek(dayI, page, font, coord, size, rotated) {
-    const text = daysOfWeek[dayI]
+function drawTextWidthinBounds(text, page, font, coord, size, params) {
+    params ??= {}
+    const padding = params.padding ?? 0.05
+    const innerFactor = 1 - 2*padding
+
     const calcParams = (maxWidth, maxHeight) => {
-        const offWidth = maxWidth * 0.9
-        const offHeight = maxHeight * 0.9
+        const offWidth = maxWidth * innerFactor
+        const offHeight = maxHeight * innerFactor
         const fontSize = sizeAtHeight(font, offHeight);
         const largestWidth = widthOfTextAtSize(font, text, fontSize);
         const textHeight = heightAtSize(font, fontSize)
@@ -667,23 +670,39 @@ function drawDayOfWeek(dayI, page, font, coord, size, rotated) {
         const scaledWidth = largestWidth * scaledHeight / offHeight;
         const newSize = sizeAtHeight(font, scaledHeight);
 
-        const d = descenderAtHeight(font, newSize);
-        const offsetWidth = (maxWidth - scaledWidth) * 0.5;
-        const offsetHeight = d + (offHeight + maxHeight) * 0.5;
-        return [offsetWidth, offsetHeight, newSize]
+        const offsetHeight = (offHeight + maxHeight) * 0.5;
+        if(params.alignRight) { 
+            const offsetWidth = maxWidth * (1 - padding) - scaledWidth
+            return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, newSize]
+        }
+        else {
+            const offsetWidth = (maxWidth - scaledWidth) * 0.5
+            return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, newSize]
+        }
     };
-    const [offsetWidth, offsetHeight, fontSize] = rotated ? calcParams(size.h, size.w) : calcParams(size.w, size.h)
+    const [offsetWidth, offsetHeight, tw, th, fontSize] = params.rotated ? calcParams(size.h, size.w) : calcParams(size.w, size.h)
+    const d = descenderAtHeight(font, fontSize);
+    const textOffsetX = params.rotated ? d : 0;
+    const textOffsetY = params.rotated ? 0 : -d;
+    const x = coord.x + (params.rotated ? offsetHeight : offsetWidth)
+    const y = coord.y + (params.rotated ? -size.h + offsetWidth : -offsetHeight)
+
+    if(params.backgroundColor) drawRectangle(page, {
+        x, y, 
+        width: params.rotated ? -th : tw,
+        height: params.rotated ? tw : th,
+        color: params.backgroundColor
+    })
 
     drawText(page, text, {
-        x: coord.x + (rotated ? offsetHeight : offsetWidth),
-        y: coord.y + (rotated ? -size.h + offsetWidth : -offsetHeight),
+        x: x + textOffsetX, y: y + textOffsetY,
         size: fontSize,
         font: font,
         color: PDFLib.rgb(0, 0, 0),
-        rotate: PDFLib.degrees(rotated ? 90 : 0)
+        rotate: PDFLib.degrees(params.rotated ? 90 : 0)
     });
 
-    drawRectangle(page, {
+    if(!params.noBorder) drawRectangle(page, {
         x: coord.x,
         y: coord.y,
         width: size.w,
@@ -708,14 +727,15 @@ function drawDay(
     const h = fullH / day.length
     const addColWidth = w*0.1
 
+    const text = daysOfWeek[dayI]
     if(dowOnTop) {
         const size = { w, h }
-        drawDayOfWeek(dayI, page, font, { x, y }, size, false)
+        drawTextWidthinBounds(text, page, font, { x, y }, size)
         y -= size.h
     }
     else {
         const size = { w: addColWidth, h : fullH }
-        drawDayOfWeek(dayI, page, font, { x, y }, size, true)
+        drawTextWidthinBounds(text, page, font, { x, y }, size, { rotated: true })
         x += size.w
         w -= addColWidth
     }
@@ -794,9 +814,10 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
     const renderPattern = []
 
     let maxRows = 0;
+    let curRows = 0;
     for(let i = 0; i < origPattern.length; i++) {
         const newCol = []
-        let curRows = 0;
+        curRows = 0;
         for(let j = 0; j < origPattern[i].length; j++) {
             const index = origPattern[i][j];
             if(index === -1) continue;
@@ -812,14 +833,21 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
         if(newCol.length) renderPattern.push(newCol)
     }
 
-    const pageSize = [colWidth * renderPattern.length, colWidth * maxRows * rowRatio]
+    const signatureHeight = 40, signaturePadding = 4
+
+    const pageHeight = Math.max( 
+        maxRows * colWidth * rowRatio,
+        curRows * colWidth * rowRatio + signatureHeight + signaturePadding*2
+    );
+
+    const pageSize = [colWidth * renderPattern.length, pageHeight]
     const groupSize = { w: colWidth, h: colWidth * rowRatio };
 
     const ch = (num) => !(num >= 1 && num < Infinity)
     if(ch(pageSize[0]) || ch(pageSize[1])) {
         const [pdfDoc, font] = await getDocument()
         const page = pdfDoc.addPage([1, 1])
-        return [1, await pdfDoc.save()]
+        return [1, await pdfDoc.save()] //no signature
     }
 
     const [pdfDoc, font] = await getDocument()
@@ -840,6 +868,13 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
             curY = curY - groupSize.h * (schedule[index].length + (dowOnTop ? 1 : 0));
         }
     }
+
+    drawTextWidthinBounds(
+        'vanaigr.github.io', page, font, 
+        { x: pageSize[0] - colWidth*0.8 - signaturePadding, y: signatureHeight + signaturePadding }, 
+        { w: colWidth*0.8, h: signatureHeight }, 
+        { alignRight: true, noBorder: true, padding: 0, backgroundColor: PDFLib.rgb(1, 1, 1) }
+    )
 
     return [pageSize[0], await pdfDoc.save()];
 }
