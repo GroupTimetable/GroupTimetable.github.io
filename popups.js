@@ -85,6 +85,16 @@ function isHidden(elem) { //not position: fixed   !
 function popupAddHoverClick(id, onElement, whenToggled) {
     addOwner('hover', id)
     addOwner('click', id)
+    addOwner('focus', id)
+
+    const popupEl = popupList[id].popup.element
+    popupEl.addEventListener('focusin', () => {
+        updatePopup('focus', id, stateShown)
+    })
+    popupEl.addEventListener('focusout', () => {
+        if(popupEl.contains(document.activeElement)) return; /*switching tabs or something*/
+        updatePopup('focus', id, stateHidden)
+    })
 
     let keepPopupOpen = false, ignoreHover = false
     onElement.addEventListener('click', () => {
