@@ -133,11 +133,13 @@ function insertPopup(par) {
 }
 
 
-async function createAndInitOutputElement(defWidth, rowRatio, scheme, schedule, doc, parentElement, name, usedFunc, userdata) {
+async function createAndInitOutputElement(doc, parentElement, name, defWidth, editParams, usedFunc, userdata) {
     const usedFunction = (type) => { try { try {
         usedFunc(...userdata, type)
     } catch(e) { console.error(e) } } catch(e) {} }
 
+    editParams.userdata = userdata
+    
     const fileUrl = window.URL.createObjectURL(new Blob([copy(doc)], { type: 'application/pdf' }));
     const imagesForWidth = []
 
@@ -240,10 +242,7 @@ async function createAndInitOutputElement(defWidth, rowRatio, scheme, schedule, 
         }
     })
     element.edit.addEventListener('click', function() {
-        const parms = JSON.stringify({ 
-            schedule: schedule, scheme: scheme, rowRatio: rowRatio,
-            userdata
-        });
+        const parms = JSON.stringify(editParams);
         const storageId = "parms" + String(Date.now());
         sessionStorage.setItem(storageId, parms);
         window.open("./fix.html" + "?sid=" + storageId);

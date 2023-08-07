@@ -522,9 +522,11 @@ async function processPDF0() {
                 updInfo({ msg: 'Создаём предпросмотр', type: 'processing', progress: ns() })
                 const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
                 await createAndInitOutputElement(
-                    width, rowRatio, 
-                    scheme, schedule, doc, dom.outputsEl, outFilename,
-                    updateUserdataF2('regDocumentUsed'), userdata
+                    doc, dom.outputsEl, 
+                    outFilename, width,
+                    { rowRatio, scheme, schedule, drawBorder, dowOnTop, borderFactor },
+                    updateUserdataF2('regDocumentUsed'), 
+                    userdata
                 )
 
                 updInfo({ msg: 'Готово', warning: warningText, type: 'processing', progress: ns() })

@@ -1,18 +1,14 @@
-let origSchedule;
-let origScheme;
-let origRowRatio;
-let origUserdata
+let orig = { /*
+    rowRatio, scheme, schedule, drawBorder, dowOnTop,
+    userdata, defaultWidth, borderFactor
+*/ };
 
 (_ => {
     const prmstr = window.location.search.split("=");
     const sid = prmstr[1];
     if(sid) try {
-        const args = JSON5.parse(sessionStorage.getItem(sid));
+        orig = JSON5.parse(sessionStorage.getItem(sid));
         sessionStorage.removeItem(sid);
-        origSchedule = args.schedule
-        origScheme = args.scheme
-        origRowRatio = args.rowRatio
-        origUserdata = args.userdata
         return 
     }
     catch(e) {
@@ -21,7 +17,7 @@ let origUserdata
         st.innerHTML = '' + e
     }
 
-    origSchedule = [
+    orig.schedule = [
         [
             {sTime: 510, eTime: 600, lessons: ['Общая пара', 'Общая пара', 'Общая пара', 'Общая пара', ]},
             {sTime: 620, eTime: 710, lessons: ['Пара 1 группы', 'Пара 2 группы', 'Пара 1 группы', 'Пара 2 группы']},
@@ -37,9 +33,13 @@ let origUserdata
         ],
         [],[],[]
     ]
-    origScheme = [[0, 1, 2], [3, 4, 5]]
-    origRowRatio = 0.19
-    origUserdata = ['new document', 'no group']
+    orig.scheme = [[0, 1, 2], [3, 4, 5]]
+    orig.rowRatio = 0.19
+    orig.userdata = ['new document', 'no group']
+    orig.drawBorder = true
+    orig.borderFactor = 0.008
+    orig.dowOnTop = false
+    orig.defaultWidth = 1000
 })()
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
@@ -117,14 +117,17 @@ function dayToSimple(day, indent) {
 function scheduleToSimple(schedule) {
     let result = '';
 
-    result += '"Высота/ширину строки": ' + origRowRatio + ',\n'
+    result += '"Черная граница дней": ' + (orig.drawBorder ? '"да"' : '"нет"') + ',\n'
+    result += '"Дни недели наверху": ' + (orig.dowOnTop ? '"да"' : '"нет"') + ',\n'
+    result += '"Размер границы дней": ' + (orig.borderFactor*1000) + ',\n'
+    result += '"% высоты строки": ' + (orig.rowRatio*100) + ',\n'
     result += '"Расположение дней": [';
     for(let j = 0;; j++) {
         let line = ''
-        for(let i = 0; i < origScheme.length; i++) {
+        for(let i = 0; i < orig.scheme.length; i++) {
             if(i !== 0) line += ' '
-            if(origScheme[i][j] == undefined) line += '  '
-            else line += daysOfWeekShortened[origScheme[i][j]]
+            if(orig.scheme[i][j] == undefined) line += '  '
+            else line += daysOfWeekShortened[orig.scheme[i][j]]
         }
         if(line.trim() === '') break
         result += '\n' + ' '.repeat(4) + '"' + line + '",'
@@ -145,10 +148,10 @@ function scheduleToSimple(schedule) {
 window.updateUserdataF ??= () => { console.error('no function defined') }
 
 document.getElementById('reset').addEventListener('click', function() {
-    document.getElementById('edit-input').value = scheduleToSimple(origSchedule)
+    document.getElementById('edit-input').value = scheduleToSimple(orig.schedule)
 })
 
-document.getElementById('edit-input').value = scheduleToSimple(origSchedule)
+document.getElementById('edit-input').value = scheduleToSimple(orig.schedule)
 
 document.getElementById('create').addEventListener('click', async function() {
     try{ await processEdit() }
@@ -170,7 +173,7 @@ document.getElementById('create').addEventListener('click', async function() {
 
         const st = document.getElementById('status')
         st.style.color = 'var(--error-color)'
-        st.innerHTML = '' + e
+        st.innerHTML = str
         return;
     }
 
@@ -189,9 +192,14 @@ async function processEdit() {
 
     const schedule = new Array(7)
 
-    const rowRatioS = si['Высота/ширину строки']
-    const rowRatio = Number.parseFloat(rowRatioS)
-    if(!(rowRatio < 1000 && rowRatio > 0.001)) throw ['неправильное значение высоты строки', rowRatioS]
+    const rowRatioS = si['% высоты строки']
+    const rowRatio = Number.parseFloat(rowRatioS) / 100
+    if(!(rowRatio < 1000 && rowRatio > 0.001)) throw ['неправильное значение % высоты строки', rowRatioS]
+    const drawBorder = (si["Черная граница дней"] || '').trim().toLowerCase() !== 'нет'
+    const dowOnTop = (si["Дни недели наверху"] || '').trim().toLowerCase() === 'да'
+    const borderFactorS = si["Размер границы дней"]
+    const borderFactor = Number.parseFloat(borderFactorS) / 1000
+    if(!(borderFactor < 1000 && borderFactor >= 0)) throw ['неправильное значение размера границы', borderFactorS]
 
     const schemeSA = si['Расположение дней'] 
     let schemeS = ''
@@ -257,11 +265,14 @@ async function processEdit() {
     }
 
     let userdata;
-    try { try { userdata = [...structuredClone(origUserdata)] } catch(e) { console.log(e) } } catch(e) {}
+    try { try { userdata = [...structuredClone(orig.userdata)] } catch(e) { console.log(e) } } catch(e) {}
 
-    const [width, pdf] = await scheduleToPDF(schedule, scheme, rowRatio, 4/500, true)
+    const [width, pdf] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
     updateUserdataF('regDocumentEdited')(...userdata) 
     const outs = document.getElementById('outputs')
-    await createAndInitOutputElement(width, rowRatio, scheme, schedule, pdf, outs, '', updateUserdataF('regDocumentUsed'), userdata) 
+    await createAndInitOutputElement(
+        pdf, outs, '', width, structuredClone(orig), 
+        updateUserdataF('regDocumentUsed'), userdata
+    ) 
 }
 
