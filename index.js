@@ -80,7 +80,7 @@ const createGenSettings = Promise.all([loadDom, loadCommon, loadPopups]).then(_ 
     <div style="margin-bottom: 0.6rem;">Расположение дней:</div>
     <div class="days-scheme" contenteditable="true" style="border:none;outline:none; border-bottom: 1px solid white;
         white-space: nowrap; width: 100%; min-height: 1rem; display: inline-block; font-family: monospace; font-size: 1.0rem">
-        Пн Чт<br>Вт Пт<br>Ср Сб
+        пн чт<br>вт пт<br>ср сб
     </div>
 
     <div style="display: flex; margin-top: 0.9em; gap: 0.2em;">
@@ -245,7 +245,7 @@ function checkShouldProcess() {
     const name = dom.groupInputEl.value.trim()
     if(name == '') {
         updInfo({
-            msg: 'Для продолжения введите имя группы и нажмите <span style="color: rgb(124 10 144)">Enter</span>', 
+            msg: 'Для продолжения введите имя группы (имгр123 и т.п.) и нажмите <span style="color: rgb(124 10 144)">Enter</span>', 
             type: 'pending'
         })
         return
