@@ -36,14 +36,21 @@ body {
     --text-color-light: #202020;
     --secondary-text-color-light: #a0a0a0;
 
+    --button-color-light: #dcdcdc;
+    --button-hover-light: #d0d0d0;
+    --button-color-dark: #333;
+    --button-hover-dark: #3b3b3b;
+
     --bg-color-dark: #202020;
-    --bg2-color-dark: #333;
+    --bg2-color-dark: #232323;
     --outline-color-dark: #777;
     --text-color-dark: #f8f8f8;
     --secondary-text-color-dark: #5f5f5f;
 
     --bg-color: var(--bg-color-light);
     --bg2-color: var(--bg2-color-light);
+    --button-color: var(--button-color-light);
+    --button-hover: var(--button-hover-light);
     --outline-color: var(--outline-color-light);
     --text-color: var(--text-color-light);
     --secondary-text-color: var(--secondary-text-color-light);
@@ -53,6 +60,8 @@ body {
     body {
         --bg-color: var(--bg-color-dark);
         --bg2-color: var(--bg2-color-dark);
+        --button-color: var(--button-color-dark);
+        --button-hover: var(--button-hover-dark);
         --outline-color: var(--outline-color-dark);
         --text-color: var(--text-color-dark);
         --secondary-text-color: var(--secondary-text-color-dark);

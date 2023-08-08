@@ -29,18 +29,22 @@
     font: inherit;
     padding: 0.5em;
     appearance: none;
-    background: var(--bg2-color);
-    color: var(--text-color);
     border: 0px solid transparent;
     border-radius: 999999px;
     outline: none;
+    cursor: pointer;
+}
 
-    &:hover { cursor: pointer; filter: brightness(115%); }
+#reset {
+    background: var(--button-color);
+    color: var(--text-color);
+    &:hover { background: var(--button-hover) } 
 }
 
 #create {
     background: var(--primary-color);
     color: var(--primary-contrast-color);
+    &:hover { filter: brightness(115%); }
 }
 
 .text-area {
@@ -96,9 +100,11 @@
 
         border: 0px solid transparent;
         border-radius: 999999px;
-        background: var(--bg-hover-text);
+        background: var(--button-color);
 
-        &:hover { cursor: pointer; filter: brightness(115%); }
+        cursor: pointer;
+
+        &:hover { background: var(--button-hover) } 
 
         & > * {
             fill: none;
