@@ -87,8 +87,6 @@ function popupAddHoverClick(id, onElement, whenToggled) {
     addOwner('click', id)
     addOwner('focus', id)
 
-    //doesn't work if mouse is already over the element
-
     const popupEl = popupList[id].popup.element
     popupEl.addEventListener('focusin', () => {
         updatePopup('focus', id, stateShown)
@@ -113,6 +111,12 @@ function popupAddHoverClick(id, onElement, whenToggled) {
 
         whenToggled(keepPopupOpen)
     })
+
+    //check if element is already under the mouse
+    if(onElement.matches(':hover')/*I hope this is equivalent to mouseenter*/) {
+        if(!ignoreHover) updatePopupAfterMs('hover', id, stateShown, 300)
+    }
+
     onElement.addEventListener('mouseenter', () => {
         if(!ignoreHover) updatePopupAfterMs('hover', id, stateShown, 300)
     })
