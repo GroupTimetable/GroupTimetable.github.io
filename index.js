@@ -440,19 +440,24 @@ function readElementText(element) {
     return innerTextHack.innerText
 }
 
-function makeWarningText(schedule, bigFields) {
-    //should this print only chosen days and not all of them?
-    
+function makeWarningText(schedule, scheme, bigFields) {
     if(!bigFields.length) return ''
+
+    const days = new Set()
+    for(let i = 0; i < scheme.length; i++) for(let j = 0; j < scheme[i].length; j++) days.add(scheme[i][j])
+
     let prevDay
     let warningText = ''
     for(let i = 0; i < bigFields.length; i++) {
         const f = bigFields[i]
+        if(!days.has(f.day)) continue
         if(prevDay === f.day) warningText += ', ' + minuteOfDayToString(schedule[f.day][f.hours].sTime)
         else warningText += '; ' + daysOfWeekShortened[f.day] + ' ' + minuteOfDayToString(schedule[f.day][f.hours].sTime)
         prevDay = f.day
     }
-    return "Внимание, обнаружены большие поля названий уроков (" + warningText.substring(2) + "). Проверьте полученное расписание на их корркетность."
+
+    if(warningText === '') return ''
+    else return "Внимание, обнаружены большие поля названий уроков (" + warningText.substring(2) + "). Проверьте полученное расписание на их корркетность."
 }
 
 function updateUserdataF2(...params) {
@@ -517,7 +522,7 @@ async function processPDF0() {
                 destroyOrig()
                 updInfo({ msg: 'Создаём PDF файл расписания', type: 'processing', progress: ns() })
                 const [width, doc] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
-                const warningText = makeWarningText(schedule, bigFields)
+                const warningText = makeWarningText(schedule, scheme, bigFields)
                 await destroyOrig() //https://github.com/mozilla/pdf.js/issues/16777
                 updInfo({ msg: 'Создаём предпросмотр', type: 'processing', progress: ns() })
                 const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
