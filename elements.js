@@ -319,6 +319,8 @@ const css = `
               margin: 0;
             }
             & input[type=number] { -moz-appearance: textfield; }
+
+            & input[type=number] { -moz-appearance: textfield; }
             & input { border: none; outline: none; background: none; }
             &:hover { outline: 1px solid var(--primary-contrast-color); }
         }

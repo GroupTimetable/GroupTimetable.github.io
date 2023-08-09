@@ -19,9 +19,43 @@
         <link rel="stylesheet" href="colors.css">
         <link rel="stylesheet" href="styles.css">
         <style>
-@media (orientation: landscape) {
+.main-flex {
+    display: flex;
+}
+
+.edit-area {
+    padding: 1rem; 
+    flex: 1 1 auto; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: stretch;
+}
+
+#outputs {
+    margin: 1em;
+    padding: 1em;
+    min-width: 5em; 
+    padding: 1rem;
+    overflow-x: visible; 
+    flex: 0 0 auto; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 1.5rem; 
+
+    background: var(--bg2-color);
+    border: 0px solid transparent;
+    border-radius: 0.5em;
+}
+
+
+@media (orientation: portrait) {
     .main-flex {
-        display: flex;
+        flex-direction: column;
+
+        & .edit-area {
+            height: 70vh;
+        }
     }
 }
 
@@ -72,23 +106,6 @@
     }
 }
 
-#outputs {
-    margin: 1em;
-    padding: 1em;
-    min-width: 5em; 
-    padding: 1rem
-    overflow-x: visible; 
-    flex: 0 0 auto; 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    gap: 1.5rem; 
-
-    background: var(--bg2-color);
-    border: 0px solid transparent;
-    border-radius: 0.5em;
-}
-
 #collapse-button {
     display: flex;
     justify-content: center;
@@ -96,7 +113,7 @@
 
     & > * {
         display: inline;
-        padding: 0.499em;
+        padding: 0.5em;
 
         border: 0px solid transparent;
         border-radius: 999999px;
@@ -109,8 +126,8 @@
         & > * {
             fill: none;
             stroke: var(--hint-color);
-            height: 1em;
-            width: 1em;
+            height: 1lh;
+            width: 1lh;
             stroke-width: 0.2;
             stroke-linecap: round;
             transform: rotate(180deg);
@@ -132,13 +149,24 @@
     text-align: center;
 }
 
+.hint-text {
+    font-size: 1.3em;
+    max-width: max(60vw, 120vh);
+}
+@keyframes opac01 {
+    from { opacity: 0 } to { opacity: 1 }
+}
+#status {
+    animation: opac01;
+    animation-duration: 300ms;
+}
         </style>
     </head>
     <body style="margin: 0; background: var(--bg-color); color: var(--text-color)">
         <div style="display: flex; flex-direction: column; width: 100vw; min-height: 100vh;">
             <div class="header">Coзание и изменение текстового расписания</div>
             <div class="main-flex" style="flex: 1 0 auto; align-items: stretch">
-                <div style="padding: 1rem; flex: 1 1 auto; display: flex; flex-direction: column; align-items: stretch">
+                <div class="edit-area">
                     <div style="margin-bottom: 1rem">
                         <div style="margin-top: 1rem; display: flex; gap: 0.8rem; align-items: baseline;">
                             <div id="collapse-button">
@@ -149,10 +177,11 @@
                             <div id="status" style="flex: 1 1 0px"></div>
                             <div id="create">Создать</div>
                         </div>
-                        <div id="collapse-content">
-                            Положение в расписании записывается как "<i>группа</i> - <i>неделя</i>", где <i>группа</i> = 1 или 2, а <i>неделя</i> = ч или з.
-                            <br/> Если не написать неделю или группу, то пара будет использоваться для обеих недель/групп.
-                            <br/> "Окна" (незанятые уроки) можно добавить так: "<i>время от</i>-<i>время до</i>": {} 
+                        <div id="collapse-content" class="hint-text">
+                            Положение в расписании записывается как "<i>группа</i>-<i>неделя</i>", где <i>группа</i> - 1 или 2, а <i>неделя</i> - ч или з.
+                            Если не написать неделю или группу, то пара будет использоваться для обеих недель/групп.
+                            <span style="color: var(--hint-color)">Все значения должны быть записаны в кавычках.</span>
+                            "Окна" (незанятые уроки) можно добавить так: "<i>время от</i>-<i>время до</i>": {} 
                         </div>
                     </div>
                     <div class="text-area"><textarea id="edit-input" wrap="off"></textarea></div>

@@ -1,7 +1,7 @@
-let orig = { /*
+let orig/*
     rowRatio, scheme, schedule, drawBorder, dowOnTop,
     userdata, defaultWidth, borderFactor
-*/ };
+*/
 
 (_ => {
     const prmstr = window.location.search.split("=");
@@ -9,37 +9,43 @@ let orig = { /*
     if(sid) try {
         orig = JSON5.parse(sessionStorage.getItem(sid));
         sessionStorage.removeItem(sid);
+        if(orig == undefined) throw 'Не удалось получить расписание для редактирования'
         return 
     }
     catch(e) {
         const st = document.getElementById('status')
         st.style.color = 'var(--error-color)'
         st.innerHTML = '' + e
+        st.style.animation = 'none'
+        st.offsetHeight
+        st.style.animation = ''
     }
 
-    orig.schedule = [
-        [
-            {sTime: 510, eTime: 600, lessons: ['Общая пара', 'Общая пара', 'Общая пара', 'Общая пара', ]},
-            {sTime: 620, eTime: 710, lessons: ['Пара 1 группы', 'Пара 2 группы', 'Пара 1 группы', 'Пара 2 группы']},
-            {sTime: 730, eTime: 820, lessons: ['', '', '', '']},
-            {sTime: 840, eTime: 930, lessons: ['Пара числителя', 'Пара числителя', 'Пара знаменателя', 'Пара знаменателя']},
-            {sTime: 950, eTime: 1040, lessons: ['Числитель 1 группы', 'Числитель 2 группы', 'Знаменатель 1 группы', 'Знаменатель 2 группы']}
+    orig = {
+        schedule: [
+            [
+                {sTime: 510, eTime: 600, lessons: ['Общая пара', 'Общая пара', 'Общая пара', 'Общая пара', ]},
+                {sTime: 620, eTime: 710, lessons: ['Пара 1 группы', 'Пара 2 группы', 'Пара 1 группы', 'Пара 2 группы']},
+                {sTime: 730, eTime: 820, lessons: ['', '', '', '']},
+                {sTime: 840, eTime: 930, lessons: ['Пара числителя', 'Пара числителя', 'Пара знаменателя', 'Пара знаменателя']},
+                {sTime: 950, eTime: 1040, lessons: ['Числитель 1 группы', 'Числитель 2 группы', 'Знаменатель 1 группы', 'Знаменатель 2 группы']}
+            ],
+            [],[],
+            [
+                {sTime: 620, eTime: 710, lessons: ['', '', '', '']},
+                {sTime: 730, eTime: 820, lessons: ['Числитель 1 группы', '', '', 'Знаменатель 2 группы']},
+                {sTime: 840, eTime: 930, lessons: ['', '', '', '']}
+            ],
+            [],[],[]
         ],
-        [],[],
-        [
-            {sTime: 620, eTime: 710, lessons: ['', '', '', '']},
-            {sTime: 730, eTime: 820, lessons: ['Числитель 1 группы', '', '', 'Знаменатель 2 группы']},
-            {sTime: 840, eTime: 930, lessons: ['', '', '', '']}
-        ],
-        [],[],[]
-    ]
-    orig.scheme = [[0, 1, 2], [3, 4, 5]]
-    orig.rowRatio = 0.19
-    orig.userdata = ['new document', 'no group']
-    orig.drawBorder = true
-    orig.borderFactor = 0.008
-    orig.dowOnTop = false
-    orig.defaultWidth = 1000
+        scheme: [[0, 1, 2], [3, 4, 5]],
+        rowRatio: 0.19,
+        userdata: ['new document', 'no group'],
+        drawBorder: true,
+        borderFactor: 0.008,
+        dowOnTop: false,
+        defaultWidth: 1000,
+    }
 })()
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
@@ -117,10 +123,10 @@ function dayToSimple(day, indent) {
 function scheduleToSimple(schedule) {
     let result = '';
 
-    result += '"Черная граница дней": ' + (orig.drawBorder ? '"да"' : '"нет"') + ',\n'
-    result += '"Дни недели наверху": ' + (orig.dowOnTop ? '"да"' : '"нет"') + ',\n'
-    result += '"Размер границы дней": ' + (orig.borderFactor*1000) + ',\n'
-    result += '"% высоты строки": ' + (orig.rowRatio*100) + ',\n'
+    result += '"Черная граница дней": "' + (orig.drawBorder ? 'да' : 'нет') + '",\n'
+    result += '"Дни недели наверху": "' + (orig.dowOnTop ? 'да' : 'нет') + '",\n'
+    result += '"Размер границы дней": "' + (orig.borderFactor*1000) + '",\n'
+    result += '"% высоты строки": "' + (orig.rowRatio*100) + '",\n'
     result += '"Расположение дней": [';
     for(let j = 0;; j++) {
         let line = ''
@@ -174,12 +180,18 @@ document.getElementById('create').addEventListener('click', async function() {
         const st = document.getElementById('status')
         st.style.color = 'var(--error-color)'
         st.innerHTML = str
+        st.style.animation = 'none'
+        st.offsetHeight
+        st.style.animation = ''
         return;
     }
 
     const st = document.getElementById('status')
     st.style.color = ''
     st.innerHTML = 'Готово'
+    st.style.animation = 'none'
+    st.offsetHeight
+    st.style.animation = ''
 })
 
 async function processEdit() {
@@ -193,13 +205,13 @@ async function processEdit() {
     const schedule = new Array(7)
 
     const rowRatioS = si['% высоты строки']
-    const rowRatio = Number.parseFloat(rowRatioS) / 100
-    if(!(rowRatio < 1000 && rowRatio > 0.001)) throw ['неправильное значение % высоты строки', rowRatioS]
+    const rowRatio = Number(rowRatioS) / 100
+    if(!(rowRatio < 1000 && rowRatio > 0.001)) throw 'неправильное значение % высоты строки: `' + rowRatioS + '`'
     const drawBorder = (si["Черная граница дней"] || '').trim().toLowerCase() !== 'нет'
     const dowOnTop = (si["Дни недели наверху"] || '').trim().toLowerCase() === 'да'
     const borderFactorS = si["Размер границы дней"]
-    const borderFactor = Number.parseFloat(borderFactorS) / 1000
-    if(!(borderFactor < 1000 && borderFactor >= 0)) throw ['неправильное значение размера границы', borderFactorS]
+    const borderFactor = Number(borderFactorS) / 1000
+    if(!(borderFactor < 1000 && borderFactor >= 0)) throw 'неправильное значение размера границы: `' + borderFactorS + '`'
 
     const schemeSA = si['Расположение дней'] 
     let schemeS = ''

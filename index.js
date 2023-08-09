@@ -117,7 +117,7 @@ const createGenSettings = Promise.all([loadDom, loadCommon, loadPopups]).then(_ 
 
             <span style="text-align: right; margin-top: 0.9em">Расположение дней недели:</span>
             <span style="display: flex;align-items: end;margin-top: 0.9em;">
-                &nbsp;<div class="dow-position" style="cursor: pointer; border-bottom: 0.1rem solid var(--orimary-contrast-color);"></div>
+                &nbsp;<div class="dow-position" style="cursor: pointer; border-bottom: 0.1rem solid var(--primary-contrast-color);"></div>
             </span>
        </div>
 
@@ -478,15 +478,15 @@ async function processPDF0() {
     await Promise.all([
         loadSchedule, loadCommon, loadElements, loadPopups, createGenSettings, 
         loadPdfjs, loadPdflibJs, loadFontkit
-    ]).catch(e => { throw "не удалось загрузить зависомость: `" + e + "`" })
+    ]).catch(e => { throw "не удалось загрузить зависомость " + e + ". Попробуйте перезагрузить страницу" })
 
     updInfo({ msg: 'Начинаем обработку', type: 'processing', progress: ns() })
 
     const contents = copy(currentFileContent)
     const name = dom.groupInputEl.value.trim()
     const nameFixed = nameFixup(name)
-    const rowRatio = Number.parseFloat(genSettings.heightEl.value) / 100
-    const borderFactor = Number.parseFloat(genSettings.borderSizeEl.value) / 1000
+    const rowRatio = Number(genSettings.heightEl.value) / 100
+    const borderFactor = Number(genSettings.borderSizeEl.value) / 1000
     if(!(rowRatio < 1000 && rowRatio > 0.001)) throw ['неправильное значение высоты строки', genSettings.heightEl.value]
     if(!(borderFactor < 1000 && borderFactor >= 0)) throw ['неправильное значение ширины границы', genSettings.borderSizeEl.value]
     const drawBorder = genSettings.drawBorder

@@ -77,11 +77,6 @@ function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
 }
 
-function isHidden(elem) { //not position: fixed   !
-    //jQuery
-    return !( elem.offsetWidth || elem.offsetHeight || elem.getClientRects().length );
-}
-
 function popupAddHoverClick(id, onElement, whenToggled) {
     addOwner('hover', id)
     addOwner('click', id)
@@ -140,15 +135,21 @@ window.addEventListener('mousemove', function(ev) {
 
     for(const i in popupList) {
         const pp = popupList[i]
-        if(isHidden(pp.popup.popup)) return
-        const bs = pp.popup.safeZone.getBoundingClientRect()
+        if(pp.state !== stateShown) /*
+            should this be removed? Popup has hiding transition,
+            and while it is playing the popup is technically hidden
+            so the user can't hover back on it to reopen it.
+            But neither feels good. And this variant is more safe,
+            because the safe area migth not collapse some day,
+            and this check would prevent a completely hidden popup from 
+            showing up when the mouse is over it
+        */ continue;
 
+        const bs = pp.popup.safeZone.getBoundingClientRect()
         const hovered = x === clamp(x, bs.left, bs.right)
             && y === clamp(y, bs.top, bs.bottom)
 
-        if(pp.state === stateShown) {
-            if(hovered) updatePopup('safe zone', i, stateShown)
-            else updatePopupAfterMs('safe zone', i, stateHidden, 500)
-        }
+        if(hovered) updatePopup('safe zone', i, stateShown)
+        else updatePopupAfterMs('safe zone', i, stateHidden, 500)
     }
 })
