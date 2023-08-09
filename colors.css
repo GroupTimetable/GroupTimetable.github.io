@@ -26,8 +26,7 @@ body {
 
     --bg-hover-text: #95959550;
     --bg-hover-outputicon: #ffffff30;
-    --bg-hover-outputmainimage: #ffffff60;
-    --bg-hover-outputmainimage-0: #ffffff00;
+    --bg-click-outputicon: white;
     --outputoverlay-color: #00000080;
 
     --bg-color-light: white;

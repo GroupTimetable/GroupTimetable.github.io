@@ -67,6 +67,23 @@ regFunctions.regDocumentUsed = (userUuid, randName, documentName, groupName, use
     console.error('data not sent for', userUuid, documentName, groupName)
 }
 
+regFunctions.regDocumentUseError = (userUuid, randName, documentName, groupName, useType) => { 
+    if(!userUuid) {
+        console.error('no user uuid for', documentName, groupName)
+        return
+    }
+
+    for(let i = 0; i < 3; i++) try {
+        db.set(db.ref(database, 'users/' + userUuid + '/' + randName), {
+            act: 'eus', doc: documentName, grp: groupName, utp: useType
+        });
+        return
+    } catch(e) { console.error(e) } 
+
+    //      it doesn't matter, right?   V
+    console.error('data not sent for', userUuid, documentName, groupName)
+}
+
 regFunctions.regDocumentEdited = (userUuid, randName, documentName, groupName) => { 
     if(!userUuid) {
         console.error('no user uuid for', documentName, groupName)

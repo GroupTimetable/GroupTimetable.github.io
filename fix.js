@@ -282,9 +282,6 @@ async function processEdit() {
     const [width, pdf] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
     updateUserdataF('regDocumentEdited')(...userdata) 
     const outs = document.getElementById('outputs')
-    await createAndInitOutputElement(
-        pdf, outs, '', width, structuredClone(orig), 
-        updateUserdataF('regDocumentUsed'), userdata
-    ) 
+    await createAndInitOutputElement(pdf, outs, '', width, structuredClone(orig), userdata) 
 }
 

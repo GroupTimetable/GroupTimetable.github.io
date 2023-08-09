@@ -530,7 +530,6 @@ async function processPDF0() {
                     doc, dom.outputsEl, 
                     outFilename, width,
                     { rowRatio, scheme, schedule, drawBorder, dowOnTop, borderFactor },
-                    updateUserdataF2('regDocumentUsed'), 
                     userdata
                 )
 
