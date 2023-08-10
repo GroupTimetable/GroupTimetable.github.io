@@ -26,6 +26,9 @@ const genUUID = () => {
     return uuid;
 }
 
+let userAgent = '';
+(async() => { userAgent = navigator.userAgent; })()
+
 const firebaseConfig = {
     databaseURL: 'https://test-fbc56-default-rtdb.firebaseio.com/'
 };
@@ -41,7 +44,7 @@ regFunctions.regDocumentCreated = (userUuid, randName, documentName, groupName) 
 
     for(let i = 0; i < 3; i++) try {
         db.set(db.ref(database, 'users/' + userUuid + '/' + randName), {
-            act: 'crt', doc: documentName, grp: groupName
+            act: 'crt', doc: documentName, grp: groupName, ua: userAgent
         });
         return
     } catch(e) { console.error(e) } 
@@ -58,7 +61,7 @@ regFunctions.regDocumentUsed = (userUuid, randName, documentName, groupName, use
 
     for(let i = 0; i < 3; i++) try {
         db.set(db.ref(database, 'users/' + userUuid + '/' + randName), {
-            act: 'use', doc: documentName, grp: groupName, utp: useType
+            act: 'use', doc: documentName, grp: groupName, utp: useType, ua: userAgent
         });
         return
     } catch(e) { console.error(e) } 
@@ -75,7 +78,7 @@ regFunctions.regDocumentUseError = (userUuid, randName, documentName, groupName,
 
     for(let i = 0; i < 3; i++) try {
         db.set(db.ref(database, 'users/' + userUuid + '/' + randName), {
-            act: 'eus', doc: documentName, grp: groupName, utp: useType
+            act: 'eus', doc: documentName, grp: groupName, utp: useType, ua: userAgent
         });
         return
     } catch(e) { console.error(e) } 
@@ -92,7 +95,7 @@ regFunctions.regDocumentEdited = (userUuid, randName, documentName, groupName) =
 
     for(let i = 0; i < 3; i++) try {
         db.set(db.ref(database, 'users/' + userUuid + '/' + randName), {
-            act: 'edt', doc: documentName, grp: groupName
+            act: 'edt', doc: documentName, grp: groupName, ua: userAgent
         });
         return
     } catch(e) { console.error(e) } 
@@ -109,7 +112,7 @@ regFunctions.regDocumentError = (userUuid, randName, documentName, groupName, er
 
     for(let i = 0; i < 3; i++) try {
         db.set(db.ref(database, 'users/' + userUuid + '/' + randName), {
-            act: 'error', doc: documentName, grp: groupName, err: error
+            act: 'error', doc: documentName, grp: groupName, err: error, ua: userAgent
         });
         return
     } catch(e) { console.error(e) } 
