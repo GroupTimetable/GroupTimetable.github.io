@@ -71,6 +71,8 @@ function updatePopup(owner, id, newState) {
     const el = popupList[id].openedArgElement
     if(el) el.setAttribute('data-popup-opened', opened)
     //console.log('popup ' + id + (opened ? ' opened' : ' hidden'))
+
+    try{ item.onStateChange(id) } catch(e) {}
 }
 
 function clamp(value, min, max) {
@@ -82,7 +84,8 @@ function popupAddHoverClick(id, onElement, whenToggled) {
     addOwner('click', id)
     addOwner('focus', id)
 
-    const popupEl = popupList[id].popup.element
+    const item = popupList[id]
+    const popupEl = item.popup.element
     popupEl.addEventListener('focusin', () => {
         updatePopup('focus', id, stateShown)
     })
@@ -118,6 +121,9 @@ function popupAddHoverClick(id, onElement, whenToggled) {
     onElement.addEventListener('mouseleave', () => {
         if(!ignoreHover) updatePopupAfterMs('hover', id, stateHidden, 500)
     })
+
+    //only one callback at a time!
+    item.onStateChange = (id) => fixPopupXPosition(id)
 }
 
 window.addEventListener('mousemove', function(ev) {
@@ -153,3 +159,54 @@ window.addEventListener('mousemove', function(ev) {
         else updatePopupAfterMs('safe zone', i, stateHidden, 500)
     }
 })
+
+function isHidden(elem) { //not position: fixed   !
+    //jQuery
+    return !( elem.offsetWidth || elem.offsetHeight || elem.getClientRects().length );
+}
+
+//does not really belong to popups, fix for popups being outside of screen bounds + 'overflow: hidden' on body
+//It doesn't work properly because it is not called when popup's position or size changes, so it may
+//still go out of bounds. 
+//TODO: move popups to separate div and put two 1px divs in popup container instead of popup itself, 
+//one positioned normally and another absolutly on top of it and use IntersectionObserver to detect 
+//position changes + ResizeObserver for the popup
+window.addEventListener('resize', function() {
+    for(const i in popupList) fixPopupXPosition(i)
+})
+function fixPopupXPosition(id) {
+    const windowWidth = window.innerWidth
+    const horPadding = windowWidth * 0.02 
+    const allowedWidth = windowWidth - horPadding*2
+
+    const pp = popupList[id]
+    const popup = pp.popup.popup
+    if(isHidden(popup)) return
+    //if(pp.state !== stateShown) continue; //hiding transition would probably break?
+
+    pp.popup.safeZone.style.transform = ''
+    popup.style.width = ''
+    popup.style.overflowX = ''
+
+    const bs = popup.getBoundingClientRect()
+    const popupWidth = bs.right - bs.left
+
+    if(popupWidth > allowedWidth) {
+        pp.popup.safeZone.style.transform = `translateX(${(windowWidth - bs.right - bs.left)*0.5}px)`
+        popup.style.width = allowedWidth + 'px'
+        popup.style.overflowX = 'scroll'
+        return
+    }
+
+    const offR = horPadding + allowedWidth - bs.right
+    if(offR < 0) {
+        pp.popup.safeZone.style.transform = `translateX(${offR}px)`
+        return
+    }
+
+    const offL = horPadding - bs.left
+    if(offL > 0) {
+        pp.popup.safeZone.style.transform = `translateX(${offL}px)`
+        return
+    }
+}

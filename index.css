@@ -232,6 +232,8 @@ body {
     flex-wrap: wrap;
     row-gap: 3rem;
     column-gap: 3rem;
+    padding-left: 1.5em; 
+    padding-right: 1.5em;
     justify-content: center;
     align-items: flex-start;
 }

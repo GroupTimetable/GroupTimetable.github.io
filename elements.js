@@ -284,6 +284,7 @@ const css = `
             border: 0px solid transparent;
             border-radius: 10px;
             padding: 0.8rem;
+            box-sizing: border-box;
 
             background-color: var(--primary-color);
             color: var(--primary-contrast-color);
