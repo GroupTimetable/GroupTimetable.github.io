@@ -6,6 +6,37 @@
     <title>Расписание</title>
 
     <script>
+        if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
+            const head = document.head || document.getElementsByTagName('head')[0];
+
+            function insertCss(css) {
+                const style = document.createElement('style');
+                style.type = 'text/css';
+                if (style.styleSheet) style.styleSheet.cssText = css;
+                else style.appendChild(document.createTextNode(css));
+                head.appendChild(style);
+                return style;
+            }
+
+            const loadCss = insertCss(`body { display: none }`)
+            document.addEventListener('DOMContentLoaded', _ => {
+                const hideCss = insertCss(`body > * { display: none !important; }`);
+
+                var el = document.createElement('div'), button = document.createElement('button');
+                el.style = 'background-color: white; color: black; display: block !important';
+                el.innerHTML = "Firefox? Он не работает, помочь не могу. ";
+                button.innerHTML = 'Всё равно открыть страницу';
+                button.addEventListener('click', () => {
+                    hideCss.remove();
+                    el.remove();
+                })
+                el.appendChild(button);
+                document.body.appendChild(el);
+
+                loadCss.remove();
+            })
+        }
+
         const depStatus = {}
         function updDep(depPromise, name) {  }
         function assertDep(name) { if(!depStatus[name]) throw `Зависимость \`${name}\` еще не загружена` }
