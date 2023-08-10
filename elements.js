@@ -83,7 +83,7 @@ function createOutputElement() {
     `)
 
     const settings = el.querySelector('.settings')
-    const popupEl = insertPopup(settings)
+    const popupEl = insertPopup(settings, true)
     const popupId = registerPopup(popupEl)
     addOpenedArgumentToElement(popupId, el.querySelector('.output'))
 
@@ -105,17 +105,11 @@ function createOutputElement() {
     };
 }
 
-function insertPopup(par) {
-    const el = htmlToElement(`
-<span class='popup-container' shown="false">
-    <div> <!-- nice empty div tat serves no purpose in the doc but needed for propper formating -->
-        <div class="safe-zone">
-            <div class="popup"></div>
-        </div>
-    </div>
-</span>
-    `)
-    par.appendChild(el)
+function insertPopup(par, onTop) {
+    const el = htmlToElement(`<span class='popup-container' shown="false"><div><div class="safe-zone"><div class="popup"></div></div></div> </span>`)
+    par.append(el)
+    if(onTop) el.setAttribute('data-anchor', 'top')
+
     return { 
         element: el, 
         popup: el.querySelector('.popup'), 
@@ -251,8 +245,11 @@ const css = `
 
 .popup-container {
     width: 0px; height: 0px;
-    top: 0.3rem; left: 50%;
+    left: 50%;
     position: relative;
+
+    &:not([data-anchor=top]) { top: 0.3em; }
+    &[data-anchor=top]       { bottom: calc(100% + 0.3em); align-items: end; }
 
     display: flex;
     justify-content: center; 
@@ -271,7 +268,8 @@ const css = `
     }
 
     &:not([shown=true]) {
-        transform: translateY(0.7rem);
+        &:not([data-anchor=top]) { transform: translateY( 0.7rem); }
+        &[data-anchor=top]       { transform: translateY(-0.7rem); }
         opacity: 0;
         & > * { transform: scale(0); transition: transform 0s 300ms; }
     }
@@ -279,6 +277,7 @@ const css = `
     & > * > .safe-zone {
         padding: 2rem; 
         margin-top: -2rem; 
+        margin-bottom: -2rem; 
         pointer-events: none;
 
         & > .popup {
@@ -397,11 +396,11 @@ const css = `
 
         & > *:not(.not-icon) {
             margin-left: 0.2rem;
-            padding: 0.4rem;
             border: 0px solid transparent;
             border-radius: 999999px;
 
             & > *:first-child {
+                margin: 0.4em;
                 display: block;
                 height: 1.4rem;
                 fill: var(--text-color-dark);
