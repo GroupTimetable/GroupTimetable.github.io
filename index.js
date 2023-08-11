@@ -518,6 +518,7 @@ async function processPDF0() {
                 const boundsH = findItemBoundsH(cont, i);
                 const vBounds = findDaysOfWeekHoursBoundsV(cont);
                 updInfo({ msg: 'Достаём расписание из файла', type: 'processing', progress: ns() })
+                const dates = findDates(cont, boundsH)
                 const [schedule, bigFields] = makeSchedule(cont, vBounds, boundsH);
                 destroyOrig()
                 updInfo({ msg: 'Создаём PDF файл расписания', type: 'processing', progress: ns() })
@@ -529,7 +530,7 @@ async function processPDF0() {
                 await createAndInitOutputElement(
                     doc, dom.outputsEl, 
                     outFilename, width,
-                    { rowRatio, scheme, schedule, drawBorder, dowOnTop, borderFactor },
+                    { rowRatio, scheme, schedule, drawBorder, dowOnTop, borderFactor, dates },
                     userdata
                 )
 

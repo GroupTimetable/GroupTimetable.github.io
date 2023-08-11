@@ -14,7 +14,8 @@ const daysOfWeekShortenedLower = daysOfWeekShortened.map(it => it.toLowerCase())
 
 function findItemBoundsH(cont, itemI) {
     const item = cont[itemI];
-    const itemCenter = Math.abs(cont[itemI].transform[4] + cont[itemI].width/2);
+    const bs = bounds(item);
+    const itemCenter = 0.5 * (bs.l + bs.r) //Math.abs(cont[itemI].transform[4] + cont[itemI].width/2);
     
     let neighbour;
     const offsets = [-1, 1, -2, 2, -3, 3]
@@ -28,12 +29,14 @@ function findItemBoundsH(cont, itemI) {
 
     if(!neighbour) throw ["Невозможно определить вертикальные границы расписания", " [имя группы] = " + itemI + "/" + cont.length];
 
-    const spacing = Math.abs(itemCenter - (cont[neighbour].transform[4] + cont[neighbour].width/2));
+    const nbbs = bounds(cont[neighbour])
+    const nbCenter = 0.5 * (nbbs.l + nbbs.r);
+    const spacing = Math.abs(itemCenter - nbCenter) //Math.abs(itemCenter - (cont[neighbour].transform[4] + cont[neighbour].width/2));
 
     const itemS = itemCenter - spacing/2;
     const itemE = itemCenter + spacing/2;
 
-    return { lef: itemS, rig: itemE };
+    return { lef: itemS, rig: itemE, bottom: bs.b };
 }
 
 function parseTime(str) {
@@ -188,6 +191,7 @@ function intersects(a1, a2, b1, b2) {
 
 
 function shouldMergeLessons2(l1, l2, isVertical) {
+    if(l1.length === 0 && l2.length === 0) return true;
     if(l1.length === 0 || l2.length === 0) return false;
 
     let max1;
@@ -212,12 +216,18 @@ function shouldMergeLessons2(l1, l2, isVertical) {
 }
 
 function mergeLessons(lessons, shouldMerge) {
+    for(let i = 0; i < lessons.length; i++) {
+        for(let j = 0; j < lessons[i].length; j++) {
+            if('деятельности пр' === (lessons[i][j].str)) debugger;
+        }
+    }
+
     const h1 = shouldMerge[0] || shouldMergeLessons2(lessons[0], lessons[1], false);
     const h2 = shouldMerge[1] || shouldMergeLessons2(lessons[2], lessons[3], false);
     const v1 = shouldMerge[2] || shouldMergeLessons2(lessons[2], lessons[0], true );
     const v2 = shouldMerge[3] || shouldMergeLessons2(lessons[3], lessons[1], true );
 
-    if(h1 && h2 && v1 && v2) {
+    if((h1 || h2) && (v1 || v2)) {
         const e = lessons[0].concat(lessons[1]).concat(lessons[2]).concat(lessons[3]);
         lessons.fill(e);
     }
@@ -283,6 +293,22 @@ function mergeLessons(lessons, shouldMerge) {
     }
 }
 
+function findDates(cont, hBounds) {
+    const datesRegex = /(^|.*?\s)(\d\d)\.(\d\d)\.(\d\d\d\d)(\s.*?\s|\s)(\d\d)\.(\d\d)\.(\d\d\d\d)(\s|$)/
+    const bottom = hBounds.bottom
+
+    for(let i = 0; i < cont.length; i++) {
+        const item = cont[i]
+        const bs = bounds(item)
+        if(bs.t > bottom) continue;
+        if(!intersects(bs.l, bs.r, hBounds.lef, hBounds.rig)) continue;
+        const gs = item.str.match(datesRegex)
+        if(gs) return [
+            new Date(gs[4], gs[3] - 1, gs[2]),
+            new Date(gs[8], gs[7] - 1, gs[6]),
+        ];
+    }
+}
 
 function makeSchedule(cont, vBounds, hBounds) {
     const schedule = Array(vBounds.length);

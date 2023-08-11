@@ -1,0 +1,65 @@
+.content {
+    flex: 1 0 auto; 
+    font-size: 1.2em;
+    padding: 1em;
+}
+
+#start-date, #end-date {
+    appearance: none;
+    border: none;
+    outline: none;
+    background: none;
+    padding: 0px;
+
+    width: 10ch;
+    font-size: 1em;
+    color: var(--text-color);
+    border-bottom: 0.1em solid var(--text-color);
+    font-family: monospace;
+}
+
+#file1, #file2 {
+    white-space: nowrap;
+    cursor: pointer;
+    color: var(--link-color);
+    margin-right: 0.3em;
+
+    &:hover {
+        border-bottom: 0.1em solid var(--primary-color);
+    }
+}
+
+#google-cal, #yandex-cal, .link {
+    appearance: none;
+    border: none;
+    outline: none;
+    background: none;
+    padding: 0px;
+
+    white-space: nowrap;
+    cursor: pointer;
+    color: var(--link-color);
+    margin-right: 0.3em;
+
+    &:not(:hover) { text-decoration: none; }
+}
+
+#google-cal::before {
+    content: "\200b";
+    display: inline-block;
+    background-image: url(https://calendar.google.com/googlecalendar/images/favicons_2020q4/calendar_1.ico);
+    background-size: 1em 1em;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.1em;
+}
+
+#yandex-cal::before {
+    content: "\200b";
+    display: inline-block;
+    background-image: url(https://calendar.yandex.ru/favicon/png/32/1.png);
+    background-size: 1em 1em;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.1em;
+}

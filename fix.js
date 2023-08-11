@@ -1,16 +1,15 @@
 let orig/*
-    rowRatio, scheme, schedule, drawBorder, dowOnTop,
+    rowRatio, scheme, schedule, drawBorder, dowOnTop, dates,
     userdata, defaultWidth, borderFactor
-*/
-
-(_ => {
-    const prmstr = window.location.search.split("=");
-    const sid = prmstr[1];
-    if(sid) try {
-        orig = JSON5.parse(sessionStorage.getItem(sid));
-        sessionStorage.removeItem(sid);
-        if(orig == undefined) throw 'Не удалось получить расписание для редактирования'
-        return 
+*/ = (_ => {
+    try {
+        const prmstr = window.location.search.split("=");
+        const sid = prmstr[1];
+        if(sid) {
+            const p = JSON.parse(sessionStorage.getItem(sid));
+            if(p == undefined) throw 'Не удалось получить расписание для редактирования'
+            return p
+        }
     }
     catch(e) {
         const st = document.getElementById('status')
@@ -21,7 +20,7 @@ let orig/*
         st.style.animation = ''
     }
 
-    orig = {
+    return {
         schedule: [
             [
                 {sTime: 510, eTime: 600, lessons: ['Общая пара', 'Общая пара', 'Общая пара', 'Общая пара', ]},
@@ -123,6 +122,26 @@ function dayToSimple(day, indent) {
 function scheduleToSimple(schedule) {
     let result = '';
 
+    try {
+        const d1 = new Date(orig.dates[0]), d2 = new Date(orig.dates[1]);
+        let ds = '';
+
+        function format(d) {
+            return d.getUTCDate().toString().padStart(2, '0') + '.'
+                + (d.getUTCMonth() + 1 + '').padStart(2, '0') + '.' + d.getUTCFullYear().toString().padStart(4, '0')
+        }
+
+        ds += '"Дата начала": "' + format(d1) + '",\n'
+        ds += '"Дата конца ": "' + format(d2) + '",\n'
+
+        result += ds
+    }
+    catch(e) {
+        console.error(e)
+        result += '"Дата начала": "???",\n'
+        result += '"Дата конца ": "???",\n'
+    }
+    
     result += '"Черная граница дней": "' + (orig.drawBorder ? 'да' : 'нет') + '",\n'
     result += '"Дни недели наверху": "' + (orig.dowOnTop ? 'да' : 'нет') + '",\n'
     result += '"Размер границы дней": "' + (orig.borderFactor*1000) + '",\n'

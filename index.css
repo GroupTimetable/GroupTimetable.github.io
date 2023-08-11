@@ -238,25 +238,6 @@ body {
     align-items: flex-start;
 }
 
-#footer {
-    margin-left: 3rem;
-    margin-right: 3rem;
-    margin-bottom: 0.5rem;
-    column-gap: 1rem;
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-
-    & > a {
-        padding: 0.5rem;
-        color: var(--link-color);
-
-        &:not(:hover) {
-            text-decoration: none;
-        }
-    }
-}
-
 #open-data-usage {
     position: fixed;
     left: 0; bottom: 0;

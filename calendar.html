@@ -1,0 +1,50 @@
+
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        <script defer src="./common.js"></script>
+        <script defer src="./userdata.js" type="module"></script>
+        <script defer src="./calendar.js"></script>
+
+        <link rel="stylesheet" href="colors.css">
+        <link rel="stylesheet" href="styles.css">
+        <link rel="stylesheet" href="calendar.css">
+    </head>
+    <body style="margin: 0; background: var(--bg-color); color: var(--text-color)">
+        <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: stretch">
+            <div class="header">Экспорт расписания в календарь</div>
+            <div class="content">
+                <div style="margin-bottom: 0.5em; color: var(--hint-color)">Эксперементальная функция! Создайте дополнительный календарь при импорте,
+                который, в случае ошибки в расписании, можно удалить.
+                <a href="https://support.google.com/calendar/answer/37095?hl=ru" target="blank" class="link">Создание календаря в Google</a>
+                (Яндекс.Календарь уже требует создания нового календаря при импорте)
+                </div>
+                <div>
+                    1. Заполните данные о периоде обучения:
+                    <div style="padding-left: 2ch; line-height: 1.1lh">
+                        <input type="checkbox" id="first-week">первая неделя - знаменатель; 
+                        <br>начало <input type="text" maxlength="10" id="start-date">;
+                        <br>конец <input type="text" maxlength="10" id="end-date">.
+                    </div>
+                </div>
+                <p>
+                    2. Скачайте файл расписания для своей группы: 
+                    <span id="file1">1 группа</span> 
+                    <span id="file2">2 группа</span>
+                </p>
+                <p class="warning-text" style="display: none">
+                </p>
+                <p>
+                    3. Импортируйте расписание в календарь. 
+                    <a href="https://calendar.google.com/calendar/u/0/r/settings/export" target="_blank" id="google-cal">Google Календарь</a>
+                    <a href="https://yandex.ru/support/calendar/common/create.html#import" target="_blank" id="yandex-cal">Яндекс.Календарь</a>
+                </p>
+            </div>
+            <div id="footer">
+                <a class="no-select" href="./index.html" target="_blank">Создать расписание</a>
+                <a class="no-select" href="./fix.html" target="_blank">Расписание из текста</a>
+                <a class="no-select" href="./help-page.html" target="_blank">Помощь</a>
+                <a class="no-select" href="https://github.com/VanaIgr/ScheduleRenderingJs" target="_blank">Проект на GitHub</a>
+            </div>
+    </body>
+</html>
