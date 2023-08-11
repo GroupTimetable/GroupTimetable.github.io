@@ -1,7 +1,7 @@
 <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-        
+       
         <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
         <script defer src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
         <script defer src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
@@ -11,7 +11,6 @@
         <script defer src="./popups.js"></script>
         <script defer src="./elements.js"></script>
         <script defer src="./common.js"></script>
-        <script defer src="./units.js"></script>
         <script defer src="./schedule.js"></script>
         <script defer src="./userdata.js" type="module"></script>
         <script defer src="fix.js"></script>
@@ -202,13 +201,13 @@
                 <div class="edit-area">
                     <div style="margin-bottom: 1rem">
                         <div style="margin-top: 1rem; display: flex; gap: 0.8rem; align-items: baseline;">
-                            <div id="collapse-button">
+                            <div id="collapse-button" class="no-select">
                                 &ZeroWidthSpace;
                                 <div><svg xmlns="http://www.w3.org/2000/svg" viewBox="-.2 0.1 1.4 0.8"><path d="M0 .75L.5 .25L1 0.75"></path></svg></div>
                             </div>
-                            <div id="reset">Сбросить</div>
-                            <div id="status" style="flex: 1 1 0px"></div>
-                            <div id="create">Создать</div>
+                            <div id="reset" class="no-select">Сбросить</div>
+                            <div id="status" class="no-select" style="flex: 1 1 0px"></div>
+                            <div id="create" class="no-select">Создать</div>
                         </div>
                         <div id="collapse-content" class="hint-text">
                             Положение в расписании записывается как "<i>группа</i>-<i>неделя</i>", где <i>группа</i> - 1 или 2, а <i>неделя</i> - ч или з.

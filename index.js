@@ -84,7 +84,7 @@ const createGenSettings = Promise.all([loadDom, loadCommon, loadPopups]).then(_ 
     </div>
 
     <div style="display: flex; margin-top: 0.9em; gap: 0.2em;">
-        <div class="gen-settings-switch gen-settings-prev">
+        <div class="gen-settings-switch gen-settings-prev no-select">
             <div><svg xmlns="http://www.w3.org/2000/svg" viewBox="-.2 -.2 1.4 1.4"><path d="M0 .75L.5 .25L1 0.75"></path></svg></div>
         </div>
 
@@ -111,17 +111,17 @@ const createGenSettings = Promise.all([loadDom, loadCommon, loadPopups]).then(_ 
             </span>
 
             <span style="text-align: right; margin-top: 0.6em;">Цвет:</span>
-            <span style="display: flex; margin-top: 0.6em;">
+            <span class="no-select" style="display: flex; margin-top: 0.6em;">
                 &nbsp;<div class="border-color" style="cursor: pointer; border-bottom: 0.1rem solid var(--primary-contrast-color);"></div>
              </span>
 
             <span style="text-align: right; margin-top: 0.9em">Расположение дней недели:</span>
-            <span style="display: flex;align-items: end;margin-top: 0.9em;">
+            <span class="no-select" style="display: flex;align-items: end;margin-top: 0.9em;">
                 &nbsp;<div class="dow-position" style="cursor: pointer; border-bottom: 0.1rem solid var(--primary-contrast-color);"></div>
             </span>
        </div>
 
-        <div class="gen-settings-switch gen-settings-next">
+        <div class="gen-settings-switch gen-settings-next no-select">
             <div><svg xmlns="http://www.w3.org/2000/svg" viewBox="-.2 -.2 1.4 1.4"><path d="M0 .75L.5 .25L1 0.75"></path></svg></div>
         </div>
 </div>
