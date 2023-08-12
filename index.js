@@ -18,41 +18,58 @@ loadDom.then(_ => {
 })
 
 Promise.all([loadDom, loadUserdata]).then(_ => {
-    const { dataAccept, dataDecline, dataUsageOpen } = dom
+    let messageInteracted;
+    try { messageInteracted = localStorage.getItem('index__userdata_interacted') } catch(e) { console.error(e) }
 
-    updateUserdataElements(true, getUserdataAllowed())
+    function updateInteracted() {
+        messageInteracted = true;
+        try { localStorage.setItem('index__userdata_interacted', true) } catch(e) { console.error(e) }
+    }
 
-    dataAccept.querySelector('.close-button').addEventListener('click', _ => {
-        updateUserdataElements(false, getUserdataAllowed())
-    })
-    dataDecline.querySelector('.close-button').addEventListener('click', _ => {
-        updateUserdataElements(false, getUserdataAllowed())
-    })
-
-    dataUsageOpen.addEventListener('click', _ => {
-        updateUserdataElements(true, getUserdataAllowed())
-    })
-
-    dataAccept.querySelector('span').addEventListener('click', _ => {
-        window.setUserdataAllowed(false)
-        updateUserdataElements(false, false)
-    })
-    dataDecline.querySelector('span').addEventListener('click', _ => {
-        window.setUserdataAllowed(true)
-        updateUserdataElements(false, true)
-    })
+    function updateVisibility(open, accepted) {
+        dataAccept  .setAttribute('data-visible', open && accepted)
+        dataDecline .setAttribute('data-visible', open && !accepted)
+        dataUsageOpen.setAttribute('data-visible', !open)
+        dataUsageOpen.setAttribute('data-usage-accepted', accepted)
+    }
 
     function updateUserdataElements(open, accepted) {
         dataAccept.setAttribute('data-transition', '')
         dataDecline.setAttribute('data-transition', '')
         dataUsageOpen.setAttribute('data-transition', '')
-
-        dataAccept  .setAttribute('data-visible', open && accepted)
-        dataDecline .setAttribute('data-visible', open && !accepted)
-        dataUsageOpen.setAttribute('data-visible', !open)
-
-        dataUsageOpen.setAttribute('data-usage-accepted', accepted)
+        updateVisibility(open, accepted)
     }
+
+
+    const { dataAccept, dataDecline, dataUsageOpen } = dom
+
+    dataAccept.querySelector('.close-button').addEventListener('click', _ => {
+        updateUserdataElements(false, getUserdataAllowed())
+        updateInteracted()
+    })
+    dataDecline.querySelector('.close-button').addEventListener('click', _ => {
+        updateUserdataElements(false, getUserdataAllowed())
+        updateInteracted()
+    })
+
+    dataUsageOpen.addEventListener('click', _ => {
+        updateUserdataElements(true, getUserdataAllowed())
+        updateInteracted()
+    })
+
+    dataAccept.querySelector('span').addEventListener('click', _ => {
+        window.setUserdataAllowed(false)
+        updateUserdataElements(false, false)
+        updateInteracted()
+    })
+    dataDecline.querySelector('span').addEventListener('click', _ => {
+        window.setUserdataAllowed(true)
+        updateUserdataElements(false, true)
+        updateInteracted()
+    })
+
+    if(!messageInteracted) updateVisibility(true, getUserdataAllowed())
+    else updateVisibility(false, getUserdataAllowed())
 })
 
 /*HTML does not have any way to make resizable multiline prompt
