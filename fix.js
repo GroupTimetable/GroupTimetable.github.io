@@ -132,14 +132,14 @@ function scheduleToSimple(schedule) {
         }
 
         ds += '"Дата начала": "' + format(d1) + '",\n'
-        ds += '"Дата конца ": "' + format(d2) + '",\n'
+        ds += '"Дата конца": "' + format(d2) + '",\n'
 
         result += ds
     }
     catch(e) {
         console.error(e)
         result += '"Дата начала": "???",\n'
-        result += '"Дата конца ": "???",\n'
+        result += '"Дата конца": "???",\n'
     }
     
     result += '"Черная граница дней": "' + (orig.drawBorder ? 'да' : 'нет') + '",\n'
@@ -231,6 +231,8 @@ async function processEdit() {
     const borderFactorS = si["Размер границы дней"]
     const borderFactor = Number(borderFactorS) / 1000
     if(!(borderFactor < 1000 && borderFactor >= 0)) throw 'неправильное значение размера границы: `' + borderFactorS + '`'
+    const startDate = parseDate(si["Дата начала"])
+    const endDate   = parseDate(si["Дата конца"])
 
     const schemeSA = si['Расположение дней'] 
     let schemeS = ''
@@ -295,12 +297,13 @@ async function processEdit() {
         }
     }
 
-    let userdata;
-    try { try { userdata = [...structuredClone(orig.userdata)] } catch(e) { console.log(e) } } catch(e) {}
+    const params = structuredClone(orig)
+    if(startDate != undefined) params.dates[0] = startDate
+    if(endDate != undefined) params.dates[1] = endDate
 
     const [width, pdf] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
-    updateUserdataF('regDocumentEdited')(...userdata) 
+    try { updateUserdataF('regDocumentEdited')(...params.userdata) } catch(e) {} 
     const outs = document.getElementById('outputs')
-    await createAndInitOutputElement(pdf, outs, '', width, structuredClone(orig), userdata) 
+    await createAndInitOutputElement(pdf, outs, '', width, params, params.userdata) 
 }
 

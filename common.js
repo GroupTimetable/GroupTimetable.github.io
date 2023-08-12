@@ -45,3 +45,20 @@ function downloadUrl(url, filename) {
     document.body.appendChild(a);
     a.click();
 }
+
+function dateToStr(date) {
+    return date.getUTCDate().toString().padStart(2, '0')
+        + '.' + (date.getUTCMonth()+1).toString().padStart(2, '0')
+        + '.' + date.getUTCFullYear().toString().padStart(4, '0')
+}
+
+function parseDate(str) {
+    if(!str) return
+    const dateRegex = /^(\d\d)\.(\d\d)\.(\d\d\d\d)$/
+    const r = str.match(dateRegex)
+    if(!r) return
+    const d = r[1], m = r[2], y = r[3];
+    
+    const date = new Date(y, m-1, d)
+    if(date instanceof Date && isFinite(date)) return date;
+}
