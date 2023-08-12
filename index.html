@@ -24,13 +24,14 @@
 
                 var el = document.createElement('div'), button = document.createElement('button');
                 el.style = 'background-color: white; color: black; display: block !important';
-                el.innerHTML = "Firefox? Он не работает, помочь не могу. ";
+                el.append("Firefox? Он не работает. ");
+                el.innerHTML += ' <a href="./help-page.html" target="_blank">Напишите сюда</a>, если хотите, чтобы я сделал расписание за вас.';
                 button.innerHTML = 'Всё равно открыть страницу';
                 button.addEventListener('click', () => {
                     hideCss.remove();
                     el.remove();
                 })
-                el.appendChild(button);
+                el.append(button);
                 document.body.appendChild(el);
 
                 loadCss.remove();
@@ -134,9 +135,9 @@
                 <div id="warning"></div>
                 <div id="outputs" style="flex: 1 0 auto;"></div>
                 <div id="footer">
-                    <a class="no-select" href="./fix.html" target="_blank">Расписание из текста</a>
-                    <a class="no-select" href="./help-page.html" target="_blank">Помощь</a>
-                    <a class="no-select" href="https://github.com/VanaIgr/ScheduleRenderingJs" target="_blank">Проект на GitHub</a>
+                    <a class="link no-select" href="./fix.html" target="_blank">Расписание из текста</a>
+                    <a class="link no-select" href="./help-page.html" target="_blank">Помощь</a>
+                    <a class="link no-select" href="https://github.com/VanaIgr/ScheduleRenderingJs" target="_blank">Проект на GitHub</a>
                 </div>
             </div>
         </div>

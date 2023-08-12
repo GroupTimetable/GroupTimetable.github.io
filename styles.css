@@ -33,12 +33,14 @@ body {
     justify-content: center;
     flex-wrap: wrap;
 
-    & > a {
+    & > .link {
         padding: 0.5rem;
-        color: var(--link-color);
-
-        &:not(:hover) {
-            text-decoration: none;
-        }
     }
+}
+
+.link {
+    color: var(--link-color);
+    cursor: pointer;
+
+    &:not(:hover) { text-decoration: none; }
 }

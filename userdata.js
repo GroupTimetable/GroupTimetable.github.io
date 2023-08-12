@@ -127,6 +127,7 @@ function setCookie(value) {
     date.setTime(date.getTime() + (90*24*60*60*1000));
     document.cookie = 'data=' + btoa(JSON.stringify(value)) + '; expires=' + date.toUTCString() + '; path=/';
 }
+//used in help-page
 function getCookie() {
     const nameEQ = "data=";
     const ca = document.cookie.split(';');

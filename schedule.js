@@ -216,12 +216,6 @@ function shouldMergeLessons2(l1, l2, isVertical) {
 }
 
 function mergeLessons(lessons, shouldMerge) {
-    for(let i = 0; i < lessons.length; i++) {
-        for(let j = 0; j < lessons[i].length; j++) {
-            if('деятельности пр' === (lessons[i][j].str)) debugger;
-        }
-    }
-
     const h1 = shouldMerge[0] || shouldMergeLessons2(lessons[0], lessons[1], false);
     const h2 = shouldMerge[1] || shouldMergeLessons2(lessons[2], lessons[3], false);
     const v1 = shouldMerge[2] || shouldMergeLessons2(lessons[2], lessons[0], true );

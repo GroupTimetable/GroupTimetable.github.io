@@ -29,19 +29,9 @@
     }
 }
 
-#google-cal, #yandex-cal, .link {
-    appearance: none;
-    border: none;
-    outline: none;
-    background: none;
-    padding: 0px;
-
+#google-cal, #yandex-cal {
     white-space: nowrap;
-    cursor: pointer;
-    color: var(--link-color);
     margin-right: 0.3em;
-
-    &:not(:hover) { text-decoration: none; }
 }
 
 #google-cal::before {

@@ -1,13 +1,32 @@
 <html>
     <head>
         <script type="text/javascript" src="https://vk.com/js/api/openapi.js?169"></script>
+        <link rel="stylesheet" href="colors.css">
+        <link rel="stylesheet" href="styles.css">
     </head>
-    <body>
+    <body style="margin: 2em; color: var(--text-color); background: var(--bg-color);">
         Можете дождаться загрузки виджета или перейти по 
-        <a href="https://vk.com/club221983441">ссылке на группу</a>
+        <a href="https://vk.com/club221983441" class="link">ссылке на группу</a>.
+        <br>Если у вас проблемы с созданием расписания, пожалуйста добавьте к сообщению файл расписания и название группы.
+        <div>Ваш id на сайте: <span id="uuid">???</span></div>
         <div id="messages"></div>
         <script type="text/javascript">
-        VK.Widgets.CommunityMessages("messages", 221983441, {widgetPosition: "left", expanded: "1", disableExpandChatSound: "1", disableButtonTooltip: "1"});
+            try {
+                VK.Widgets.CommunityMessages("messages", 221983441, {widgetPosition: "left", expanded: "1", disableExpandChatSound: "1", disableButtonTooltip: "1"});
+            } catch(e) { console.log(e) }
+
+            try {
+                const nameEQ = "data=";
+                const ca = document.cookie.split(';');
+                for(let i = 0; i < ca.length; i++) {
+                    const c = ca[i].trimStart();
+                    if(c.indexOf(nameEQ) == 0) {
+                        const result = JSON.parse(atob(c.substring(nameEQ.length,c.length)));
+                        const el = document.getElementById('uuid')
+                        el.innerText = result.uuid
+                    }
+                }
+            } catch(e) { console.log(e) }
         </script>
     </body>
 </html>
