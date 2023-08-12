@@ -62,3 +62,28 @@ function parseDate(str) {
     const date = new Date(y, m-1, d)
     if(date instanceof Date && isFinite(date)) return date;
 }
+
+function addClick(element, callback) {
+    function keydownHandler(event) {
+        if(event.keyCode === 32) {
+            event.preventDefault();
+        }
+        else if (event.keyCode === 13) {
+            event.preventDefault();
+            callback(event);
+        }
+    }
+    function keyupHandler(event) {
+        if(event.keyCode !== 32) return
+        event.preventDefault();
+        callback(event);
+    } 
+
+    element.addEventListener('keydown', keydownHandler)
+    element.addEventListener('keyup', keyupHandler)
+    element.addEventListener('click', (e) => { callback(e) })
+
+    element.setAttribute('tabindex', '0')
+    element.setAttribute('data-custom-button', '')
+}
+

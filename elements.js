@@ -172,8 +172,8 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         setTimeout(_ => el.setAttribute('data-anim', isError ? 'err' : 'ok'))
     }
 
-    function addClick(el, name, func) {
-        el.addEventListener('click', _ => func()
+    function addClick2(el, name, func) {
+        addClick(el, _ => func()
             .then(_ => { 
                 iconAnim(el)
                 if(name) usedFunc(name)
@@ -186,7 +186,7 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         )
     }
 
-    addClick(element.viewPdf, 'vpdf', async() => {
+    addClick2(element.viewPdf, 'vpdf', async() => {
         closeCalendarHintPopup()
         const tab = window.open();
         if(tab == null) {
@@ -195,7 +195,7 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         }
         tab.location.href = fileUrl;
     })
-    addClick(element.viewImg, 'vimg', async() => {
+    addClick2(element.viewImg, 'vimg', async() => {
         closeCalendarHintPopup()
         const img = await getImage()
         const tab = window.open();
@@ -205,11 +205,11 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         }
         tab.location.href = img;
     })
-    addClick(element.downloadImg, 'dimg', async() => {
+    addClick2(element.downloadImg, 'dimg', async() => {
         closeCalendarHintPopup()
         downloadUrl(await getImage(), name + '.png')
     })
-    addClick(element.copyImg, 'cimg', async() => {
+    addClick2(element.copyImg, 'cimg', async() => {
         closeCalendarHintPopup()
         try {
             const img = await getImage(true)
@@ -225,11 +225,11 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
             console.error(error);
         }
     })
-    addClick(element.edit, null, async() => {
+    addClick2(element.edit, null, async() => {
         closeCalendarHintPopup()
         window.open("./fix.html" + "?sid=" + storageId);
     })
-    addClick(element.del, null, async() => {
+    addClick2(element.del, null, async() => {
         //TODO: add onbeforeunload
         const el = element.element
         el.style.animation = 'none'
@@ -246,7 +246,7 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
             for(let i = 0; i < ifw.length; i++) URL.revokeObjectURL(ifw[i].img);
         })
     })
-    addClick(element.calendar, null, async() => {
+    addClick2(element.calendar, null, async() => {
         closeCalendarHintPopup()
         window.open("./calendar.html" + "?sid=" + storageId);
     })
@@ -262,10 +262,10 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         popup.popup.classList.add('hint-popup')
         addOwner('main', popupId)
         addOpenedArgumentToElement(popupId, 'calendar-hint', element.element.querySelector('.output'))
-        popup.element.addEventListener('click', (e) => {
+        addClick(popup.popup, (e) => {
              closeCalendarHintPopup()
              e.stopPropagation() 
-        }, true)
+        })
         closeCalendarHintPopup = () => {
             try { localStorage.setItem('elements__new_calendar_1', '1') } catch(e) { console.error(e) }
             try { updatePopup('main', popupId, stateHidden); } catch(e) { console.error(e) }
@@ -465,7 +465,10 @@ const css = `
             border-radius: 999999px;
 
             & > *:first-child {
-                margin: 0.4em;
+                border: inherit;
+                border-radius: inherit;
+                padding: 0.4em;
+                overflow: visible;
                 display: block;
                 height: 1.4rem;
                 fill: var(--text-color-dark);
@@ -504,8 +507,8 @@ const css = `
         transition: opacity 200ms;
     }
 
-    .out-overlay:hover, .output[data-popup-opened]:not([data-popup-opened=""]) .out-overlay { 
-        opacity: 1;
+    &:hover, &:focus-within, .output[data-popup-opened]:not([data-popup-opened=""]) { 
+        .out-overlay { opacity: 1; }
     }
 }
 

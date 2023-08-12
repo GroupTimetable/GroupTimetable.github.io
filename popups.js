@@ -121,7 +121,7 @@ function popupAddHoverClick(id, onElement, whenToggled) {
     })
 
     let keepPopupOpen = false, ignoreHover = false
-    onElement.addEventListener('click', () => {
+    addClick(onElement, () => {
         keepPopupOpen = !keepPopupOpen;
 
         if(!window.matchMedia('(pointer: fine)').matches) {

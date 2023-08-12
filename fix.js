@@ -52,7 +52,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 let collapsed = false;
 const collapseContent = document.querySelector('#collapse-content')
 const collapseButton = document.querySelector('#collapse-button')
-collapseButton.addEventListener('click', _ => {
+addClick(collapseButton, _ => {
     collapsed = !collapsed;
 
     collapseButton.setAttribute('collapsed', collapsed)
@@ -172,13 +172,13 @@ function scheduleToSimple(schedule) {
 
 window.updateUserdataF ??= () => { console.error('no function defined') }
 
-document.getElementById('reset').addEventListener('click', function() {
+addClick(document.getElementById('reset'), function() {
     document.getElementById('edit-input').value = scheduleToSimple(orig.schedule)
 })
 
 document.getElementById('edit-input').value = scheduleToSimple(orig.schedule)
 
-document.getElementById('create').addEventListener('click', async function() {
+addClick(document.getElementById('create'), async function() {
     try{ await processEdit() }
     catch(e) {
         let str = ''

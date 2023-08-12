@@ -91,6 +91,7 @@ body {
     &:hover { outline: 1px solid var(--outline-color); }
 
     #group-input {
+        color-scheme: light dark;
         width: 100%; 
         flex: 1 1 0px; 
         appearance: none; border: none; outline: none;
@@ -103,11 +104,13 @@ body {
     .group-bar-icon {
         margin: auto 0;
         margin-left: 0.5rem;
+        border: 0px solid transparent;
+        border-radius: 999999px;
 
         & > svg {
             cursor: pointer;
-            border: 0px solid transparent;
-            border-radius: 999999px;
+            border: inherit;
+            border-radius: inherit;
             overflow: hidden;
 
             display: block;

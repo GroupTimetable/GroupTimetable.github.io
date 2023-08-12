@@ -190,16 +190,16 @@ const createGenSettings = Promise.all([loadDom, loadCommon, loadPopups]).then(_ 
         setFromSettings()
     }
 
-    genSettings.borderColorEl.addEventListener('click', () => {
+    addClick(genSettings.borderColorEl, () => {
         updBorderCol(!genSettings.drawBorder)
     })
-    genSettings.dowPositionEl.addEventListener('click', () => {
+    addClick(genSettings.dowPositionEl, () => {
         updDowOnTop(!genSettings.dowOnTop)
     })
-    genPopupHTML.querySelector('.gen-settings-prev').addEventListener('click', () => {
+    addClick(genPopupHTML.querySelector('.gen-settings-prev'), () => {
         updSettings(curSettings-1)
     })
-    genPopupHTML.querySelector('.gen-settings-next').addEventListener('click', () => {
+    addClick(genPopupHTML.querySelector('.gen-settings-next'), () => {
         updSettings(curSettings+1)
     })
 
@@ -299,14 +299,14 @@ loadDom.then(_ => {
         if(processing) return
         if (e.key === "Enter") updatePending(true)
     })
-    dom.startButtonEl.addEventListener('click', _ => {
+    addClick(dom.startButtonEl, _ => {
         if(processing) return;
         updatePending(!currentPending)
     })
 
     new ResizeObserver(() => resizeProgressBar(curStatus.progress, true)).observe(dom.groupBarEl)
 
-    document.querySelector('#file-picker').addEventListener('click', function() {
+    addClick(document.querySelector('#file-picker'), function() {
         pickFile(e => loadFromListFiles(e.target.files))
     })
 
