@@ -10,8 +10,15 @@ function timeout(ms) {
 
 function registerPopup(popup) {
     const id = popupTop++
-    popupList[id] = { popup, state: stateHidden, action: {}, ownerStates: {}, ownerActions: {} }
-    addOwner('safe zone', id)
+    popupList[id] = { 
+        popup, 
+        state: stateHidden, 
+        action: {}, 
+        ownerStates: {}, ownerActions: {}, 
+        openedArgElements: [], 
+        __stateChangeCallbacks: [],
+        set onStateChange(callback) { this.__stateChangeCallbacks.push(callback) },
+    }
     popup.safeZone.setAttribute('data-popup-id', id)
     return id
 }
@@ -20,8 +27,12 @@ function unregisterPopup(id) {
     delete popupList[id]
 }
 
-function addOpenedArgumentToElement(id, element) {
-    popupList[id].openedArgElement = element;
+function addOpenedArgumentToElement(id, name, element) {
+    if(name.includes('$')) {
+        console.error('popup open argument name `' + name + '` contains special symbols')
+        name.replace('$', '!@#%^&*()')
+    }
+    popupList[id].openedArgElements.push([element, '$' + name + '$']);
 }
 
 function addOwner(owner, id) {
@@ -50,6 +61,7 @@ async function updatePopupAfterMs(owner, id, state, delay) {
 
 function updatePopup(owner, id, newState) {
     const item = popupList[id]
+    if(item.ownerStates[owner] == undefined) return;
     item.ownerStates[owner] = newState
     delete item.ownerActions[owner]
 
@@ -68,11 +80,24 @@ function updatePopup(owner, id, newState) {
 
     const opened = item.state === stateShown
     item.popup.element.setAttribute('shown', opened)
-    const el = popupList[id].openedArgElement
-    if(el) el.setAttribute('data-popup-opened', opened)
+    for(let i = 0; i < popupList[id].openedArgElements.length; i++) {
+        const [el, name] = popupList[id].openedArgElements[i]
+        if(el) {
+            let attrs = el.getAttribute('data-popup-opened') ?? ''
+            if(opened && !attrs.includes(name)) attrs = attrs + name
+            else if(!opened && attrs.includes(name)) attrs = attrs.replace(name, '')
+
+            if(attrs != '') el.setAttribute('data-popup-opened', attrs)
+            else el.removeAttribute('data-popup-opened') 
+        }
+    }
     //console.log('popup ' + id + (opened ? ' opened' : ' hidden'))
 
-    try{ item.onStateChange(id) } catch(e) {}
+    try {
+        for(let i = 0; i < item.__stateChangeCallbacks.length; i++) {
+            try { item.__stateChangeCallbacks[i](id) } catch(e) { console.error(e) }
+        }
+    } catch(e) { console.error(e) }
 }
 
 function clamp(value, min, max) {
@@ -83,6 +108,7 @@ function popupAddHoverClick(id, onElement, whenToggled) {
     addOwner('hover', id)
     addOwner('click', id)
     addOwner('focus', id)
+    addOwner('safe zone', id)
 
     const item = popupList[id]
     const popupEl = item.popup.element
@@ -122,7 +148,6 @@ function popupAddHoverClick(id, onElement, whenToggled) {
         if(!ignoreHover) updatePopupAfterMs('hover', id, stateHidden, 500)
     })
 
-    //only one callback at a time!
     item.onStateChange = (id) => fixPopupXPosition(id)
 }
 

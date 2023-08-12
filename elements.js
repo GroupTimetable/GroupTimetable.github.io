@@ -89,7 +89,7 @@ function createOutputElement() {
     const settings = el.querySelector('.settings')
     const popupEl = insertPopup(settings, true)
     const popupId = registerPopup(popupEl)
-    addOpenedArgumentToElement(popupId, el.querySelector('.output'))
+    addOpenedArgumentToElement(popupId, 'settings', el.querySelector('.output'))
 
     popupAddHoverClick(popupId, settings.firstElementChild, (pressed) => settings.setAttribute('data-pressed', pressed))
     popupEl.popup.appendChild(popupCont)
@@ -122,6 +122,7 @@ function insertPopup(par, onTop) {
     };
 }
 
+let elements__new_calendar_1;
 
 async function createAndInitOutputElement(doc, parentElement, name, defWidth, editParams, userdata) {
     function updateUserdataF_elements(...params) { try { try {
@@ -136,6 +137,7 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
 
     const usedFunc = updateUserdataF_elements('regDocumentUsed')
     const useErrorFunc = updateUserdataF_elements('regDocumentUseError')
+    let closeCalendarHintPopup = () => {}
 
     editParams.userdata = userdata
     editParams.filename = name
@@ -163,6 +165,7 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
 
     element.widthInput.value = defWidth
     element.image.src = await getImage()
+    element.name.textContent = name
 
     function iconAnim(el, isError) {
         el.removeAttribute('data-anim')
@@ -170,22 +173,21 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
     }
 
     function addClick(el, name, func) {
-        el.addEventListener('click', _ => 
-            func()
-                .then(_ => { 
-                    iconAnim(el)
-                    if(name) usedFunc(name)
-                })
-                .catch(e => {
-                    iconAnim(el, true);
-                    if(name) useErrorFunc(name)
-                    console.error(e)
-                })
+        el.addEventListener('click', _ => func()
+            .then(_ => { 
+                iconAnim(el)
+                if(name) usedFunc(name)
+            })
+            .catch(e => {
+                iconAnim(el, true);
+                if(name) useErrorFunc(name)
+                console.error(e)
+            })
         )
     }
 
-    element.name.textContent = name
     addClick(element.viewPdf, 'vpdf', async() => {
+        closeCalendarHintPopup()
         const tab = window.open();
         if(tab == null) {
             downloadUrl(fileUrl, name + '.pdf')
@@ -194,6 +196,7 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         tab.location.href = fileUrl;
     })
     addClick(element.viewImg, 'vimg', async() => {
+        closeCalendarHintPopup()
         const img = await getImage()
         const tab = window.open();
         if(tab == null) {
@@ -203,9 +206,11 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         tab.location.href = img;
     })
     addClick(element.downloadImg, 'dimg', async() => {
+        closeCalendarHintPopup()
         downloadUrl(await getImage(), name + '.png')
     })
     addClick(element.copyImg, 'cimg', async() => {
+        closeCalendarHintPopup()
         try {
             const img = await getImage(true)
             const obj = {}
@@ -221,6 +226,7 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         }
     })
     addClick(element.edit, null, async() => {
+        closeCalendarHintPopup()
         window.open("./fix.html" + "?sid=" + storageId);
     })
     addClick(element.del, null, async() => {
@@ -241,8 +247,33 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         })
     })
     addClick(element.calendar, null, async() => {
+        closeCalendarHintPopup()
         window.open("./calendar.html" + "?sid=" + storageId);
     })
+    popupList[element.popupId].onStateChange = () => closeCalendarHintPopup(); 
+
+
+    if(elements__new_calendar_1 == undefined) elements__new_calendar_1 = localStorage.getItem('elements__new_calendar_1')
+    if(!elements__new_calendar_1) try {
+        const popup = insertPopup(element.calendar, true)
+        const popupId = registerPopup(popup)
+        popup.popup.innerHTML = "<span style='color: var(--error-color)'>Новое!</span>&nbsp;Экспорт в&nbsp;календарь"
+        popup.popup.classList.add('popup-no-default-style')
+        popup.popup.classList.add('hint-popup')
+        addOwner('main', popupId)
+        addOpenedArgumentToElement(popupId, 'calendar-hint', element.element.querySelector('.output'))
+        popup.element.addEventListener('click', (e) => {
+             closeCalendarHintPopup()
+             e.stopPropagation() 
+        }, true)
+        closeCalendarHintPopup = () => {
+            try { localStorage.setItem('elements__new_calendar_1', '1') } catch(e) { console.error(e) }
+            try { updatePopup('main', popupId, stateHidden); } catch(e) { console.error(e) }
+        }
+        updatePopup('main', popupId, stateShown)
+        elements__new_calendar_1 = true
+    } catch(e) { console.error(e) }
+
 
     parentElement.appendChild(element.element)
 }
@@ -281,22 +312,26 @@ const css = `
         & > * { transform: scale(0); transition: transform 0s 300ms; }
     }
 
+    & > * {
+        pointer-events: none;
+    }
+
     & > * > .safe-zone {
         padding: 2rem; 
         margin-top: -2rem; 
         margin-bottom: -2rem; 
-        pointer-events: none;
 
         & > .popup {
+            box-sizing: border-box;
+            box-shadow: 0px 0px var(--shadow2-size) 0px var(--shadow1-color);
             border: 0px solid transparent;
             border-radius: 10px;
             padding: 0.8rem;
-            box-sizing: border-box;
+        }
 
+        & > .popup:not(.popup-no-default-style) {
             background-color: var(--primary-color);
             color: var(--primary-contrast-color);
-
-            box-shadow: 0px 0px var(--shadow2-size) 0px var(--shadow1-color);
 
             pointer-events: all;
 
@@ -310,6 +345,28 @@ const css = `
             & input[type=number] { -moz-appearance: textfield; }
             & input { border: none; outline: none; background: none; }
             &:hover { outline: 1px solid var(--primary-contrast-color); }
+        }
+
+        & > .popup.hint-popup {
+            font-size: 0.8em;
+            background-color: var(--bg2-color);
+            color: var(--hint-color);
+            pointer-events: all;
+            position: relative;
+            cursor: grabbing; /*no better alternative*/
+
+            &::before {
+                pointer-events: none;
+                position: absolute;
+                top: 0px; left: 0px; right: 0px; bottom: 0px;
+                content: '';
+                border: 0px solid transparent;
+                border-radius: inherit;
+            }
+
+            &:hover::before {
+                background: var(--bg-hover-text);
+            }
         }
     }
 }
@@ -447,7 +504,7 @@ const css = `
         transition: opacity 200ms;
     }
 
-    .out-overlay:hover, .output[data-popup-opened=true] .out-overlay { 
+    .out-overlay:hover, .output[data-popup-opened]:not([data-popup-opened=""]) .out-overlay { 
         opacity: 1;
     }
 }

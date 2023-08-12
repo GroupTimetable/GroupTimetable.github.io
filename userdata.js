@@ -121,14 +121,7 @@ regFunctions.regDocumentError = (userUuid, randName, documentName, groupName, er
     console.error('data not sent for', userUuid, documentName, groupName, error)
 }
 
-//https://stackoverflow.com/a/24103596/18704284
-function setCookie(value) {
-    const date = new Date();
-    date.setTime(date.getTime() + (90*24*60*60*1000));
-    document.cookie = 'data=' + btoa(JSON.stringify(value)) + '; expires=' + date.toUTCString() + '; path=/';
-}
-//used in help-page
-function getCookie() {
+function get_Cookie() {
     const nameEQ = "data=";
     const ca = document.cookie.split(';');
     for(let i = 0; i < ca.length; i++) {
@@ -139,22 +132,45 @@ function getCookie() {
     }
 }
 
-const userData = (() => {
-    let userData;
-    try { userData = getCookie() } catch(e) { console.error(e) }
-    if(!userData || !userData.uuid) {
-         //preserving the fields
-        userData ??= {}
-        userData.uuid ??= genUUID()
-        userData.noUserdata ??= false
+//used in help-page
+function updateUserdata() {
+    try { 
+        const userData = JSON.parse(localStorage.getItem('userdata')) 
+        if(userData != undefined) return [userData, false]
+    } catch(e) { console.error(e) }
+
+    try { 
+        const userData = get_Cookie();
+        if(userData != undefined) return [userData, true]
+    } catch(e) { console.error(e) }
+}
+
+const userData = (_ => {
+    const result = updateUserdata()
+    const userData = result?.[0] ?? {}
+    let updated = result?.[1] ?? true
+
+    if(userData.uuid == undefined) {
+        userData.uuid = genUUID()
+        updated = true
     }
-    try { setCookie(userData) } catch(e) { console.error(e) }
+    if(userData.noUserdata == undefined) {
+        userData.noUserdata = false
+        updated = true
+    }
+
+    if(updated) try { 
+        localStorage.setItem('userdata', JSON.stringify(userData)) 
+        document.cookie = '' //TODO: remove sometime later
+    } catch(e) { console.error(e) }
+
     return userData
 })()
 
+
 window.setUserdataAllowed = (isAllowed) => {
     userData.noUserdata = !isAllowed
-    try { setCookie(userData) } catch(e) { console.error(e) }
+    try { localStorage.setItem('userdata', JSON.stringify(userData)) } catch(e) { console.error(e) }
 }
 
 window.getUserdataAllowed = () => {
