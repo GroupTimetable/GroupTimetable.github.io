@@ -47,7 +47,8 @@ let orig/*
     }
 })()
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+//pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerPort = pdfjsWorker;
 
 let collapsed = false;
 const collapseContent = document.querySelector('#collapse-content')

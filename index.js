@@ -1,3 +1,23 @@
+const loadFontkit  = files[0][0];
+const loadPdfjs    = files[1][0];
+const loadPdflibJs = files[2][0];
+const loadSchedule = files[3][0];
+const loadCommon   = files[4][0];
+const loadElements = files[5][0];
+const loadPopups   = files[6][0];
+const loadUserdata = files[7][0];
+//const loadIndex    = files[8][0]; 
+const loadDom = domPromise;
+
+loadPdfjs.then(arr => {
+    pdfjsLib.GlobalWorkerOptions.workerPort = pdfjsWorker;
+});
+
+let isDomLoaded, isUserdataLoaded;
+loadDom.then(_ => isDomLoaded = true);
+loadUserdata.then(_ => isUserdataLoaded = true);
+function assertDomLoaded() { if(!isDomLoaded) throw 'Страница не была загружена до конца'; }
+
 const dom = {}
 loadDom.then(_ => {
     const qs = document.getElementById.bind(document)
@@ -91,7 +111,7 @@ let prevProgress
 let curStatus = {};
 
 const genSettings = {}
-const createGenSettings = Promise.all([loadDom, loadCommon, loadPopups]).then(_ => {
+const createGenSettings = Promise.all([loadDom, loadCommon ]).then(_ => {
     const genPopupHTML = htmlToElement(`
 <div>
     <div style="margin-bottom: 0.6rem;">Расположение дней:</div>
@@ -215,13 +235,13 @@ Promise.all([loadDom, loadElements, loadPopups, createGenSettings]).then(_ => {
 })
 
 function hideOverlay() {
-    assertDep('dom')
+    assertDomLoaded()
     dom.dropZoneEl.style.visibility = 'hidden'
     dom.dropZoneEl.style.opacity = 0
 }
 
 function showOverlay() {
-    assertDep('dom')
+    assertDomLoaded()
     dom.dropZoneEl.style.visibility = ''
     dom.dropZoneEl.style.opacity = 1
 }
@@ -280,7 +300,7 @@ function checkShouldProcess() {
 }
 
 function updatePending(newValue) {
-    assertDep('dom')
+    assertDomLoaded()
     currentPending = newValue;
     if(!currentPending && curStatus.level === 'info'
         && (curStatus.type == undefined || curStatus.type === 'pending')
@@ -290,7 +310,7 @@ function updatePending(newValue) {
     checkShouldProcess()
 }
 
-loadDom.then(_ => {
+Promise.all([loadDom, loadCommon]).then(_ => {
     dom.groupInputEl.addEventListener('blur', e => {
         if(processing) return
         checkShouldProcess() 
@@ -315,7 +335,7 @@ loadDom.then(_ => {
 })
 
 function resizeProgressBar(progress, immediately) {
-    assertDep('dom')
+    assertDomLoaded()
     const w = dom.groupBarEl.offsetWidth
     const b = dom.groupBarEl.offsetHeight * 0.5 
 
@@ -341,7 +361,7 @@ function resetStage() {
 }
 
 function updStatus() { try {
-    assertDep('dom')
+    assertDomLoaded()
     const s = curStatus
 
     const { progressBarEl, statusEl, warningEl } = dom
@@ -478,12 +498,12 @@ function makeWarningText(schedule, scheme, bigFields) {
         + "вы можете изменить расписание самостоятельно или <a href='./help-page.html' target='blank' class='link'>написать сюда</a>."
 }
 
-function updateUserdataF2(...params) {
-    if(!depStatus['userdata']) {
-        console.error('Dependency not loaded')
-        return () => {}
-    }
-    else return updateUserdataF(...params)
+function updateUserdataF2(...params) { 
+    try {
+        if(!isUserdataLoaded) throw 'Dependency not loaded';
+        else return updateUserdataF(...params);
+    } catch(e) { console.error(e); }
+    return () => {};
 }
 
 
@@ -530,9 +550,7 @@ async function processPDF0() {
             const cont = (await page.getTextContent()).items;
             const contLength = cont.length
 
-            for(let i = 0; i < cont.length; i++) {
-                if(nameFixup(cont[i].str) === nameFixed) try {
-
+            for(let i = 0; i < cont.length; i++) if(nameFixup(cont[i].str) === nameFixed) try {
                 const boundsH = findItemBoundsH(cont, i);
                 const vBounds = findDaysOfWeekHoursBoundsV(cont);
                 updInfo({ msg: 'Достаём расписание из файла', type: 'processing', progress: ns() })
@@ -562,7 +580,7 @@ async function processPDF0() {
                 else throw [e, add] 
             }
         }
-        } catch(e) {
+        catch(e) {
             const add = "[страница] = " + j + '/' + orig.numPages
             if(Array.isArray(e)) { e.push(add); throw e }
             else throw [e, add] 

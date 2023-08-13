@@ -6,13 +6,7 @@ function htmlToElement(html) {
     return template.content.firstChild;
 }
 
-function call1(func) {
-    let result;
-    return () => (result ??= [func()])[0]
-}
-
-function createOutputElement() {
-    const el = htmlToElement(`
+const outputElementOrig = htmlToElement(`
 <div class="output-cont">
     <div class="name" style="text-align: center"></div>
     <div class="output">
@@ -71,49 +65,16 @@ function createOutputElement() {
         </div>
     </div>
 </div>
-    `);
+`);
 
-    const popupCont = htmlToElement(`
-        <div style="display: flex; align-items: baseline;">
-            Ширина:&nbsp;
-            <input type="number" style="
-                text-align: right;
-                font-size: 1rem;
-                color: var(--primary-contrast-color);
-                border-bottom: 0.1rem solid var(--primary-contrast-color);" 
-                max="4" min="0"></input>
-            пикс.
-        </div>
-    `)
-
-    const settings = el.querySelector('.settings')
-    const popupEl = insertPopup(settings, true)
-    const popupId = registerPopup(popupEl)
-    addOpenedArgumentToElement(popupId, 'settings', el.querySelector('.output'))
-
-    popupAddHoverClick(popupId, settings.firstElementChild, (pressed) => settings.setAttribute('data-pressed', pressed))
-    popupEl.popup.appendChild(popupCont)
-
-    return { 
-        element: el, 
-        popupId: popupId,
-        widthInput: popupCont.querySelector('input'),
-        name: el.querySelector('.name'), 
-        image: el.querySelector('img'),
-        del: el.querySelector('.delete'),
-        copyImg: el.querySelector('.copy-img'),
-        viewPdf: el.querySelector('.view-pdf'),
-        viewImg: el.querySelector('.view-img'),
-        calendar: el.querySelector('.calendar'),
-        downloadImg: el.querySelector('.download-img'),
-        edit: el.querySelector('.edit'),
-    };
+function createOutputElement() {
+    return outputElementOrig.cloneNode(true);
 }
 
 function insertPopup(par, onTop) {
-    const el = htmlToElement(`<span class='popup-container' shown="false"><div><div class="safe-zone"><div class="popup"></div></div></div> </span>`)
-    par.append(el)
-    if(onTop) el.setAttribute('data-anchor', 'top')
+    const el = htmlToElement(`<span class='popup-container' shown="false"><div><div class="safe-zone"><div class="popup"></div></div></div></span>`);
+    par.append(el);
+    if(onTop) el.setAttribute('data-anchor', 'top');
 
     return { 
         element: el, 
@@ -124,80 +85,106 @@ function insertPopup(par, onTop) {
 
 let elements__new_calendar_1;
 
-async function createAndInitOutputElement(doc, parentElement, name, defWidth, editParams, userdata) {
-    function updateUserdataF_elements(...params) { try { try {
-        const func = updateUserdataF(...params)
+async function createImage(width, ifw, doc, retOrig) {
+    for(let i = 0; i < ifw.length; i++) if(ifw[i].width === width) return retOrig ? ifw[i].img : ifw[i].url;
 
-        return (...params2) => { try { try {
-            func(...userdata, ...params2)
-        } catch(e) { console.error(e) } } catch(e) {} }
-    } catch(e) { console.error(e) } } catch(e) {} 
-        return () => { console.error('no funcion defined') } 
+    if(ifw.length > 4) URL.revokeObjectURL(ifw.pop().img);
+    const img = await renderPDF(copy(doc), width);
+    const url = URL.createObjectURL(img);
+    ifw.unshift({ width, img, url });
+    return retOrig ? img : url;
+}
+
+function updateUserdataF_elements(userdata, ...params) { try { try {
+    const func = updateUserdataF(...params)
+    return (...params2) => { try { try {
+        func(...userdata, ...params2);
+    } catch(e) { console.error(e); } } catch(e) {} }
+} catch(e) { console.error(e); } } catch(e) {} 
+    return () => { console.error('no funcion defined'); };
+}
+
+function addClick_elements(el, name, func, usedFunc, useErrorFunc) {
+    function iconAnim(el, isError) {
+        el.removeAttribute('data-anim');
+        setTimeout(_ => el.setAttribute('data-anim', isError ? 'err' : 'ok'));
     }
+    addClick(el, _ => func().then(_ => { 
+        iconAnim(el);
+        if(name) usedFunc(name);
+    }, e => {
+        iconAnim(el, true);
+        if(name) useErrorFunc(name)
+        console.error(e);
+    }));
+}
 
-    const usedFunc = updateUserdataF_elements('regDocumentUsed')
-    const useErrorFunc = updateUserdataF_elements('regDocumentUseError')
-    let closeCalendarHintPopup = () => {}
+async function createAndInitOutputElement(doc, parentElement, name, defWidth, editParams, userdata) {
+    const imagesForWidth = [];
+    const imagePromise = createImage(defWidth, imagesForWidth, doc, false);
+    const fileUrl = window.URL.createObjectURL(new Blob([copy(doc)], { type: 'application/pdf' }));
+    let settingsPopupId, calendarHintPopupId;
+    let closeCalendarHintPopup = () => {};
 
-    editParams.userdata = userdata
-    editParams.filename = name
+    const outputElement = createOutputElement();
+    const settingsEl = outputElement.querySelector('.settings');
+    const nameEl = outputElement.querySelector('.name');
+    const imageEl = outputElement.querySelector('img');
+    const delEl = outputElement.querySelector('.delete');
+    const copyImgEl = outputElement.querySelector('.copy-img');
+    const viewPdfEl = outputElement.querySelector('.view-pdf');
+    const viewImgEl = outputElement.querySelector('.view-img');
+    const calendarEl = outputElement.querySelector('.calendar');
+    const downloadImgEl = outputElement.querySelector('.download-img');
+    const editEl = outputElement.querySelector('.edit');
+    const widthInputEl = (() => {
+        const popupCont = htmlToElement(`
+            <div style="display: flex; align-items: baseline;">
+                Ширина:&nbsp;
+                <input type="number" style="
+                    text-align: right;
+                    font-size: 1rem;
+                    color: var(--primary-contrast-color);
+                    border-bottom: 0.1rem solid var(--primary-contrast-color);" 
+                    max="4" min="0"></input>
+                пикс.
+            </div>
+        `)
+        const popupEl = insertPopup(settingsEl, true)
+        popupEl.popup.appendChild(popupCont)
+        settingsPopupId = registerPopup(popupEl)
+        popupAddHoverClick(settingsPopupId, settingsEl.firstElementChild, (pressed) => settingsEl.setAttribute('data-pressed', pressed))
+        addOpenedArgumentToElement(settingsPopupId, 'settings', outputElement)
+        popupList[settingsPopupId].onStateChange = () => closeCalendarHintPopup(); 
+        return popupEl.element.querySelector('input');
+    })();
 
+    const getImage = (retOrig) => createImage(Number.parseInt(widthInputEl.value), imagesForWidth, doc, retOrig);
+    const usedFunc = updateUserdataF_elements(userdata, 'regDocumentUsed');
+    const useErrorFunc = updateUserdataF_elements(userdata, 'regDocumentUseError');
+    const addClick2 = (el, name, func) => addClick_elements(el, name, func, usedFunc, useErrorFunc);
+
+    editParams.userdata = userdata;
+    editParams.filename = name;
     const storageId = "parms" + String(Date.now());
     sessionStorage.setItem(storageId, JSON.stringify(editParams));
     
-    const fileUrl = window.URL.createObjectURL(new Blob([copy(doc)], { type: 'application/pdf' }));
-    const imagesForWidth = []
 
-    const getImage = async function(retOrig) {
-        const width = Number.parseInt(element.widthInput.value)
+    nameEl.textContent = name;
+    widthInputEl.value = defWidth;
 
-        const ifw = imagesForWidth
-        for(let i = 0; i < ifw.length; i++) if(ifw[i].width === width) return retOrig ? ifw[i].img : ifw[i].url
-
-        if(ifw.length > 4) URL.revokeObjectURL(ifw.pop().img);
-        const img = await renderPDF(copy(doc), width)
-        const url = URL.createObjectURL(img);
-        ifw.unshift({ width, img, url })
-        return retOrig ? img : url
-    }
-
-    const element = createOutputElement()
-
-    element.widthInput.value = defWidth
-    element.image.src = await getImage()
-    element.name.textContent = name
-
-    function iconAnim(el, isError) {
-        el.removeAttribute('data-anim')
-        setTimeout(_ => el.setAttribute('data-anim', isError ? 'err' : 'ok'))
-    }
-
-    function addClick2(el, name, func) {
-        addClick(el, _ => func()
-            .then(_ => { 
-                iconAnim(el)
-                if(name) usedFunc(name)
-            })
-            .catch(e => {
-                iconAnim(el, true);
-                if(name) useErrorFunc(name)
-                console.error(e)
-            })
-        )
-    }
-
-    addClick2(element.viewPdf, 'vpdf', async() => {
-        closeCalendarHintPopup()
+    addClick2(viewPdfEl, 'vpdf', async() => {
+        closeCalendarHintPopup();
         const tab = window.open();
         if(tab == null) {
-            downloadUrl(fileUrl, name + '.pdf')
-            return
+            downloadUrl(fileUrl, name + '.pdf');
+            return;
         }
         tab.location.href = fileUrl;
     })
-    addClick2(element.viewImg, 'vimg', async() => {
-        closeCalendarHintPopup()
-        const img = await getImage()
+    addClick2(viewImgEl, 'vimg', async() => {
+        closeCalendarHintPopup();
+        const img = await getImage();
         const tab = window.open();
         if(tab == null) {
             downloadUrl(img, name + '.png')
@@ -205,77 +192,76 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         }
         tab.location.href = img;
     })
-    addClick2(element.downloadImg, 'dimg', async() => {
-        closeCalendarHintPopup()
-        downloadUrl(await getImage(), name + '.png')
+    addClick2(downloadImgEl, 'dimg', async() => {
+        closeCalendarHintPopup();
+        downloadUrl(await getImage(), name + '.png');
     })
-    addClick2(element.copyImg, 'cimg', async() => {
-        closeCalendarHintPopup()
+    addClick2(copyImgEl, 'cimg', async() => {
+        closeCalendarHintPopup();
         try {
-            const img = await getImage(true)
-            const obj = {}
-            obj[img.type] = img
-            navigator.clipboard.write([
-                new ClipboardItem(obj)
-            ])
-            iconAnim(element.copyImg)
+            const img = await getImage(true);
+            const obj = {};
+            obj[img.type] = img;
+            navigator.clipboard.write([new ClipboardItem(obj)])
         } catch (error) {
-            const url = await getImage()
-            downloadUrl(url, name + '.png')
+            const url = await getImage();
+            downloadUrl(url, name + '.png');
             console.error(error);
         }
     })
-    addClick2(element.edit, null, async() => {
-        closeCalendarHintPopup()
+    addClick2(editEl, null, async() => {
+        closeCalendarHintPopup();
         window.open("./fix.html" + "?sid=" + storageId);
     })
-    addClick2(element.del, null, async() => {
+    addClick2(delEl, null, async() => {
         //TODO: add onbeforeunload
-        const el = element.element
-        el.style.animation = 'none'
+        const el = outputElement;
+        el.style.animation = 'none';
         el.offsetHeight;
-        el.style.animation = null
-        el.style.animationDirection = 'reverse'
-        el.style.animationDuration = '125ms'
+        el.style.animation = null;
+        el.style.animationDirection = 'reverse';
+        el.style.animationDuration = '125ms';
         el.addEventListener('animationend', _ => { 
-            parentElement.removeChild(element.element)
-            unregisterPopup(element.popupId)
+            parentElement.removeChild(el);
+            unregisterPopup(settingsPopupId);
+            if(calendarHintPopupId) unregisterPopup(calendarHintPopupId);
             sessionStorage.removeItem(storageId);
             window.URL.revokeObjectURL(fileUrl);
-            const ifw = imagesForWidth
+            const ifw = imagesForWidth;
             for(let i = 0; i < ifw.length; i++) URL.revokeObjectURL(ifw[i].img);
         })
     })
-    addClick2(element.calendar, null, async() => {
+    addClick2(calendarEl, null, async() => {
         closeCalendarHintPopup()
         window.open("./calendar.html" + "?sid=" + storageId);
     })
-    popupList[element.popupId].onStateChange = () => closeCalendarHintPopup(); 
 
-
-    if(elements__new_calendar_1 == undefined) elements__new_calendar_1 = localStorage.getItem('elements__new_calendar_1')
+    if(elements__new_calendar_1 == undefined) elements__new_calendar_1 = localStorage.getItem('elements__new_calendar_1');
     if(!elements__new_calendar_1) try {
-        const popup = insertPopup(element.calendar, true)
-        const popupId = registerPopup(popup)
-        popup.popup.innerHTML = "<span style='color: var(--error-color)'>Новое!</span>&nbsp;Экспорт в&nbsp;календарь"
-        popup.popup.classList.add('popup-no-default-style')
-        popup.popup.classList.add('hint-popup')
-        addOwner('main', popupId)
-        addOpenedArgumentToElement(popupId, 'calendar-hint', element.element.querySelector('.output'))
+        const popup = insertPopup(calendarEl, true);
+        const popupId = registerPopup(popup);
+        calendarHintPopupId = popupId;
+        popup.popup.innerHTML = "<span style='color: var(--error-color)'>Новое!</span>&nbsp;Экспорт в&nbsp;календарь";
+        popup.popup.classList.add('popup-no-default-style');
+        popup.popup.classList.add('hint-popup');
+        addOwner('main', popupId);
+        addOpenedArgumentToElement(popupId, 'calendar-hint', outputElement);
         addClick(popup.popup, (e) => {
-             closeCalendarHintPopup()
-             e.stopPropagation() 
+             closeCalendarHintPopup();
+             e.stopPropagation();
         })
         closeCalendarHintPopup = () => {
-            try { localStorage.setItem('elements__new_calendar_1', '1') } catch(e) { console.error(e) }
-            try { updatePopup('main', popupId, stateHidden); } catch(e) { console.error(e) }
+            try { popup.popup.blur() } catch(e) { console.error(e) }
+            try { localStorage.setItem('elements__new_calendar_1', '1') } catch(e) { console.error(e) };
+            try { updatePopup('main', popupId, stateHidden); } catch(e) { console.error(e) };
         }
-        updatePopup('main', popupId, stateShown)
-        elements__new_calendar_1 = true
-    } catch(e) { console.error(e) }
+        updatePopup('main', popupId, stateShown);
+        elements__new_calendar_1 = true;
+    } catch(e) { console.error(e); }
 
+    imageEl.src = await imagePromise;
 
-    parentElement.appendChild(element.element)
+    parentElement.appendChild(outputElement);
 }
 
 
@@ -490,24 +476,13 @@ const css = `
             }
         }
     }
-}
 
-@keyframes opacity-inc {
-    from { opacity: 0.5 }
-    to { opacity: 1; }
-}
-@keyframes opacity-inc2 {
-    from { opacity: 1 }
-    to { opacity: 0.5 }
-}
-
-.output-cont {
     & .out-overlay { 
         opacity: 0;
         transition: opacity 200ms;
     }
 
-    &:hover, &:focus-within, .output[data-popup-opened]:not([data-popup-opened=""]) { 
+    &:hover, &:has(:focus-visible), &[data-popup-opened]:not([data-popup-opened=""]) { 
         .out-overlay { opacity: 1; }
     }
 }

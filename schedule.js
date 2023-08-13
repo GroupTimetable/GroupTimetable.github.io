@@ -823,9 +823,6 @@ async function renderPDF(doc, width, type = 'image/png', quality = 1) {
     } finally { await pdfTask.destroy() }
 }
 
-const url = 'times_new_roman.ttf' //local server required
-const fontBytes = fetch(url).then(res => res.arrayBuffer()); 
-
 async function getDocument() {
     const pdfDoc = await PDFLib.PDFDocument.create() /*
         we can't reuse the document and glyph cache because of 
@@ -833,7 +830,7 @@ async function getDocument() {
     */
     pdfDoc.registerFontkit(window.fontkit)
 
-    const font = await pdfDoc.embedFont(await fontBytes, {subset:true});
+    const font = await pdfDoc.embedFont(await fontPromise, {subset:true});
 
     font.embedder.__descenderAtHeight = function(size, options) {
         if (options === void 0) { options = {}; }

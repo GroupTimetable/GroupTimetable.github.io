@@ -8,7 +8,7 @@ function htmlToElement(html) {
 
 function call1(func) {
     let result;
-    return () => (result ??= [func()])[0]
+    return () => (result ??= [func()])[0];
 }
 
 //https://stackoverflow.com/a/22114687/18704284

@@ -18,7 +18,7 @@
                 return style;
             }
 
-            const loadCss = insertCss(`body { display: none }`)
+            const loadCss = insertCss(`body { display: none }`);
             document.addEventListener('DOMContentLoaded', _ => {
                 const hideCss = insertCss(`body > * { display: none !important; }`);
 
@@ -38,47 +38,36 @@
             })
         }
 
-        const depStatus = {}
-        function updDep(depPromise, name) {  }
-        function assertDep(name) { if(!depStatus[name]) throw `Зависимость \`${name}\` еще не загружена` }
-
-        const scripts = []
-        function addScript(name, src, isModule) { return new Promise((resolve, reject) => {
-
-            const s = document.createElement('script');
-            s.setAttribute('src', src);
-            s.setAttribute('async', '');
-            if(isModule) s.setAttribute('type', 'module')
-            s.addEventListener('load', () => { depStatus[name] = true; resolve() });
-            s.addEventListener('error', () => { reject(name) });
-            scripts.push(s)
-        }) }
-        const loadDom = new Promise((g, b) => {
-            document.addEventListener('DOMContentLoaded', _ => { depStatus['dom'] = true; g() })
-        })
-
-        const loadFontkit  = addScript('fontkit', "https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js")
-        const loadPdfjs    = addScript('pdfjs', "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js")
-        const loadPdflibJs = addScript('pdflib', "https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js")
-
-        const loadSchedule = addScript('schedule', "./schedule.js")
-        const loadCommon   = addScript('common', "./common.js")
-        const loadElements = addScript('elements', "./elements.js")
-        const loadPopups   = addScript('popups', "./popups.js")
-        const loadUserdata = addScript('userdata', './userdata.js', true)
-        const loadIndex    = addScript('index', "./index.js")
-
-        ;(async() => {
-            const response = await fetch("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js")
-            const workerBlob = await response.blob()
-            const url = URL.createObjectURL(workerBlob)
-            const worker = new Worker(url)
-            //URL.revokeObjectURL(url)
-            loadPdfjs.then(_ => pdfjsLib.GlobalWorkerOptions.workerPort = worker);
-        })()
-
-        document.head.append(...scripts)
+        const files = new Array(9);
+        for(let i = 0; i < 9; i++) {
+            const file = files[i] = new Array(3);
+            file[0] = new Promise((g, b) => {
+                file[1] = g;
+                file[2] = b;
+            });
+        }
+        const domPromise = new Promise((g, b) => document.addEventListener('DOMContentLoaded', g));
+        const pdfjsWorker = (() => {
+            const workerString = `importScripts("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js")`;
+            return new Worker(URL.createObjectURL(new Blob([workerString], { type: 'text/javascript' })));
+        })();
+        const fontPromise = fetch('times_new_roman.ttf').then(res => res.arrayBuffer(), () => { throw 'не удалось загрузить шрифт'; }); 
     </script>
+
+    <script async onload="files[0][1]()" onerror="files[0][2]()" src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+    <script async onload="files[1][1]()" onerror="files[1][2]()" src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
+    <script async onload="files[2][1]()" onerror="files[2][2]()" src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script> 
+
+    <script async onload="files[3][1]()" onerror="files[3][2]()" src="./schedule.js"></script>
+    <script async onload="files[4][1]()" onerror="files[4][2]()" src="./common.js"></script>
+    <script async onload="files[5][1]()" onerror="files[5][2]()" src="./elements.js"></script>
+    <script async onload="files[6][1]()" onerror="files[6][2]()" src="./popups.js"></script>
+
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js"></script>
+    <script type="module" onload="files[7][1]()" onerror="files[7][2]()" src="./userdata.js"></script>
+
+    <script async onload="files[8][1]()" onerror="files[8][2]()" src="./index.js"></script>
 
     <link rel="stylesheet" href="colors.css">
     <link rel="stylesheet" href="styles.css">

@@ -179,6 +179,7 @@ body {
 
         visibility: hidden; 
         overflow: clip; 
+        contain: strict;
 
         border-radius: inherit; 
         border: inherit; 
