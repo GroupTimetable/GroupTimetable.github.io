@@ -15,28 +15,117 @@ const daysOfWeekShortenedLower = daysOfWeekShortened.map(it => it.toLowerCase())
 function findItemBoundsH(cont, itemI) {
     const item = cont[itemI];
     const bs = bounds(item);
-    const itemCenter = 0.5 * (bs.l + bs.r) //Math.abs(cont[itemI].transform[4] + cont[itemI].width/2);
-    
-    let neighbour;
-    const offsets = [-1, 1, -2, 2, -3, 3]
-    for(let i = 0; i < offsets.length; i++) {
-        const neigI = itemI + offsets[i]
-        if(cont[neigI] && cont[neigI].str == ' ') {
-            neighbour = neigI + (i % 2 === 0 ? -1 : 1);
-            break
+    const itemCenter = 0.5 * (bs.l + bs.r)
+
+    const itemBounds = new Map();
+    const items = new Set();
+    const is = { l: bs.l, r: bs.r, t: bs.t, b: bs.b };
+
+    let curI = itemI;
+    let totalHeight = item.height;
+    let totalCount = 1;
+    let curAdded;
+
+    const addItems = () => {
+        const nItem = cont[curI];
+        if(nItem.str.trim() == '') return;
+        if(items.has(curI)) return;
+        let ns;
+        if(itemBounds.has(curI)) ns = itemBounds.get(curI);
+        else itemBounds.set(curI, ns = bounds(nItem));
+
+        const h = (totalHeight + nItem.height) / (totalCount+1);
+        const lea = h * mergeLeading;
+        const spa = h * mergeSpace;
+
+        if(intersects(ns.b, ns.t, is.b - lea, is.t + lea)) {
+            curAdded++;
+            totalHeight = totalHeight + nItem.height;
+            totalCount++;
+            items.add(curI)
+            is.l = Math.min(is.l, ns.l)
+            is.b = Math.min(is.b, ns.b)
+            is.r = Math.max(is.r, ns.r)
+            is.t = Math.max(is.t, ns.t)
+        }
+        else return true;
+    };
+
+    do { //add all items in row
+        curAdded = 0;
+        curI--;
+        for(; curI >= 0; curI--) if(addItems()) break;
+        curI++;
+        for(; curI < cont.length; curI++) if(addItems()) break;
+    } while(curAdded !== 0);
+
+    const itemsArr = Array.from(items);
+    itemsArr.sort((a, b) => {
+        const ba = itemBounds.get(a);
+        const bb = itemBounds.get(b);
+        const ac = (ba.l + ba.r) * 0.5;
+        const bc = (bb.l + bb.r) * 0.5;
+        return ac - bc;
+    })
+
+    const spaces = []
+    {
+        const firstBs = itemBounds.get(itemsArr[0])
+        let colL = firstBs.l, colR = firstBs.r;
+        let colXTotal = (colL + colR) * 0.5;
+        let colCount = 1;
+        let prevColCenter = undefined;
+
+        for(let i = 1;; i++) {
+            let bs, center;
+            if(i < itemsArr.length) {
+                bs = itemBounds.get(itemsArr[i])
+                center = (bs.l + bs.r) * 0.5;
+                if(intersects(bs.l, bs.r, colL, colR)) {
+                    colXTotal += center;
+                    colCount++;
+                    colL = Math.min(colL, bs.l)
+                    colR = Math.max(colR, bs.r)
+                    continue;
+                }
+            }
+
+            const curColCenter = colXTotal / colCount;
+            if(prevColCenter != undefined) spaces.push(Math.abs(curColCenter - prevColCenter));
+
+            if(i >= itemsArr.length) break;
+            prevColCenter = curColCenter;
+            colXTotal = center;
+            colCount = 1;
+            colL = bs.l;
+            colR = bs.r;
         }
     }
 
-    if(!neighbour) throw ["Невозможно определить вертикальные границы расписания", " [имя группы] = " + itemI + "/" + cont.length];
+    const err = item.height * 0.05;
+    let avg;
+    while(spaces.length > 2) {
+        avg = 0;
+        for(let i = 0; i < spaces.length; i++) {
+            avg += 
+                spaces[i];
+        }
+        avg /= spaces.length;
+        
+        let maxI = 0, maxDiff = Math.abs(spaces[0] - avg)
+        for(let i = 1; i < spaces.length; i++) {
+            const diff = Math.abs(spaces[i] - avg);
+            if(!(diff <= maxDiff)) {
+                maxDiff = diff;
+                maxI = i;
+            }
+        }
+        if(maxDiff < err) break;
+        spaces.splice(maxI, 1)
+    }
 
-    const nbbs = bounds(cont[neighbour])
-    const nbCenter = 0.5 * (nbbs.l + nbbs.r);
-    const spacing = Math.abs(itemCenter - nbCenter) //Math.abs(itemCenter - (cont[neighbour].transform[4] + cont[neighbour].width/2));
-
-    const itemS = itemCenter - spacing/2;
-    const itemE = itemCenter + spacing/2;
-
-    return { lef: itemS, rig: itemE, bottom: bs.b };
+    if(avg != undefined) return { lef: itemCenter - avg/2, rig: itemCenter + avg/2, bottom: bs.b }; 
+    else throw "Невозможно определить вертикальные границы расписания, [имя группы] = " + itemI + "/" + cont.length;
 }
 
 function parseTime(str) {
@@ -189,9 +278,9 @@ function intersects(a1, a2, b1, b2) {
     return a2 > b1 && a1 < b2;
 }
 
+const mergeLeading = 0.2, mergeSpace = 0.1;
 
 function shouldMergeLessons2(l1, l2, isVertical) {
-    if(l1.length === 0 && l2.length === 0) return true;
     if(l1.length === 0 || l2.length === 0) return false;
 
     let max1;
@@ -209,8 +298,8 @@ function shouldMergeLessons2(l1, l2, isVertical) {
     }
 
     let sh;
-    if(isVertical) sh = (min2 - max1) < l1[0].height * 0.2; // leading
-    else sh = (min2 - max1) < l1[0].height * 0.1; //space
+    if(isVertical) sh = (min2 - max1) < l1[0].height * mergeLeading;
+    else sh = (min2 - max1) < l1[0].height * mergeSpace;
 
     return sh;
 }
@@ -305,84 +394,176 @@ function findDates(cont, hBounds) {
 }
 
 function makeSchedule(cont, vBounds, hBounds) {
+    const iterateHours = (func) => {
+        for(let d = 0; d < vBounds.length; d++) {
+            if(vBounds[d] == undefined) continue;
+            const day = vBounds[d];
+            const curS = schedule[d];
+            for(let h = 0; h < day.hours.length; h++) {
+                if(func(day, h, curS, d)) return;
+            }
+        }
+    };
+
     const schedule = Array(vBounds.length);
-    const bigFields = []
-
-    const la = hBounds.lef, ra = hBounds.rig;
-    const ma = (la + ra) * 0.5;
-
     for(let dayI = 0; dayI < vBounds.length; dayI++) {
         if(vBounds[dayI] == undefined) continue;
         const day = vBounds[dayI];
 
         const curS = Array(day.hours.length);
         schedule[dayI] = curS;
-        for(let i = 0; i < day.hours.length; i++) curS[i] = { sTime: day.hours[i].sTime, eTime: day.hours[i].eTime, lessons: [[], [], [], []], shouldMerge: [false, false, false, false] };
+        for(let i = 0; i < day.hours.length; i++) curS[i] = {
+            sTime: day.hours[i].sTime,
+            eTime: day.hours[i].eTime,
+            lessons: [[], [], [], []],
+            shouldMerge: [false, false, false, false]
+        };
+    }
 
-        for(let j = day.si; j <= day.ei; j++) {
-            const item = cont[j];
-            item.index = j;
-            if(item.str.trim() === '') continue;
-            const ibounds = bounds(item)
-            const bi = ibounds.b, ti = ibounds.t; 
-            const li = ibounds.l, ri = ibounds.r;
-            
-            const itemC = (bi + ti) * 0.5;
-            const itemM = (li + ri) * 0.5;
-            for(let i = 0; i < day.hours.length; i++) {
-                const ba = day.hours[i].bot, ta = day.hours[i].top;
-                const ca = (ba + ta) * 0.5;
+    const la = hBounds.lef, ra = hBounds.rig;
+    const ma = (la + ra) * 0.5;
 
-                const il = intersects(li, ri, la, ma);
-                const ir = intersects(li, ri, ma, ra);
-                if(!il && !ir) continue;
-                const ib = intersects(bi, ti, ba, ca);
-                const it = intersects(bi, ti, ca, ta);
-                if(!it && !ib) continue;
+    const fields = []
+    for(let i = 0; i < cont.length; i++) {
+        const item = cont[i];
+        const ibounds = bounds(item)
+        const bi = ibounds.b, ti = ibounds.t; 
+        const li = ibounds.l, ri = ibounds.r;
+        if(!intersects(li, ri, la, ra)) continue;
 
-                let addBigField = item.width > hBounds.rig - hBounds.lef
-                const bigField = { day: dayI, hours: i }
-                if(addBigField && bigFields.length !== 0) {
-                    const otherField = bigFields[bigFields.length-1]
-                    if(otherField.day == bigField.day && otherField.hours == bigField.hours) {
-                        addBigField = false
-                    }
-                }
+        const err = item.height * 0.1;
+        iterateHours((day, h) => {
+            const ba = day.hours[h].bot, ta = day.hours[h].top;
+            if(!intersects(bi, ti, ba, ta)) return;
+            fields.push({ item, bs: ibounds, isBig: li + err < la || ri - err > ra })
+            return true
+        });
+    }
+    if(fields.length === 0) throw "Не удалось найти ни одного урока для данной группы";
 
-                if(addBigField) bigFields.push(bigField)
+    const fieldGroups = [];
+    let minYGroups;
+    for(let i = 0; i < fields.length; i++) {
+        const cur = fields[i]
+        const cbs = cur.bs;
 
-                const shouldL = itemM < ma;
-                const shouldB = itemC < ca;
+        let added = false, aboveMinGroup = true;
+        for(let j = fieldGroups.length-1; j >= 0 && aboveMinGroup; j--) {
+            aboveMinGroup = cbs.top <= minYGroups;
+            const other = fieldGroups[j];
+            const obs = other.bs;
 
-                if(il && ir && it && ib) curS[i].shouldMerge.fill(true);
-                else {
-                    if(il && ir) curS[i].shouldMerge[shouldB ? 1 : 0] = true;
-                    if(it && ib) curS[i].shouldMerge[shouldL ? 2 : 3] = true;
-                }
+            const h = Math.min(cur.item.height, other.fields[0].height)
+            if(Math.abs(cur.item.height - other.fields[0].height) >= h * 0.1) continue;
+            const lea = h * mergeLeading;
+            const spa = h * mergeSpace;
 
-                const c = curS[i].lessons;
-                const s = item;
-                if(!shouldB &&  shouldL) c[0].push(s);
-                if(!shouldB && !shouldL) c[1].push(s);
-                if( shouldB &&  shouldL) c[2].push(s);
-                if( shouldB && !shouldL) c[3].push(s);
+            const ih = intersects(cbs.l, cbs.r, obs.l - spa, obs.r + spa)
+            const iv = intersects(cbs.b, cbs.t, obs.b - lea, obs.t + lea)
+            if(!ih || !iv) continue;
+            const xh = intersects(cbs.l, cbs.r, obs.l, obs.r)
+            const xv = intersects(cbs.b, cbs.t, obs.b, obs.t)
+            if(xh && xv) continue;
 
-                break;
-            }
+            other.fields.push(cur.item)
+            other.isBig = other.isBig || cur.isBig
+            obs.l = Math.min(cbs.l, obs.l)
+            obs.r = Math.max(cbs.r, obs.r)
+            obs.b = Math.min(cbs.b, obs.b)
+            obs.t = Math.max(cbs.t, obs.t)
+            minYGroups = minYGroups == undefined ? other.bs.b : Math.min(minYGroups, other.bs.b);
+
+            added = true;
+            break;
         }
+        if(!added) {
+            const other = { fields: [cur.item], bs: cbs, isBig: cur.isBig }
+            fieldGroups.push(other)
+            minYGroups = minYGroups == undefined ? other.bs.b : Math.min(minYGroups, other.bs.b);
+        }
+    }
 
+    const bigFields0 = new Set()
+    const bigFieldsLessons = []
+
+    //put field groups in the schedule
+    for(let gI = 0; gI < fieldGroups.length; gI++) {
+        const group = fieldGroups[gI];
+        const ibounds = group.bs;
+        const bi = ibounds.b, ti = ibounds.t; 
+        const li = ibounds.l, ri = ibounds.r;
+        
+        const itemC = (bi + ti) * 0.5;
+        const itemM = (li + ri) * 0.5;
+
+        const err = group.height * 0.1;
+
+        iterateHours((day, i, curS, dayI) => {
+            const ba = day.hours[i].bot, ta = day.hours[i].top;
+            const ca = (ba + ta) * 0.5;
+
+            if(!(ba < itemC && itemC < ta) && !(bi + err > ba && ti - err < ta)) return;
+            const il = intersects(li, ri, la, ma);
+            const ir = intersects(li, ri, ma, ra);
+            if(!il && !ir) return;
+            const ib = intersects(bi, ti, ba, ca);
+            const it = intersects(bi, ti, ca, ta);
+            if(!it && !ib) return;
+
+            const curLessons = curS[i];
+
+            const shouldL = itemM < ma;
+            const shouldB = itemC < ca;
+            if(il && ir && it && ib) curLessons.shouldMerge.fill(true);
+            else {
+                if(il && ir) curLessons.shouldMerge[shouldB ? 1 : 0] = true;
+                if(it && ib) curLessons.shouldMerge[shouldL ? 2 : 3] = true;
+            }
+
+            let lessonsI = (shouldB ? 2 : 0) + (shouldL ? 0 : 1);
+            const arr = curLessons.lessons[lessonsI];
+            for(let j = 0; j < group.fields.length; j++) arr.push(group.fields[j]);
+            if(group.isBig) {
+                bigFields0.add((BigInt(dayI) << BigInt(16)) + BigInt(i));
+                bigFieldsLessons.push([curLessons, lessonsI])
+            }
+
+            return true
+        })
+    }
+
+    //make big fields take all horisontal space if allowed
+    //[top left] -> +top right, [top right] -> +top left, ...
+    const otherIndex = [1, 0, 3, 2], oVerIndex = [3, 2, 3, 2], mergeIndex = [0, 0, 1, 1];
+    for(let i = 0; i < bigFieldsLessons.length; i++) {
+        const [lessons, index] = bigFieldsLessons[i];
+        lessons.shouldMerge[mergeIndex[index]] ||= lessons.lessons[otherIndex[index]].length === 0
+                                                    && !lessons.shouldMerge[oVerIndex[index]]
+    }
+
+    //merge lessons
+    for(let dayI = 0; dayI < vBounds.length; dayI++) {
+        if(vBounds[dayI] == undefined) continue;
+        const curS = schedule[dayI]
 
         let empty = true;
         for(let i = curS.length-1; i >= 0; i--) {
             const l = curS[i];
-            for(let j = 0; j < 4 && empty; j++) empty = empty && l.lessons[j].length == 0;
+            for(let j = 0; j < 4 && empty; j++) empty &&= !l.lessons[j].length;
             if(empty) curS.pop();
             else {
                 mergeLessons(l.lessons, l.shouldMerge);
-                l.shouldMerge = undefined;
+                delete l.shouldMerge;
             }
         }
     }
+
+    const bigFields = []
+    bigFields0.forEach(it => {
+        const day = Number(it >> BigInt(16))
+        const hours = Number(it & ((BigInt(1) << BigInt(16)) - BigInt(1)))
+        bigFields.push({ day, hours })
+    })
 
     return [schedule, bigFields]
 }
@@ -413,7 +594,7 @@ function drawText(page, text, params) {
 function widthOfTextAtSize(font, text, size) {
     if(size != undefined && checkValid(size)) return font.widthOfTextAtSize(text, size)
     else {
-        console.log('invalid size: ', size)
+        console.error('invalid size: ', size)
         return NaN
     }
 }
@@ -759,9 +940,8 @@ function drawDay(
     page, font, 
     day, dayI, 
     outerCoord, groupSize, 
-    borderFactor, drawBorder, dowOnTop
+    borderWidth, drawBorder, dowOnTop
 ) {
-    const borderWidth = groupSize.w * borderFactor
     const fullH = groupSize.h * day.length - borderWidth
 
     let x = outerCoord.x + borderWidth * 0.5
@@ -875,11 +1055,11 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
 
     const signatureHeight = 40, signaturePadding = 4
 
+    const borderWidth = colWidth * borderFactor
     const pageHeight = Math.max( 
         maxRows * colWidth * rowRatio,
-        curRows * colWidth * rowRatio + signatureHeight + signaturePadding*2
+        curRows * colWidth * rowRatio + borderWidth*0.5 + signatureHeight + signaturePadding*2
     );
-
     const pageSize = [colWidth * renderPattern.length, pageHeight]
     const groupSize = { w: colWidth, h: colWidth * rowRatio };
 
@@ -903,7 +1083,7 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
                 page, font, 
                 schedule[index], index, 
                 { x: i*groupSize.w, y: curY }, groupSize, 
-                borderFactor, drawBorder, dowOnTop
+                borderWidth, drawBorder, dowOnTop
             );
             curY = curY - groupSize.h * (schedule[index].length + (dowOnTop ? 1 : 0));
         }
@@ -919,28 +1099,22 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
     return [pageSize[0], await pdfDoc.save()];
 }
 
-function readScheduleScheme(text) {
+function readScheduleScheme(str) {
     const dowa = daysOfWeekShortenedLower
-    text = text.split('\n')
+    const texts = str.split('\n')
 
     const scheme = []
     function appS(row, col, day) {
-        if(col >= scheme.length) {
-            for(let i = 0; i <= col - scheme.length; i++) scheme.push([])
-        }
+        while(scheme.length <= col) scheme.push([])
         const c = scheme[col]
-
-        if(row >= c.length) {
-            for(let i = 0; i <= row - c.length; i++) c.push([])
-        }
-
+        while(c.length <= row) c.push(undefined)
         c[row] = day
     }
 
-    for(let i = 0; i < text.length; i++) {
-        const line = text[i].trim()
+    for(let i = 0; i < texts.length; i++) {
+        const line = texts[i].trimEnd()
         const count = Math.floor(line.length+1)/3
-        if(count*3-1 !== line.length) throw ['Неправильная строка расположения дней: `' + line + '`', '[строка] = ' + i + '/' + text.length]
+        if(count*3-1 !== line.length) throw ['Неправильная строка расположения дней: `' + line + '`', '[строка] = ' + i + '/' + texts.length]
 
         for(let j = 0; j < count; j++) {
             const sp = j*3;
