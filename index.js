@@ -538,19 +538,28 @@ async function processPDF0() {
     const origDestructor = [call1(origTask.destroy.bind(origTask))]
     const destroyOrig = () => Promise.all(origDestructor.map(it => it()))
     try {
-    let orig
-    try { orig = await origTask.promise }
-    catch (e) { throw ["Документ не распознан как PDF", e] }
+        let orig
+        try { orig = await origTask.promise }
+        catch (e) { throw ["Документ не распознан как PDF", e] }
 
-    origDestructor.push(call1(orig.cleanup.bind(orig))) //do I even need this?
+        origDestructor.push(call1(orig.cleanup.bind(orig))) //do I even need this?
 
-    for(let j = 0; j < orig.numPages; j++) {
-        try {
-            const page = await orig.getPage(j + 1);
-            const cont = (await page.getTextContent()).items;
+        let closestName = undefined, closestN = Infinity;
+        const minBound = Math.min(nameFixed.length*0.5, nameFixed.length - 4)
+        const maxBound = Math.max(nameFixed.length*2, nameFixed.length + 4)
+
+        for(let j = 0; j < orig.numPages; j++) try {
+            const cont = (await (await orig.getPage(j+1)).getTextContent()).items;
             const contLength = cont.length
 
-            for(let i = 0; i < cont.length; i++) if(nameFixup(cont[i].str) === nameFixed) try {
+            for(let i = 0; i < contLength; i++) try {
+                const oname = nameFixup(cont[i].str)
+                if(oname.length < minBound || oname.length > maxBound) continue;
+                const n = levenshteinDistance(nameFixed, oname);
+                if(n > 0) {
+                    if(n < closestN) { closestName = cont[i].str; closestN = n; }
+                    continue
+                }
                 const boundsH = findItemBoundsH(cont, i);
                 const vBounds = findDaysOfWeekHoursBoundsV(cont);
                 updInfo({ msg: 'Достаём расписание из файла', type: 'processing', progress: ns() })
@@ -586,14 +595,14 @@ async function processPDF0() {
             else throw [e, add] 
 
         }
-    }
-    throw ["имя группы не найдено `" + name + "`", "количество страниц = " + orig.numPages];
+
+        let cloS = ''
+        if(closestName != undefined) cloS = ", возможно вы имели в виду `" + closestName + "`"
+        throw ["имя `" + name + "` не найдено" + cloS, "количество страниц = " + orig.numPages];
     } catch(e) {
         updateUserdataF2('regDocumentError')(...userdata, e) 
         throw e
-    } finally { 
-        await destroyOrig() 
-    }
+    } finally { await destroyOrig() }
 }
 
 /*
@@ -655,4 +664,42 @@ function pickFile(callback) {
     setTimeout(function() {
         document.body.removeChild(f);
     }, 0);
+}
+
+function levenshteinDistance(str1, str2) {
+    const [s1, s2] = str1.length < str2.length ? [str1, str2] : [str2, str1];
+    if(s1.length === 0) return s2.length;
+
+    const len = s1.length;
+    const row = Array(len);
+    {
+        const c2 = s2[0];
+        let lef = 1;
+        for(let i = 0; i < len; i++) {
+            const c1 = s1[i];
+            const top = i+1, toplef = i;
+            lef = row[i] = (c1 === c2 ? toplef : Math.min(top, toplef, lef) + 1);
+        }
+    }
+    for(let j = 1; j < s2.length-1; j++) {
+        let lef = j + 1, toplef = j;
+        const c2 = s2[j];
+        for(let i = 0; i < len; i++) {
+            const c1 = s1[i];
+            const top = row[i];
+            lef = row[i] = (c1 === c2 ? toplef : Math.min(top, toplef, lef) + 1);
+            toplef = top;
+        }
+    }
+    {
+        let lef = s2.length, toplef = s2.length-1;
+        const c2 = s2[s2.length-1];
+        for(let i = 0; i < len; i++) {
+            const c1 = s1[i];
+            const top = row[i];
+            lef = (c1 === c2 ? toplef : Math.min(top, toplef, lef) + 1);
+            toplef = top;
+        }
+        return lef;
+    }
 }
