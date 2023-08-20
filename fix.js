@@ -41,7 +41,7 @@ let orig/*
         rowRatio: 0.19,
         userdata: ['new document', 'no group'],
         drawBorder: true,
-        borderFactor: 0.008,
+        borderFactor: 0.01,
         dowOnTop: false,
         defaultWidth: 1000,
     }
@@ -148,7 +148,7 @@ function scheduleToSimple(schedule) {
         result += '"Дата конца": "???",\n'
     }
     
-    result += '"Черная граница дней": "' + (orig.drawBorder ? 'да' : 'нет') + '",\n'
+    result += '"Граница дней заливкой": "' + (orig.drawBorder ? 'да' : 'нет') + '",\n'
     result += '"Дни недели наверху": "' + (orig.dowOnTop ? 'да' : 'нет') + '",\n'
     result += '"Размер границы дней": "' + (orig.borderFactor*1000) + '",\n'
     result += '"% высоты строки": "' + (orig.rowRatio*100) + '",\n'
@@ -290,7 +290,7 @@ async function processEdit() {
     const rowRatioS = si['% высоты строки']
     const rowRatio = Number(rowRatioS) / 100
     if(!(rowRatio < 1000 && rowRatio > 0.001)) throw 'неправильное значение % высоты строки: `' + rowRatioS + '`'
-    const drawBorder = (si["Черная граница дней"] || '').trim().toLowerCase() !== 'нет'
+    const drawBorder = (si["Граница дней заливкой"] || '').trim().toLowerCase() !== 'нет'
     const dowOnTop = (si["Дни недели наверху"] || '').trim().toLowerCase() === 'да'
     const borderFactorS = si["Размер границы дней"]
     const borderFactor = Number(borderFactorS) / 1000

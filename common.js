@@ -81,7 +81,7 @@ function addClick(element, callback) {
 
     element.addEventListener('keydown', keydownHandler)
     element.addEventListener('keyup', keyupHandler)
-    element.addEventListener('click', (e) => { callback(e) })
+    element.addEventListener('click', (e) => { callback(e); e.target.blur() })
 
     element.setAttribute('tabindex', '0')
     element.setAttribute('data-custom-button', '')

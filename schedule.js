@@ -661,7 +661,7 @@ function fitTextBreakLines(str, font, size) {
     return [el.texts, el.fontSize, el.lineWidths]
 }
 
-function drawLessonText(lesson, secondWeek, page, font, coord, blockSize) {
+function drawLessonText(lesson, secondWeek, page, font, coord, blockSize, borderWidth) {
     if(secondWeek && lesson.trim() !== '') drawRectangle(page, {
         x: coord.x,
         y: coord.y,
@@ -687,7 +687,7 @@ function drawLessonText(lesson, secondWeek, page, font, coord, blockSize) {
         width: blockSize.w,
         height: -blockSize.h,
         borderColor: PDFLib.rgb(0, 0, 0),
-        borderWidth: 2,
+        borderWidth: borderWidth,
     })
 }
 
@@ -695,7 +695,7 @@ function minuteOfDayToString(it) {
     return Math.floor(it/60) + ":" + (it%60).toString().padStart(2, '0')
 }
 
-function drawTime(lesson, page, font, coord, blockSize) {
+function drawTime(lesson, page, font, coord, blockSize, borderWidth) {
     const innerSize = { w: blockSize.w*0.8, h: blockSize.h*0.9 }
 
     const texts = [
@@ -731,12 +731,12 @@ function drawTime(lesson, page, font, coord, blockSize) {
         width: blockSize.w,
         height: -blockSize.h,
         borderColor: PDFLib.rgb(0, 0, 0),
-        borderWidth: 2,
+        borderWidth: borderWidth,
     })
 }
 
 
-function drawLessons(lesson, page, font, coord, size) {
+function drawLessons(lesson, page, font, coord, size, borderWidth) {
     const eqh1 = lesson.lessons[0] === lesson.lessons[1];
     const eqh2 = lesson.lessons[2] === lesson.lessons[3];
     const eqv1 = lesson.lessons[0] === lesson.lessons[2];
@@ -757,32 +757,32 @@ function drawLessons(lesson, page, font, coord, size) {
     ];
 
     const drawLessons = Array(4)
-    if(eqh1 && eqh2 && eqv1 && eqv2) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[3])
+    if(eqh1 && eqh2 && eqv1 && eqv2) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[3], borderWidth)
     else if(eqh1 || eqh2) {
-        if(eqh1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[1])
+        if(eqh1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[1], borderWidth)
         else drawLessons[0] = drawLessons[1] = true
 
-        if(eqh2) drawLessonText(lesson.lessons[2], true, page, font, points[2], sizes[1])
+        if(eqh2) drawLessonText(lesson.lessons[2], true, page, font, points[2], sizes[1], borderWidth)
         else drawLessons[2] = drawLessons[3] = true
     }
     else if(eqv1 || eqv2) {
-        if(eqv1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[2])
+        if(eqv1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[2], borderWidth)
         else drawLessons[0] = drawLessons[2] = true
 
-        if(eqv2) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[2])
+        if(eqv2) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[2], borderWidth)
         else drawLessons[1] = drawLessons[3] = true
     }
     else drawLessons.fill(true)
 
-    if(drawLessons[0]) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[0])
-    if(drawLessons[1]) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[0])
-    if(drawLessons[2]) drawLessonText(lesson.lessons[2], true, page, font, points[2], sizes[0])
-    if(drawLessons[3]) drawLessonText(lesson.lessons[3], true, page, font, points[3], sizes[0])
+    if(drawLessons[0]) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[0], borderWidth)
+    if(drawLessons[1]) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[0], borderWidth)
+    if(drawLessons[2]) drawLessonText(lesson.lessons[2], true, page, font, points[2], sizes[0], borderWidth)
+    if(drawLessons[3]) drawLessonText(lesson.lessons[3], true, page, font, points[3], sizes[0], borderWidth)
 }
 
-function drawLesson(lesson, page, font, coord, size, timeWidth) {
-    drawTime(lesson, page, font, coord, { w: timeWidth, h: size.h })
-    drawLessons(lesson, page, font, { x: coord.x + timeWidth, y: coord.y }, { w: size.w - timeWidth, h: size.h })
+function drawLesson(lesson, page, font, coord, size, timeWidth, borderWidth) {
+    drawTime(lesson, page, font, coord, { w: timeWidth, h: size.h }, borderWidth)
+    drawLessons(lesson, page, font, { x: coord.x + timeWidth, y: coord.y }, { w: size.w - timeWidth, h: size.h }, borderWidth)
 }
 
 function drawTextWidthinBounds(text, page, font, coord, size, params) {
@@ -838,7 +838,7 @@ function drawTextWidthinBounds(text, page, font, coord, size, params) {
         width: size.w,
         height: -size.h,
         borderColor: PDFLib.rgb(0, 0, 0),
-        borderWidth: 2,
+        borderWidth: params.borderWidth ?? (() => { console.error('no border width!'); return 0 })(),
     })
 }
 
@@ -846,39 +846,42 @@ function drawDay(
     page, font, 
     day, dayI, 
     outerCoord, groupSize, 
-    borderWidth, drawBorder, dowOnTop
+    borderWidth,  innerBorderWidth, drawBorder, dowOnTop
 ) {
-    const fullH = groupSize.h * day.length - borderWidth
-
-    let x = outerCoord.x + borderWidth * 0.5
-    let y = outerCoord.y - borderWidth * 0.5
-    let w = groupSize.w - borderWidth
-    const h = fullH / day.length
+    const borderOffset = (drawBorder 
+        ? Math.max(0, borderWidth - innerBorderWidth)
+        : borderWidth + innerBorderWidth) -1/*? border is drawn 1px less than it should ?*/;
+    let x = outerCoord.x + borderOffset * 0.5;
+    let y = outerCoord.y - borderOffset * 0.5;
+    let w = groupSize.w - borderOffset;
+    const rowsCount = day.length + (dowOnTop ? 1 : 0);
+    const fullH = groupSize.h * rowsCount - borderOffset;
+    const h = groupSize.h - borderOffset / rowsCount;
     const addColWidth = w*0.1
 
     const text = daysOfWeek[dayI]
     if(dowOnTop) {
         const size = { w, h }
-        drawTextWidthinBounds(text, page, font, { x, y }, size)
+        drawTextWidthinBounds(text, page, font, { x, y }, size, { borderWidth: innerBorderWidth })
         y -= size.h
     }
     else {
         const size = { w: addColWidth, h : fullH }
-        drawTextWidthinBounds(text, page, font, { x, y }, size, { rotated: true })
+        drawTextWidthinBounds(text, page, font, { x, y }, size, { rotated: true, borderWidth: innerBorderWidth })
         x += size.w
         w -= addColWidth
     }
 
     const size = { w, h }
     for(let i = 0; i < day.length; i++) {
-        drawLesson(day[i], page, font, { x: x, y: y - i*h }, size, addColWidth);
+        drawLesson(day[i], page, font, { x: x, y: y - i*h }, size, addColWidth, innerBorderWidth);
     }
 
     if(drawBorder) drawRectangle(page, {
         x: outerCoord.x,
         y: outerCoord.y,
         width: groupSize.w,
-        height: -groupSize.h * (day.length + (dowOnTop ? 1 : 0)),
+        height: -groupSize.h * rowsCount,
         borderColor: PDFLib.rgb(0, 0, 0),
         borderWidth: borderWidth,
     })
@@ -961,7 +964,8 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
 
     const signatureHeight = 40, signaturePadding = 4
 
-    const borderWidth = colWidth * borderFactor
+    const borderWidth = colWidth * borderFactor;
+    const innerBorderWidth = colWidth * 2/500;
     const pageHeight = Math.max( 
         maxRows * colWidth * rowRatio,
         curRows * colWidth * rowRatio + borderWidth*0.5 + signatureHeight + signaturePadding*2
@@ -989,7 +993,7 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
                 page, font, 
                 schedule[index], index, 
                 { x: i*groupSize.w, y: curY }, groupSize, 
-                borderWidth, drawBorder, dowOnTop
+                borderWidth, innerBorderWidth, drawBorder, dowOnTop
             );
             curY = curY - groupSize.h * (schedule[index].length + (dowOnTop ? 1 : 0));
         }

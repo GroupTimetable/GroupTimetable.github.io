@@ -137,6 +137,11 @@ const createGenSettings = Promise.all([loadDom, loadCommon ]).then(_ => {
             </span>
 
             <span style="text-align: right; margin-top: 0.9em;">Граница&nbsp;дней:</span>
+            <span class="no-select" style="display: flex; margin-top: 0.6em;">
+                &nbsp;<div class="border-color" style="cursor: pointer; border-bottom: 0.1rem solid var(--primary-contrast-color);"></div>
+             </span>
+
+            <span style="text-align: right; margin-top: 0.6em;">Размер:</span>
             <span style="display: flex;align-items: baseline;margin-top: 0.9em;">
                 &nbsp;
                 <input class="border-input" type="number" style="
@@ -146,11 +151,6 @@ const createGenSettings = Promise.all([loadDom, loadCommon ]).then(_ => {
                     " max="6" min="0">
                 ‰
             </span>
-
-            <span style="text-align: right; margin-top: 0.6em;">Цвет:</span>
-            <span class="no-select" style="display: flex; margin-top: 0.6em;">
-                &nbsp;<div class="border-color" style="cursor: pointer; border-bottom: 0.1rem solid var(--primary-contrast-color);"></div>
-             </span>
 
             <span style="text-align: right; margin-top: 0.9em">Расположение дней недели:</span>
             <span class="no-select" style="display: flex;align-items: end;margin-top: 0.9em;">
@@ -168,18 +168,18 @@ const createGenSettings = Promise.all([loadDom, loadCommon ]).then(_ => {
     genSettings.scheduleLayoutEl = genPopupHTML.querySelector('.days-scheme') 
     genSettings.heightEl = genPopupHTML.querySelector('.height-input')
     genSettings.borderSizeEl = genPopupHTML.querySelector('.border-input')
-    genSettings.borderColorEl = genPopupHTML.querySelector('.border-color')
+    genSettings.borderTypeEl = genPopupHTML.querySelector('.border-color')
     genSettings.dowPositionEl = genPopupHTML.querySelector('.dow-position')
 
     const savedSettings = [
-        [(1/5.2 * 100).toFixed(2),  '8', true, false],
+        [(1/5.2 * 100).toFixed(2), '10', true, false],
         [(1/5.2 * 100).toFixed(2), '20', false, true],
     ]
     let curSettings = 0;
 
     function updBorderCol(value) { 
         genSettings.drawBorder = value
-        genSettings.borderColorEl.innerText = value ? 'чёрный' : 'никакой'
+        genSettings.borderTypeEl.innerText = value ? 'заливка' : 'отступ'
     }
     function updDowOnTop(value) {
         genSettings.dowOnTop = value
@@ -210,7 +210,7 @@ const createGenSettings = Promise.all([loadDom, loadCommon ]).then(_ => {
         setFromSettings()
     }
 
-    addClick(genSettings.borderColorEl, () => {
+    addClick(genSettings.borderTypeEl, () => {
         updBorderCol(!genSettings.drawBorder)
     })
     addClick(genSettings.dowPositionEl, () => {
