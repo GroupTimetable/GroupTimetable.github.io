@@ -68,6 +68,8 @@ function findItemBoundsH(cont, itemI) {
         return ac - bc;
     })
 
+    if(typeof __schedule_debug_names != 'undefined' && __schedule_debug_names) console.log(itemsArr.map(it => '"' + cont[it].str + '"') + ',')
+
     const spaces = []
     {
         const firstBs = itemBounds.get(itemsArr[0])

@@ -291,12 +291,14 @@ function checkShouldProcess() {
     processing = true;
 
     var startTime = performance.now()
-    processPDF().finally(() => {
-        var endTime = performance.now()
-        console.log(`call took ${endTime - startTime} milliseconds`)
-        updatePending(false);
-        processing = false;
-    })
+    processPDF()
+        .catch(e => printScheduleError(e))
+        .finally(() => {
+            var endTime = performance.now()
+            console.log(`call took ${endTime - startTime} milliseconds`)
+            updatePending(false);
+            processing = false;
+        })
 }
 
 function updatePending(newValue) {
@@ -506,8 +508,100 @@ function updateUserdataF2(...params) {
     return () => {};
 }
 
+function __print() { console.log(JSON.stringify(__debug_schedule_parsing_results)); }
+function __stop() { __debug_start = false; }
 
-async function processPDF0() {
+let __debug_schedule_parsing, __debug_groups;
+let __debug_schedule_parsing_results;
+let __debug_start;
+let __schedule_debug_names;
+let __last_expected;
+//__start()
+const __start = (mode, folder, ...args) => {
+    if(__debug_start) {
+        console.error('Cannot run mor than one test at a time!')
+        console.log('(set __debug_start=false and call again if bugged)')
+        return
+    }
+    __debug_start = true;
+    __debug_schedule_parsing = false;
+    __debug_groups = false;
+    __debug_schedule_parsing_results = {};
+    __schedule_debug_names = false;
+    const testFolder = 'test' + folder + '/'
+
+    let goupNames = [], checkExpected;
+    if(mode === 'groups') {
+        __debug_groups = true;
+        groupNames = args[0]
+    }
+    else {
+        __debug_schedule_parsing = true;
+        checkExpected = (args[0] == undefined || !args[0])
+    }
+
+    loadDom.then(async () => {
+        async function readJson0(filename) {
+            const result = await fetch(testFolder + filename)
+            if(!result.ok) throw '(custom error meaasge) File ' + filename + ' not loaded';
+            const buf = await result.arrayBuffer()
+            return JSON.parse(new TextDecoder('utf-8').decode(buf))
+        }
+        function readJson(filename) {
+            return readJson0(filename).catch(err => { console.error('file not loaded:', err); return undefined })
+        }
+
+        if(__debug_schedule_parsing) {
+            const namesP = readJson('names.txt')
+            const contP = fetch(testFolder + 'file.pdf').then(it => it.arrayBuffer())
+            const expectedP = readJson('expected.txt')
+
+            const [names, cont] = await Promise.all([namesP, contP])
+            currentFileContent = cont
+            let expected = __last_expected = checkExpected ? await expectedP : undefined;
+
+            const differences = []
+
+            for(let i = 0; i < names.length; i++) {
+                if(!__debug_start) break;
+                dom.groupInputEl.value = names[i]
+                try { await processPDF(); } catch(e) { printScheduleError(e); break; }
+                if(expected) {
+                    const ex = expected[names[i]]
+                    if(!ex) console.warn('Name', ex, 'not found in expected!')
+                    else if(JSON.stringify(__debug_schedule_parsing_results[names[i]]) !== JSON.stringify(ex)) {
+                        differences.push(names[i])
+                        console.error('!')
+                    }
+                }
+            }
+
+            if(differences.length !== 0) {
+                console.error('results differ for: ')
+                console.error('[' + differences.map(it => '"'+it+'"') + ']')
+            }
+
+            updInfo({ msg: 'Everything done', type: 'processing', progress: 1 })
+            console.log('done')
+
+            //console.log(JSON.stringify(results))
+        }
+        else if(__debug_groups) {
+            const contP = fetch(testFolder + 'file.pdf').then(it => it.arrayBuffer())
+            const cont = await contP
+            currentFileContent = cont
+
+            for(let i = 0; i < groupNames.length; i++) {
+                if(!__debug_start) break;
+                dom.groupInputEl.value = groupNames[i]
+                try { await processPDF(); } catch(e) { printScheduleError(e); break; }
+            }
+        }
+    }).finally(() => __debug_start = false)
+}
+            
+
+async function processPDF() {
     const stagesC = 4
     let stage = 0
     const ns = () => { return ++stage / (stagesC+1) }
@@ -566,6 +660,7 @@ async function processPDF0() {
                 const dates = findDates(cont, boundsH)
                 const [schedule, bigFields] = makeSchedule(cont, vBounds, boundsH);
                 destroyOrig()
+                if(__debug_schedule_parsing) { __debug_schedule_parsing_results[name] = schedule; return }
                 updInfo({ msg: 'Создаём PDF файл расписания', type: 'processing', progress: ns() })
                 const [width, doc] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
                 const warningText = makeWarningText(schedule, scheme, bigFields)
@@ -632,25 +727,23 @@ if(false) {
 }
 */
 
-function processPDF() {
-     return processPDF0().catch(e => {
-        let str = ''
-        if(Array.isArray(e)) {
-            console.error('ERROR')
-            for(let i = 0; i < e.length; i++) {
-                console.error(e[i])
-                if(i !== 0) str += ', '
-                str += e[i]
-            }
-            console.error('RORRE')
+function printScheduleError(e) {
+    let str = ''
+    if(Array.isArray(e)) {
+        console.error('ERROR')
+        for(let i = 0; i < e.length; i++) {
+            console.error(e[i])
+            if(i !== 0) str += ', '
+            str += e[i]
         }
-        else {
-            str += e
-            console.error(e)
-        }
+        console.error('RORRE')
+    }
+    else {
+        str += e
+        console.error(e)
+    }
 
-        updError({ msg: str, type: 'processing' })
-    })
+    updError({ msg: str, type: 'processing' })
 }
 
 function pickFile(callback) {
