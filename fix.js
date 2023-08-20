@@ -81,23 +81,28 @@ function lessonToSimple(lesson, indent) {
         result = result + '\n' + ' '.repeat(indent+4) + '"' + key + '": "' + value + '",'; 
     }
 
+    const added = Array(4)
     if(h1 && h2 && v1 && v2) {
         a('все', 0)
     }
     else if(h1 || h2) {
         if(h1) a('обе - ч', 0)
+        else added[0] = added[1] = true
         if(h2) a('обе - з', 2)
+        else added[2] = added[3] = true
     }
     else if(v1 || v2) {
         if(v1) a('1 - обе', 0)
+        else added[0] = added[2] = true
         if(v2) a('2 - обе', 1)
+        else added[1] = added[3] = true
     }
-    else;
+    else added.fill(true)
 
-    if(!h1 && !v1) a('1 - ч', 0)
-    if(!h1 && !v2) a('2 - ч', 1)
-    if(!h2 && !v1) a('1 - з', 2)
-    if(!h2 && !v2) a('2 - з', 3)
+    if(added[0]) a('1 - ч', 0)
+    if(added[1]) a('2 - ч', 1)
+    if(added[2]) a('1 - з', 2)
+    if(added[3]) a('2 - з', 3)
 
     if(result.length === 0) return '{},'
 

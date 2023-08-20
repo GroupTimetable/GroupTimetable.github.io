@@ -756,23 +756,28 @@ function drawLessons(lesson, page, font, coord, size) {
         { w: size.w    , h: size.h     }
     ];
 
-    if(eqh1 && eqh2 && eqv1 && eqv2) {
-        drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[3])
-    }
+    const drawLessons = Array(4)
+    if(eqh1 && eqh2 && eqv1 && eqv2) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[3])
     else if(eqh1 || eqh2) {
         if(eqh1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[1])
+        else drawLessons[0] = drawLessons[1] = true
+
         if(eqh2) drawLessonText(lesson.lessons[2], true, page, font, points[2], sizes[1])
+        else drawLessons[2] = drawLessons[3] = true
     }
     else if(eqv1 || eqv2) {
         if(eqv1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[2])
-        if(eqv2) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[2])
-    }
-    else;
+        else drawLessons[0] = drawLessons[2] = true
 
-    if(!eqh1 && !eqv1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[0])
-    if(!eqh1 && !eqv2) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[0])
-    if(!eqh2 && !eqv1) drawLessonText(lesson.lessons[2], true, page, font, points[2], sizes[0])
-    if(!eqh2 && !eqv2) drawLessonText(lesson.lessons[3], true, page, font, points[3], sizes[0])
+        if(eqv2) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[2])
+        else drawLessons[1] = drawLessons[3] = true
+    }
+    else drawLessons.fill(true)
+
+    if(drawLessons[0]) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[0])
+    if(drawLessons[1]) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[0])
+    if(drawLessons[2]) drawLessonText(lesson.lessons[2], true, page, font, points[2], sizes[0])
+    if(drawLessons[3]) drawLessonText(lesson.lessons[3], true, page, font, points[3], sizes[0])
 }
 
 function drawLesson(lesson, page, font, coord, size, timeWidth) {
