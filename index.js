@@ -515,7 +515,7 @@ let __debug_schedule_parsing, __debug_groups;
 let __debug_schedule_parsing_results;
 let __debug_start;
 let __schedule_debug_names;
-let __last_expected;
+let __last_expected;//console.log(JSON.stringify(__last_expected[  ]));
 //__start()
 const __start = (mode, folder, ...args) => {
     if(__debug_start) {
@@ -528,20 +528,28 @@ const __start = (mode, folder, ...args) => {
     __debug_groups = false;
     __debug_schedule_parsing_results = {};
     __schedule_debug_names = false;
-    const testFolder = 'test' + folder + '/'
+    const testFolder = (folder == undefined || folder.trim() == '') ? undefined : 'test' + folder + '/'
 
-    let goupNames = [], checkExpected;
+    let goupNames, checkExpected;
     if(mode === 'groups') {
         __debug_groups = true;
         groupNames = args[0]
     }
     else {
         __debug_schedule_parsing = true;
-        checkExpected = (args[0] == undefined || !args[0])
+        checkExpected = (args[0] == undefined || !!args[0])
+        groupNames = args[1]
     }
 
     loadDom.then(async () => {
+        async function readFile0(filename) {
+            if(testFolder == undefined) return Promise.reject('test folder not given');
+            const result = await fetch(testFolder + filename)
+            if(!result.ok) throw '(custom error meaasge) File ' + filename + ' not loaded';
+            return await result.arrayBuffer()
+        }
         async function readJson0(filename) {
+            if(testFolder == undefined) return Promise.reject('test folder not given');
             const result = await fetch(testFolder + filename)
             if(!result.ok) throw '(custom error meaasge) File ' + filename + ' not loaded';
             const buf = await result.arrayBuffer()
@@ -550,27 +558,35 @@ const __start = (mode, folder, ...args) => {
         function readJson(filename) {
             return readJson0(filename).catch(err => { console.error('file not loaded:', err); return undefined })
         }
+        function readFile(filename) {
+            return readFile0(filename).catch(err => { console.error('file not loaded:', err); return undefined })
+        }
 
         if(__debug_schedule_parsing) {
-            const namesP = readJson('names.txt')
-            const contP = fetch(testFolder + 'file.pdf').then(it => it.arrayBuffer())
+            const contP = readFile('file.pdf')
             const expectedP = readJson('expected.txt')
 
-            const [names, cont] = await Promise.all([namesP, contP])
-            currentFileContent = cont
-            let expected = __last_expected = checkExpected ? await expectedP : undefined;
+            groupNames ??= await readJson('names.txt')
+            await contP.then(it => { if(it != undefined) currentFileContent = it })
+            let expected = checkExpected ? await expectedP : undefined;
+            if(expected != undefined) __last_expected = expected
 
             const differences = []
 
-            for(let i = 0; i < names.length; i++) {
+            if(groupNames == undefined) throw 'No group names provided'
+            if(currentFileContent == undefined) throw 'No pdf provided'
+
+            console.log('started' + (expected != undefined ? ' with expected/actual checks' : ''))
+
+            for(let i = 0; i < groupNames.length; i++) {
                 if(!__debug_start) break;
-                dom.groupInputEl.value = names[i]
+                dom.groupInputEl.value = groupNames[i]
                 try { await processPDF(); } catch(e) { printScheduleError(e); break; }
-                if(expected) {
-                    const ex = expected[names[i]]
+                if(expected != undefined) {
+                    const ex = expected[groupNames[i]]
                     if(!ex) console.warn('Name', ex, 'not found in expected!')
-                    else if(JSON.stringify(__debug_schedule_parsing_results[names[i]]) !== JSON.stringify(ex)) {
-                        differences.push(names[i])
+                    else if(JSON.stringify(__debug_schedule_parsing_results[groupNames[i]]) !== JSON.stringify(ex)) {
+                        differences.push(groupNames[i])
                         console.error('!')
                     }
                 }
@@ -580,16 +596,14 @@ const __start = (mode, folder, ...args) => {
                 console.error('results differ for: ')
                 console.error('[' + differences.map(it => '"'+it+'"') + ']')
             }
-
-            updInfo({ msg: 'Everything done', type: 'processing', progress: 1 })
-            console.log('done')
-
-            //console.log(JSON.stringify(results))
+            else if(expected != undefined) console.log('expected results matched')
         }
         else if(__debug_groups) {
-            const contP = fetch(testFolder + 'file.pdf').then(it => it.arrayBuffer())
-            const cont = await contP
-            currentFileContent = cont
+            const contP = readFile('file.pdf')
+            await contP.then(it => { if(it != undefined) currentFileContent = it })
+
+            if(groupNames == undefined) throw 'No group names provided'
+            if(currentFileContent == undefined) throw 'No pdf provided'
 
             for(let i = 0; i < groupNames.length; i++) {
                 if(!__debug_start) break;
@@ -597,7 +611,17 @@ const __start = (mode, folder, ...args) => {
                 try { await processPDF(); } catch(e) { printScheduleError(e); break; }
             }
         }
-    }).finally(() => __debug_start = false)
+    }).finally(() => {
+        if(__debug_start) {
+            updInfo({ msg: 'Everything done', type: 'processing', progress: 1 })
+            console.log('done')
+        }
+        else {
+            updInfo({ msg: 'Stopped', type: 'processing', progress: 1 })
+            console.log('done, stopped')
+        }
+        __debug_start = false
+    })
 }
             
 
