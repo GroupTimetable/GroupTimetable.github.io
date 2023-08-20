@@ -11,6 +11,7 @@ const daysOfWeek = [
 const daysOfWeekLower = daysOfWeek.map(a => a.toLowerCase())
 const daysOfWeekShortened = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const daysOfWeekShortenedLower = daysOfWeekShortened.map(it => it.toLowerCase())
+const mergeLeading = 0.2, mergeSpace = 0.1;
 
 function findItemBoundsH(cont, itemI) {
     const item = cont[itemI];
@@ -280,104 +281,6 @@ function intersects(a1, a2, b1, b2) {
     return a2 > b1 && a1 < b2;
 }
 
-const mergeLeading = 0.2, mergeSpace = 0.1;
-
-function shouldMergeLessons2(l1, l2, isVertical) {
-    if(l1.length === 0 || l2.length === 0) return false;
-
-    let max1;
-    for(let i = 0; i < l1.length; i++) {
-        const bs = bounds(l1[i]) 
-        const p = isVertical ? bs.t : bs.r;
-        if(max1 == undefined || p > max1) max1 = p;
-    }
-
-    let min2;
-    for(let i = 0; i < l2.length; i++) {
-        const bs = bounds(l2[i]) 
-        const p = isVertical ? bs.b : bs.l;
-        if(min2 == undefined || p < min2) min2 = p;
-    }
-
-    let sh;
-    if(isVertical) sh = (min2 - max1) < l1[0].height * mergeLeading;
-    else sh = (min2 - max1) < l1[0].height * mergeSpace;
-
-    return sh;
-}
-
-function mergeLessons(lessons, shouldMerge) {
-    const h1 = shouldMerge[0] || shouldMergeLessons2(lessons[0], lessons[1], false);
-    const h2 = shouldMerge[1] || shouldMergeLessons2(lessons[2], lessons[3], false);
-    const v1 = shouldMerge[2] || shouldMergeLessons2(lessons[2], lessons[0], true );
-    const v2 = shouldMerge[3] || shouldMergeLessons2(lessons[3], lessons[1], true );
-
-    if((h1 || h2) && (v1 || v2)) {
-        const e = lessons[0].concat(lessons[1]).concat(lessons[2]).concat(lessons[3]);
-        lessons.fill(e);
-    }
-    else if(h1 || h2) {
-        if(h1) {
-            const e = lessons[0].concat(lessons[1]);
-            lessons[0] = e;
-            lessons[1] = e;
-        }
-        if(h2) {
-            const e = lessons[2].concat(lessons[3]);
-            lessons[2] = e;
-            lessons[3] = e;
-        }
-    }
-    else if(v1 || v2) {
-        if(v1) {
-            const e = lessons[0].concat(lessons[2]);
-            lessons[0] = e;
-            lessons[2] = e;
-        }
-        if(v2) {
-            const e = lessons[1].concat(lessons[3]);
-            lessons[1] = e;
-            lessons[3] = e;
-        }
-    }
-
-    const done = new Map()
-
-    for(let i = 0; i < 4; i++) {
-        const a = lessons[i];
-        const cached = done.get(a)
-        if(cached != undefined) {
-            lessons[i] = cached
-        }
-        else if(a.length == 0) {
-            done.set(a, lessons[i] = "");
-        }
-        else {
-            a.sort(function(a, b) { // a - b
-                const xa = a.transform[4],
-                    ya = a.transform[5],
-                    xb = b.transform[4],
-                    yb = b.transform[5];
-
-                const dy = ya - yb
-                if(Math.abs(dy) < 0.01 * Math.min(a.height, b.height)) return xa - xb
-                else return -dy //in pdf y is flipped
-            })
-
-            let res = "" + a[0].str;
-            let prevR = bounds(a[0]).r;
-            for(let j = 1; j < a.length; j++) {
-                const bs = bounds(a[j])
-                const curL = bs.l;
-                const curR = bs.r;
-                res = res + " " + a[j].str;
-                prevR = curR;
-            }
-            done.set(a, lessons[i] = res);
-        }
-    }
-}
-
 function findDates(cont, hBounds) {
     const datesRegex = /(^|.*?\s)(\d\d)\.(\d\d)\.(\d\d\d\d)(\s.*?\s|\s)(\d\d)\.(\d\d)\.(\d\d\d\d)(\s|$)/
     const bottom = hBounds.bottom
@@ -417,8 +320,7 @@ function makeSchedule(cont, vBounds, hBounds) {
         for(let i = 0; i < day.hours.length; i++) curS[i] = {
             sTime: day.hours[i].sTime,
             eTime: day.hours[i].eTime,
-            lessons: [[], [], [], []],
-            shouldMerge: [false, false, false, false]
+            lessons: ['', '', '', '']
         };
     }
 
@@ -433,11 +335,10 @@ function makeSchedule(cont, vBounds, hBounds) {
         const li = ibounds.l, ri = ibounds.r;
         if(!intersects(li, ri, la, ra)) continue;
 
-        const err = item.height * 0.1;
         iterateHours((day, h) => {
             const ba = day.hours[h].bot, ta = day.hours[h].top;
             if(!intersects(bi, ti, ba, ta)) return;
-            fields.push({ item, bs: ibounds, isBig: li + err < la || ri - err > ra })
+            fields.push({ item, bs: ibounds })
             return true
         });
     }
@@ -468,7 +369,6 @@ function makeSchedule(cont, vBounds, hBounds) {
             if(xh && xv) continue;
 
             other.fields.push(cur.item)
-            other.isBig = other.isBig || cur.isBig
             obs.l = Math.min(cbs.l, obs.l)
             obs.r = Math.max(cbs.r, obs.r)
             obs.b = Math.min(cbs.b, obs.b)
@@ -479,7 +379,7 @@ function makeSchedule(cont, vBounds, hBounds) {
             break;
         }
         if(!added) {
-            const other = { fields: [cur.item], bs: cbs, isBig: cur.isBig }
+            const other = { fields: [cur.item], bs: cbs }
             fieldGroups.push(other)
             minYGroups = minYGroups == undefined ? other.bs.b : Math.min(minYGroups, other.bs.b);
         }
@@ -494,14 +394,14 @@ function makeSchedule(cont, vBounds, hBounds) {
         const ibounds = group.bs;
         const bi = ibounds.b, ti = ibounds.t; 
         const li = ibounds.l, ri = ibounds.r;
+        const err = group.fields[0].height * 0.1;
+        const isBig = li + err < la || ri - err > ra
         
         const itemC = (bi + ti) * 0.5;
         const itemM = (li + ri) * 0.5;
 
-        const err = group.height * 0.1;
-
-        iterateHours((day, i, curS, dayI) => {
-            const ba = day.hours[i].bot, ta = day.hours[i].top;
+        iterateHours((day, hours, curS, dayI) => {
+            const ba = day.hours[hours].bot, ta = day.hours[hours].top;
             const ca = (ba + ta) * 0.5;
 
             if(!(ba < itemC && itemC < ta) && !(bi + err > ba && ti - err < ta)) return;
@@ -512,22 +412,24 @@ function makeSchedule(cont, vBounds, hBounds) {
             const it = intersects(bi, ti, ca, ta);
             if(!it && !ib) return;
 
-            const curLessons = curS[i];
+            group.fields.sort((a, b) => {
+                const dy = a.transform[5] - b.transform[5];
+                if(Math.abs(dy) < 0.01 * Math.min(a.height, b.height)) return a.transform[4] - b.transform[4];
+                else return -dy //in pdf y is flipped
+            });
+            let result = '' + group.fields[0].str;
+            for(let i = 1; i < group.fields.length; i++) result += ' ' + group.fields[i].str;
 
-            const shouldL = itemM < ma;
-            const shouldB = itemC < ca;
-            if(il && ir && it && ib) curLessons.shouldMerge.fill(true);
-            else {
-                if(il && ir) curLessons.shouldMerge[shouldB ? 1 : 0] = true;
-                if(it && ib) curLessons.shouldMerge[shouldL ? 2 : 3] = true;
-            }
-
-            let lessonsI = (shouldB ? 2 : 0) + (shouldL ? 0 : 1);
-            const arr = curLessons.lessons[lessonsI];
-            for(let j = 0; j < group.fields.length; j++) arr.push(group.fields[j]);
-            if(group.isBig) {
-                bigFields0.add((BigInt(dayI) << BigInt(16)) + BigInt(i));
-                bigFieldsLessons.push([curLessons, lessonsI])
+            const lessons = curS[hours].lessons;
+            const inters = [il && it, ir && it, il && ib, ir && ib];
+            for(let i = 0; i < inters.length; i++) {
+                if(!inters[i]) continue;
+                if(lessons[i].length !== 0) console.error('Cannot add more than one group per field', dayI, hours, lessonsI)
+                lessons[i] = result;
+                if(isBig) {
+                    bigFields0.add((BigInt(dayI) << BigInt(16)) + BigInt(hours));
+                    bigFieldsLessons.push([lessons, i])
+                }
             }
 
             return true
@@ -536,14 +438,15 @@ function makeSchedule(cont, vBounds, hBounds) {
 
     //make big fields take all horisontal space if allowed
     //[top left] -> +top right, [top right] -> +top left, ...
-    const otherIndex = [1, 0, 3, 2], oVerIndex = [3, 2, 3, 2], mergeIndex = [0, 0, 1, 1];
+    const otherIndex = [1, 0, 3, 2];
     for(let i = 0; i < bigFieldsLessons.length; i++) {
         const [lessons, index] = bigFieldsLessons[i];
-        lessons.shouldMerge[mergeIndex[index]] ||= lessons.lessons[otherIndex[index]].length === 0
-                                                    && !lessons.shouldMerge[oVerIndex[index]]
+        const oi = otherIndex[index]
+        if(lessons[oi] === '') lessons[oi] = lessons[index]
     }
 
-    //merge lessons
+    //remove trailing empty lessons
+    //? if day is completely empty => set to undefined ?
     for(let dayI = 0; dayI < vBounds.length; dayI++) {
         if(vBounds[dayI] == undefined) continue;
         const curS = schedule[dayI]
@@ -553,10 +456,6 @@ function makeSchedule(cont, vBounds, hBounds) {
             const l = curS[i];
             for(let j = 0; j < 4 && empty; j++) empty &&= !l.lessons[j].length;
             if(empty) curS.pop();
-            else {
-                mergeLessons(l.lessons, l.shouldMerge);
-                delete l.shouldMerge;
-            }
         }
     }
 
