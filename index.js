@@ -496,8 +496,8 @@ function makeWarningText(schedule, scheme, bigFields) {
     }
 
     if(warningText === '') return ''
-    else return "Внимание, обнаружены большие поля названий уроков (" + warningText.substring(2) + "). Проверьте полученное расписание на их корркетность."
-        + "вы можете изменить расписание самостоятельно или <a href='./help-page.html' target='blank' class='link'>написать сюда</a>."
+    else return "Обнаружены большие поля названий уроков (" + warningText.substring(2) + "). Если в расписании присутствуют ошибки, "
+        + "вы можете изменить его самостоятельно или <a href='./help-page.html' target='blank' class='link'>написать сюда</a>."
 }
 
 function updateUserdataF2(...params) { 
