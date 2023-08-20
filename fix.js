@@ -219,35 +219,8 @@ addClick(document.getElementById('create'), async function() {
     st.style.animation = ''
 })
 
-async function processEdit() {
-    const text = '{' + document.getElementById('edit-input').value + '}'
-    let si
-    try { si = JSON5.parse(text); } 
-    catch(e) {
-        throw ['Не удалось прочитать изменения', e]
-    }
-
+async function jsonToSchedule(si) {
     const schedule = new Array(7)
-
-    const rowRatioS = si['% высоты строки']
-    const rowRatio = Number(rowRatioS) / 100
-    if(!(rowRatio < 1000 && rowRatio > 0.001)) throw 'неправильное значение % высоты строки: `' + rowRatioS + '`'
-    const drawBorder = (si["Черная граница дней"] || '').trim().toLowerCase() !== 'нет'
-    const dowOnTop = (si["Дни недели наверху"] || '').trim().toLowerCase() === 'да'
-    const borderFactorS = si["Размер границы дней"]
-    const borderFactor = Number(borderFactorS) / 1000
-    if(!(borderFactor < 1000 && borderFactor >= 0)) throw 'неправильное значение размера границы: `' + borderFactorS + '`'
-    const startDate = parseDate(si["Дата начала"])
-    const endDate   = parseDate(si["Дата конца"])
-
-    const schemeSA = si['Расположение дней'] 
-    let schemeS = ''
-    for(let i = 0; i < schemeSA.length; i++) {
-        schemeS += schemeSA[i] + '\n';
-    }
-    schemeS.substring(0, schemeS.length-1)
-
-    const scheme = readScheduleScheme(schemeS) 
 
     for(let i = 0; i < daysOfWeek.length; i++) {
         const day = si[daysOfWeek[i]]
@@ -302,6 +275,43 @@ async function processEdit() {
             else throw [e, add]
         }
     }
+
+    return schedule;
+}
+
+async function processEdit() {
+    const text = '{' + document.getElementById('edit-input').value + '}'
+    let si
+    try { si = JSON5.parse(text); } 
+    catch(e) {
+        throw ['Не удалось прочитать изменения', e]
+    }
+
+    const rowRatioS = si['% высоты строки']
+    const rowRatio = Number(rowRatioS) / 100
+    if(!(rowRatio < 1000 && rowRatio > 0.001)) throw 'неправильное значение % высоты строки: `' + rowRatioS + '`'
+    const drawBorder = (si["Черная граница дней"] || '').trim().toLowerCase() !== 'нет'
+    const dowOnTop = (si["Дни недели наверху"] || '').trim().toLowerCase() === 'да'
+    const borderFactorS = si["Размер границы дней"]
+    const borderFactor = Number(borderFactorS) / 1000
+    if(!(borderFactor < 1000 && borderFactor >= 0)) throw 'неправильное значение размера границы: `' + borderFactorS + '`'
+    const startDate = parseDate(si["Дата начала"])
+    const endDate   = parseDate(si["Дата конца"])
+
+    const schemeSA = si['Расположение дней'] 
+    let schemeS = ''
+    for(let i = 0; i < schemeSA.length; i++) {
+        schemeS += schemeSA[i] + '\n';
+    }
+    schemeS.substring(0, schemeS.length-1)
+
+    const scheme = readScheduleScheme(schemeS) 
+
+    let schedule;
+
+    const schedule0 = si['__schedule'];
+    if(schedule0 != undefined) schedule = schedule0
+    else schedule = await jsonToSchedule(si)
 
     const params = structuredClone(orig)
     if(startDate != undefined) params.dates[0] = startDate
