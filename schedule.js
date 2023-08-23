@@ -801,7 +801,11 @@ function drawTextWidthinBounds(text, page, font, coord, size, params) {
         const newSize = sizeAtHeight(font, scaledHeight);
 
         const offsetHeight = (offHeight + maxHeight) * 0.5;
-        if(params.alignRight) { 
+        if(params.alignLeft) {
+            const offsetWidth = 0;
+            return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, newSize]
+        }
+        else if(params.alignRight) { 
             const offsetWidth = maxWidth * (1 - padding) - scaledWidth
             return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, newSize]
         }
@@ -942,34 +946,40 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
     const colWidth = 500
     const renderPattern = []
 
+    const rowHeight = colWidth * rowRatio;
+    const borderWidth = colWidth * borderFactor;
+    const innerBorderWidth = colWidth * 2/500;
+
+    const signatureHeight = 40, signaturePadding = 4;
+    const signatureHeightFull = borderWidth*0.5 + signatureHeight + signaturePadding*2;
+
     let maxRows = 0;
-    let curRows = 0;
+    let firstRows = Infinity, lastRows = 0;
     for(let i = 0; i < origPattern.length; i++) {
         const newCol = []
-        curRows = 0;
+        lastRows = 0;
         for(let j = 0; j < origPattern[i].length; j++) {
             const index = origPattern[i][j];
             if(index === -1) continue;
             const day = schedule[index];
             if(!day || !day.length) continue;
 
-            curRows += day.length;
+            lastRows += day.length;
             newCol.push(index)
         }
-        if(dowOnTop) curRows += newCol.length;
+        if(dowOnTop) lastRows += newCol.length;
 
-        if(curRows > maxRows) maxRows = curRows;
+        if(firstRows === Infinity) firstRows = lastRows;
+        if(lastRows > maxRows) maxRows = lastRows;
         if(newCol.length) renderPattern.push(newCol)
     }
 
-    const signatureHeight = 40, signaturePadding = 4
+    const rowMaxHeight = maxRows * rowHeight;
+    const heightIfSignFirst = Math.max(rowMaxHeight, firstRows * rowHeight + signatureHeightFull);
+    const heightIfSignLast  = Math.max(rowMaxHeight, lastRows  * rowHeight + signatureHeightFull);
 
-    const borderWidth = colWidth * borderFactor;
-    const innerBorderWidth = colWidth * 2/500;
-    const pageHeight = Math.max( 
-        maxRows * colWidth * rowRatio,
-        curRows * colWidth * rowRatio + borderWidth*0.5 + signatureHeight + signaturePadding*2
-    );
+    const pageHeight = Math.min(heightIfSignFirst, heightIfSignLast);
+    const signFirst  = heightIfSignFirst < heightIfSignLast;
     const pageSize = [colWidth * renderPattern.length, pageHeight]
     const groupSize = { w: colWidth, h: colWidth * rowRatio };
 
@@ -999,11 +1009,15 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
         }
     }
 
+    const signX = signFirst ? signaturePadding : pageSize[0] - colWidth*0.8 - signaturePadding;
+    const alignRight = !signFirst;
+    const alignLeft = signFirst;
+
     drawTextWidthinBounds(
         'vanaigr.github.io', page, font, 
-        { x: pageSize[0] - colWidth*0.8 - signaturePadding, y: signatureHeight + signaturePadding }, 
+        { x: signX, y: signatureHeight + signaturePadding }, 
         { w: colWidth*0.8, h: signatureHeight }, 
-        { alignRight: true, noBorder: true, padding: 0, backgroundColor: PDFLib.rgb(1, 1, 1) }
+        { alignRight, alignLeft, noBorder: true, padding: 0, backgroundColor: PDFLib.rgb(1, 1, 1) }
     )
 
     return [pageSize[0], await pdfDoc.save()];
