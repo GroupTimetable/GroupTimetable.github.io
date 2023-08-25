@@ -276,15 +276,11 @@ function findDates(cont, bounds, colBounds) {
     }
 }
 
-function makeSchedule(cont, pageView, groupNameI) {
+function makeSchedule(cont, pageView, groupNameI, bigFieldsInclude) {
     if(cont.length < 1) throw 'Unreachable'
 
     const itemBs = Array(cont.length);
-    for(let i = 0; i < itemBs.length; i++) {
-        const bs = itemBs[i] = calcItemBounds(cont[i]);
-        itemBs[i].c = 0.5 * (bs.t + bs.b);
-        itemBs[i].m = 0.5 * (bs.l + bs.r);
-    }
+    for(let i = 0; i < itemBs.length; i++) itemBs[i] = calcItemBounds(cont[i]);
 
     const pageR = Math.max(pageView[0], pageView[2])
     const colBounds = findColumnBounds(cont, itemBs, groupNameI);
@@ -389,11 +385,11 @@ function makeSchedule(cont, pageView, groupNameI) {
     if(lastGroup !== undefined) writeGroup(lastGroup);
 
     //fix big fields
-    const bigFields = [];
+    const bigFieldsCands = [];
     for(let i = 0; i < bigFields_.length; i++) {
         const f = bigFields_[i];
         const inCurCol = intersects(f.l, f.r, colBounds.l, colBounds.r);
-        if(inCurCol) {
+        if(inCurCol || bigFieldsInclude.includes(i)) {
             const cell = table[f.y*colC + curColI]
             //note: make big fields take all horisontal space if allowed
             const lt = f.t && cell[0] == undefined, lb = f.b && cell[2] == undefined;
@@ -415,14 +411,20 @@ function makeSchedule(cont, pageView, groupNameI) {
                 for(let i = 2; f.b && empty && i < 4; i++) empty = cell[i] == undefined;
                 if(!empty) break
             }
-            if(empty) {
-                const cell = table[f.y*colC + curColI];
-                const hOff = leftSide ? 0 : 1;
-                if((!f.t || cell[0 + hOff] == undefined) && (!f.b || cell[2 + hOff] == undefined)) {
-                    const dayHour = rowDayHour[f.y]
-                    bigFields.push([dayHour[0], dayHour[1], f.t, f.b])
-                }
-            }
+            if(empty) bigFieldsCands.push(i); //table cell may be occupied later by other big fields
+        }
+    }
+
+    const bigFields = [];
+    for(let i = 0; i < bigFieldsCands.length; i++) {
+        const fI = bigFieldsCands[i];
+        const f = bigFields_[fI];
+        const cell = table[f.y*colC + curColI];
+        const leftSide = curColI > f.x;
+        const hOff = leftSide ? 0 : 1;
+        if((!f.t || cell[0 + hOff] == undefined) && (!f.b || cell[2 + hOff] == undefined)) {
+            const dayHour = rowDayHour[f.y]
+            bigFields.push([dayHour[0], days[dayHour[0]][dayHour[1]].sTime, f.t, f.b, fI])
         }
     }
 

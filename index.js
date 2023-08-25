@@ -489,17 +489,18 @@ function makeWarningText(schedule, scheme, bigFields) {
     let warningText = ''
     for(let i = 0; i < bigFields.length; i++) {
         const f = bigFields[i]
-        const day = f[0], hour = f[1], ch = f[2], z = f[3];
+        const day = f[0], hour = f[1], ch = f[2], z = f[3], index = f[4];
         if(!days.has(day)) continue
-        const text = minuteOfDayToString(schedule[day][hour].sTime) + '-' + (ch ? 'ч' : '') + (z ? 'з' : '');
-        if(prevDay === day) warningText += ', ' + text;
-        else warningText += '; ' + daysOfWeekShortened[day] + ' ' + text;
+        warningText += '; ' + daysOfWeekShortened[day] + '-' + minuteOfDayToString(hour)
+            + '-' + (ch ? 'ч' : '') + (z ? 'з' : '') + '(' + index + ')';
         prevDay = day;
     }
 
     if(warningText === '') return ''
-    else return "Потенциальные уроки не добавлены: " + warningText.substring(2) + ". Если в расписании присутствуют ошибки, "
-        + "вы можете изменить его самостоятельно или <a href='./help-page.html' target='blank' class='link'>написать сюда</a>."
+    else return "Возможно пропущены уроки: " + warningText.substring(2)
+        + ". Чтобы добавить их в расписание, допишите $<i>индекс_из_скобок</i> к имени группы, напр. ИМгр-123$0$2$39."
+        + " Также вы можете отредактировать расписание вручную, нажав на кнопку с карандашом на изображении"
+        + " или <a href='./help-page.html' target='blank' class='link'>написать сюда</a>.";
 }
 
 function updateUserdataF2(...params) { 
@@ -518,6 +519,7 @@ let __debug_schedule_parsing_results;
 let __debug_start;
 let __schedule_debug_names;
 let __last_expected;//console.log(JSON.stringify(__last_expected[  ]));
+let __debug_warningOn = [];
 
 function __start(mode, folder, ...args) {
     if(__debug_start) {
@@ -594,6 +596,9 @@ function __start(mode, folder, ...args) {
                 }
             }
 
+            console.log('warning on:', '[' + __debug_warningOn.map(it => '"'+it[0]+'"') + ']', structuredClone(__debug_warningOn));
+            __debug_warningOn.length = 0;
+
             if(differences.length !== 0) {
                 console.error('results differ for: ')
                 console.error('[' + differences.map(it => '"'+it+'"') + ']')
@@ -641,7 +646,10 @@ async function processPDF() {
 
     updInfo({ msg: 'Начинаем обработку', type: 'processing', progress: ns() })
     const contents = copy(currentFileContent)
-    const name = dom.groupInputEl.value.trim()
+    const nameS = dom.groupInputEl.value.trim().split('$')
+    const name = nameS[0]
+    const indices = Array(nameS.length - 1)
+    for(let i = 1; i < nameS.length; i++) indices[i-1] = Number.parseInt(nameS[i]);
     const nameFixed = nameFixup(name)
     const rowRatio = Number(genSettings.heightEl.value) / 100
     const borderFactor = Number(genSettings.borderSizeEl.value) / 1000
@@ -683,12 +691,12 @@ async function processPDF() {
                 }
 
                 updInfo({ msg: 'Достаём расписание из файла', type: 'processing', progress: ns() })
-                const [schedule, dates, bigFields] = makeSchedule(cont, page.view, i);
+                const [schedule, dates, bigFields] = makeSchedule(cont, page.view, i, indices);
+                const warningText = makeWarningText(schedule, scheme, bigFields)
+                if(__debug_schedule_parsing) { __debug_schedule_parsing_results[name] = schedule; if(bigFields.length != 0) __debug_warningOn.push([name, warningText]); return }
                 destroyOrig()
-                if(__debug_schedule_parsing) { __debug_schedule_parsing_results[name] = schedule; return }
                 updInfo({ msg: 'Создаём PDF файл расписания', type: 'processing', progress: ns() })
                 const [width, doc] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
-                const warningText = makeWarningText(schedule, scheme, bigFields)
                 await destroyOrig() //https://github.com/mozilla/pdf.js/issues/16777
                 updInfo({ msg: 'Создаём предпросмотр', type: 'processing', progress: ns() })
                 const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
