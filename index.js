@@ -47,8 +47,8 @@ Promise.all([loadDom, loadUserdata]).then(_ => {
     }
 
     function updateVisibility(open, accepted) {
-        dataAccept  .setAttribute('data-visible', open && accepted)
-        dataDecline .setAttribute('data-visible', open && !accepted)
+        dataAccept.setAttribute('data-visible', open && accepted)
+        dataDecline.setAttribute('data-visible', open && !accepted)
         dataUsageOpen.setAttribute('data-visible', !open)
         dataUsageOpen.setAttribute('data-usage-accepted', accepted)
     }
@@ -185,12 +185,8 @@ const createGenSettings = Promise.all([loadDom, loadCommon ]).then(_ => {
         genSettings.dowOnTop = value
         genSettings.dowPositionEl.innerText = value ? 'сверху' : 'сбоку'
     }
-    function updHeight(value) {
-        genSettings.heightEl.value = value
-    }
-    function updBorderSize(value) {
-        genSettings.borderSizeEl.value = value
-    }
+    function updHeight(value) { genSettings.heightEl.value = value; }
+    function updBorderSize(value) { genSettings.borderSizeEl.value = value; }
     function setFromSettings() {
         const s = savedSettings[curSettings]
         updHeight(s[0])
@@ -210,18 +206,10 @@ const createGenSettings = Promise.all([loadDom, loadCommon ]).then(_ => {
         setFromSettings()
     }
 
-    addClick(genSettings.borderTypeEl, () => {
-        updBorderCol(!genSettings.drawBorder)
-    })
-    addClick(genSettings.dowPositionEl, () => {
-        updDowOnTop(!genSettings.dowOnTop)
-    })
-    addClick(genPopupHTML.querySelector('.gen-settings-prev'), () => {
-        updSettings(curSettings-1)
-    })
-    addClick(genPopupHTML.querySelector('.gen-settings-next'), () => {
-        updSettings(curSettings+1)
-    })
+    addClick(genSettings.borderTypeEl, () => { updBorderCol(!genSettings.drawBorder) })
+    addClick(genSettings.dowPositionEl, () => { updDowOnTop(!genSettings.dowOnTop) })
+    addClick(genPopupHTML.querySelector('.gen-settings-prev'), () => { updSettings(curSettings-1) })
+    addClick(genPopupHTML.querySelector('.gen-settings-next'), () => { updSettings(curSettings+1) })
 
     setFromSettings()
 })
@@ -259,9 +247,7 @@ function showOverlay() {
         if(event.target === lastTarget || event.target === document) hideOverlay()
     })
 
-    window.addEventListener("dragover", function (e) {
-        e.preventDefault();
-    });
+    window.addEventListener("dragover", function (e) { e.preventDefault(); });
 
     window.addEventListener('drop', function(ev) { 
         ev.preventDefault();
@@ -274,7 +260,6 @@ function checkShouldProcess() {
     if(processing) return;
     if(!currentPending) return;
 
-    resetStage()
     if(currentFileContent == undefined) {
         updInfo({ msg: 'Для продолжения требуется файл расписания', type: 'pending' })
         return
@@ -329,10 +314,16 @@ Promise.all([loadDom, loadCommon]).then(_ => {
     new ResizeObserver(() => resizeProgressBar(curStatus.progress, true)).observe(dom.groupBarEl)
 
     addClick(document.querySelector('#file-picker'), function() {
-        pickFile(e => loadFromListFiles(e.target.files))
+        const f = document.createElement('input');
+        f.style.display = 'none';
+        f.type = 'file';
+        f.name = 'file';
+        f.addEventListener('change', e => loadFromListFiles(e.target.files))
+        document.body.appendChild(f);
+        f.click();
+        setTimeout(() => document.body.removeChild(f), 0);
     })
 
-    resetStage()
     updatePending(true)
 })
 
@@ -357,14 +348,16 @@ function resizeProgressBar(progress, immediately) {
     dom.progressBarEl.style.width = newW + 'px'
 }
 
-function resetStage() {
-    curStatus = { level: 'info' }
-    updStatus()
-}
-
+let prevTime = performance.now()
 function updStatus() { try {
     assertDomLoaded()
     const s = curStatus
+    if(false) {
+        const now = performance.now()
+        console.log('time:', (now - prevTime).toFixed(3))
+        prevTime = now;
+        try { throw s.msg } catch(e) { console.error(e) }
+    }
 
     const { progressBarEl, statusEl, warningEl } = dom
 
@@ -433,45 +426,36 @@ function nameFixup(name) {
 }
 
 async function loadFromListFiles(list) {
-    if(list.length === 0) {
-        //if you drop files fast enough sometimes files list would be empty
-        updError({ msg: 'Не удалось получить файлы. Попробуйте перетащить их ещё раз', type: 'fieldUpdate', progress: undefined });
-        return
-    } 
-
-    resetStage()
-
-    for(let i = 0;; i++) {
-        let errorReason = 'неправильное расширение файла'
-
-        const file = list[i]
-        const ext = file.name.endsWith('.pdf')
-        if(ext || i === list.length-1) {
-            currentFilename = file.name;
-            if(ext) currentFilename = currentFilename.substring(0, currentFilename.length-4)
-            currentFileContent = await file.arrayBuffer()
-
-            if(currentFileContent.length === 0) {
-                currentFileContent = undefined
-                //no idea why this happens
-                errorReason = 'Получен пустой файл'
-            }
-            else {
-                dom.filenameEl.innerText = 'Файл' + (list.length === 1 ? '' : ' №' + (i+1)) + ': ' + file.name
-                dom.filenameEl.style.opacity = 1
-                updInfo({ msg: 'Файл загружен', type: 'fieldUpdate' })
-                document.body.setAttribute('data-fileLoaded', '')
-
-                checkShouldProcess()
-                return
-            }
-        }
-
-        if(i < list.length) continue
-
-        updError({ msg: errorReason, type: 'fieldUpdate', progress: undefined })
+    if(list.length === 0) { //if you drop files fast enough sometimes files list would be empty
+        updError({ msg: 'Не удалось получить файлы. Попробуйте ещё раз', type: 'fieldUpdate', progress: undefined });
         return
     }
+
+    let res;
+    for(let i = 1; i < list.length; i++) {
+        const file = list[i];
+        const ext = file.name.endsWith('.pdf')
+        if(!ext) continue;
+        res = { filename: file.name, ext, content: await file.arrayBuffer() };
+    }
+    if(res == undefined) {
+        const file = list[0];
+        res = { filename: file.name, ext: file.name.endsWith('.pdf'), content: await file.arrayBuffer() };
+    }
+
+    if(res.content.length === 0) { //no idea why this happens
+        updError({ msg: 'Получен пустой файл', type: 'fieldUpdate', progress: undefined })
+        return;
+    }
+
+    dom.filenameEl.innerText = 'Файл' + (list.length === 1 ? '' : ' №' + (i+1)) + ': ' + res.filename
+    dom.filenameEl.style.opacity = 1
+    document.body.setAttribute('data-fileLoaded', '')
+    currentFilename = res.ext ? res.filename.substring(0, res.filename - 4) : res.filename;
+    currentFileContent = res.content;
+
+    updInfo({ msg: 'Файл загружен', type: 'fieldUpdate' })
+    checkShouldProcess()
 }
 
 function readElementText(element) {
@@ -503,44 +487,36 @@ function makeWarningText(schedule, scheme, bigFields) {
         + " или <a href='./help-page.html' target='blank' class='link'>написать сюда</a>.";
 }
 
-function updateUserdataF2(...params) { 
-    try {
-        if(!isUserdataLoaded) throw 'Dependency not loaded';
-        else return updateUserdataF(...params);
-    } catch(e) { console.error(e); }
-    return () => {};
+window.updateUserdataF ??= () => () => { console.error('No function defined') }
+
+function __stop() {
+    __debug_start = false;
+    __debug_mode = undefined;
 }
 
-function __print() { console.log(JSON.stringify(__debug_schedule_parsing_results)); }
-function __stop() { __debug_start = false; }
-
-let __debug_schedule_parsing, __debug_groups;
-let __debug_schedule_parsing_results;
-let __debug_start;
-let __schedule_debug_names;
-let __last_expected;//console.log(JSON.stringify(__last_expected[  ]));
+let __debug_start, __debug_mode;
+let __debug_schedule_parsing_results, __last_expected; //console.log(JSON.stringify());
+Object.defineProperty(window, '__schedule_debug_names', { get() { return __debug_mode === 2; } });
 let __debug_warningOn = [];
 
 function __start(mode, folder, ...args) {
     if(__debug_start) {
-        console.error('Cannot run mor than one test at a time!')
-        console.log('(set __debug_start=false and call again if bugged)')
+        console.error('Cannot run more than one test at a time! (call __stop())')
         return
     }
+    const modes = { 'groups': 1, 'schedule_names': 2 };
+
+    __stop();
     __debug_start = true;
-    __debug_schedule_parsing = false;
-    __debug_groups = false;
-    __debug_schedule_parsing_results = {};
-    __schedule_debug_names = false;
+    __debug_mode = modes[mode] ?? 0;
     const testFolder = (folder == undefined || folder.trim() == '') ? undefined : 'test' + folder + '/'
 
     let goupNames, checkExpected;
-    if(mode === 'groups') {
-        __debug_groups = true;
+    if(__debug_mode === 1) {
         groupNames = args[0]
     }
+    else if(__debug_mode === 2) return Promise.resolve();
     else {
-        __debug_schedule_parsing = true;
         checkExpected = (args[0] == undefined || !!args[0])
         groupNames = args[1]
     }
@@ -551,27 +527,23 @@ function __start(mode, folder, ...args) {
             const result = await fetch(testFolder + filename)
             if(!result.ok) throw '(custom error meaasge) File ' + filename + ' not loaded';
             return await result.arrayBuffer()
-        }
-        async function readJson0(filename) {
-            if(testFolder == undefined) return Promise.reject('test folder not given');
-            const result = await fetch(testFolder + filename)
-            if(!result.ok) throw '(custom error meaasge) File ' + filename + ' not loaded';
-            const buf = await result.arrayBuffer()
-            return JSON.parse(new TextDecoder('utf-8').decode(buf))
-        }
-        function readJson(filename) {
-            return readJson0(filename).catch(err => { console.error('file not loaded:', err); return undefined })
-        }
-        function readFile(filename) {
-            return readFile0(filename).catch(err => { console.error('file not loaded:', err); return undefined })
-        }
+        };
+        const readJson0 = (filename) => readFile0(filename).then(it => JSON.parse(new TextDecoder('utf-8').decode(it)))
+        const wrap = (func) => func.catch(err => { console.error('file not loaded:', err); return undefined })
+        const readFile = (filename) => wrap(readFile0(filename))
+        const readJson = (filename) => wrap(readJson0(filename))
 
-        if(__debug_schedule_parsing) {
+        if(__debug_mode === 0) {
             const contP = readFile('file.pdf')
             const expectedP = readJson('expected.txt')
 
             groupNames ??= await readJson('names.txt')
-            await contP.then(it => { if(it != undefined) currentFileContent = it })
+            await contP.then(it => { if(it != undefined) {
+                currentFileContent = it
+                dom.filenameEl.innerText = 'Test folder: ' + testFolder;
+                dom.filenameEl.style.opacity = 1
+                document.body.setAttribute('data-fileLoaded', '')
+            } })
             let expected = checkExpected ? await expectedP : undefined;
             if(expected != undefined) __last_expected = expected
 
@@ -580,12 +552,14 @@ function __start(mode, folder, ...args) {
             if(groupNames == undefined) throw 'No group names provided'
             if(currentFileContent == undefined) throw 'No pdf provided'
 
-            console.log('started' + (expected != undefined ? ' with expected/actual checks' : ''))
+            __debug_schedule_parsing_results = {};
 
+            console.log('started' + (expected != undefined ? ' with expected/actual checks' : ''))
             for(let i = 0; i < groupNames.length; i++) {
                 if(!__debug_start) break;
                 dom.groupInputEl.value = groupNames[i]
                 try { await processPDF(); } catch(e) { printScheduleError(e); break; }
+                if(!__debug_start) break;
                 if(expected != undefined) {
                     const ex = expected[groupNames[i]]
                     if(!ex) console.warn('Name', ex, 'not found in expected!')
@@ -605,9 +579,14 @@ function __start(mode, folder, ...args) {
             }
             else if(expected != undefined) console.log('expected results matched')
         }
-        else if(__debug_groups) {
+        else if(__debug_mode === 1) {
             const contP = readFile('file.pdf')
-            await contP.then(it => { if(it != undefined) currentFileContent = it })
+            await contP.then(it => { if(it != undefined) {
+                currentFileContent = it
+                dom.filenameEl.innerText = 'Test folder: ' + testFolder;
+                dom.filenameEl.style.opacity = 1
+                document.body.setAttribute('data-fileLoaded', '')
+            } })
 
             if(groupNames == undefined) throw 'No group names provided'
             if(currentFileContent == undefined) throw 'No pdf provided'
@@ -628,7 +607,7 @@ function __start(mode, folder, ...args) {
             updInfo({ msg: 'Stopped' + n2, type: 'processing', progress: 1 })
             console.log('done, stopped' + n2)
         }
-        __debug_start = false
+        __stop();
     })
 }
 
@@ -693,7 +672,7 @@ async function processPDF() {
                 updInfo({ msg: 'Достаём расписание из файла', type: 'processing', progress: ns() })
                 const [schedule, dates, bigFields] = makeSchedule(cont, page.view, i, indices);
                 const warningText = makeWarningText(schedule, scheme, bigFields)
-                if(__debug_schedule_parsing) { __debug_schedule_parsing_results[name] = schedule; if(bigFields.length != 0) __debug_warningOn.push([name, warningText]); return }
+                if(__debug_start && __debug_mode === 0) { __debug_schedule_parsing_results[name] = schedule; if(bigFields.length != 0) __debug_warningOn.push([name, warningText]); return }
                 destroyOrig()
                 updInfo({ msg: 'Создаём PDF файл расписания', type: 'processing', progress: ns() })
                 const [width, doc] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
@@ -701,14 +680,13 @@ async function processPDF() {
                 updInfo({ msg: 'Создаём предпросмотр', type: 'processing', progress: ns() })
                 const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
                 await createAndInitOutputElement(
-                    doc, dom.outputsEl, 
-                    outFilename, width,
+                    doc, dom.outputsEl, outFilename, width,
                     { rowRatio, scheme, schedule, drawBorder, dowOnTop, borderFactor, dates },
                     userdata
                 )
 
                 updInfo({ msg: 'Готово', warning: warningText, type: 'processing', progress: ns() })
-                updateUserdataF2('regDocumentCreated')(...userdata) 
+                updateUserdataF('regDocumentCreated')(...userdata) 
                 return
             }
             catch(e) {
@@ -728,7 +706,7 @@ async function processPDF() {
         if(closestName != undefined) cloS = ", возможно вы имели в виду `" + closestName + "`"
         throw ["имя `" + name + "` не найдено" + cloS, "количество страниц = " + orig.numPages];
     } catch(e) {
-        updateUserdataF2('regDocumentError')(...userdata, e) 
+        updateUserdataF('regDocumentError')(...userdata, e) 
         throw e
     } finally { await destroyOrig() }
 }
@@ -767,19 +745,6 @@ function printScheduleError(e) {
     }
 
     updError({ msg: str, type: 'processing' })
-}
-
-function pickFile(callback) {
-    var f = document.createElement('input');
-    f.style.display='none';
-    f.type='file';
-    f.name='file';
-    f.addEventListener('change', callback)
-    document.body.appendChild(f);
-    f.click();
-    setTimeout(function() {
-        document.body.removeChild(f);
-    }, 0);
 }
 
 function levenshteinDistance(str1, str2) {

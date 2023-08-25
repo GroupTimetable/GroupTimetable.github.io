@@ -33,19 +33,16 @@ function findColumnBounds(cont, itemBs, itemI) {
 
         const h = (totalHeight + nItem.height) / (totalCount+1);
         const lea = h * mergeLeading;
-        const spa = h * mergeSpace;
+        if(!intersects(ns.b, ns.t, is.b - lea, is.t + lea)) return true;
 
-        if(intersects(ns.b, ns.t, is.b - lea, is.t + lea)) {
-            curAdded++;
-            totalHeight = totalHeight + nItem.height;
-            totalCount++;
-            items.add(nI)
-            is.l = Math.min(is.l, ns.l)
-            is.b = Math.min(is.b, ns.b)
-            is.r = Math.max(is.r, ns.r)
-            is.t = Math.max(is.t, ns.t)
-        }
-        else return true;
+        curAdded++;
+        totalHeight = totalHeight + nItem.height;
+        totalCount++;
+        items.add(nI)
+        is.l = Math.min(is.l, ns.l)
+        is.b = Math.min(is.b, ns.b)
+        is.r = Math.max(is.r, ns.r)
+        is.t = Math.max(is.t, ns.t)
     };
 
     let curI = itemI;

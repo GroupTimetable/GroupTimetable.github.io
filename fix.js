@@ -176,7 +176,7 @@ function scheduleToSimple(schedule) {
     return result;
 }
 
-window.updateUserdataF ??= () => { console.error('no function defined') }
+window.updateUserdataF ??= () => () => { console.error('no function defined') }
 
 addClick(document.getElementById('reset'), function() {
     document.getElementById('edit-input').value = scheduleToSimple(orig.schedule)
