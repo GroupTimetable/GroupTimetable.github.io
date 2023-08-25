@@ -489,14 +489,16 @@ function makeWarningText(schedule, scheme, bigFields) {
     let warningText = ''
     for(let i = 0; i < bigFields.length; i++) {
         const f = bigFields[i]
-        if(!days.has(f.day)) continue
-        if(prevDay === f.day) warningText += ', ' + minuteOfDayToString(schedule[f.day][f.hours].sTime)
-        else warningText += '; ' + daysOfWeekShortened[f.day] + ' ' + minuteOfDayToString(schedule[f.day][f.hours].sTime)
-        prevDay = f.day
+        const day = f[0], hour = f[1], ch = f[2], z = f[3];
+        if(!days.has(day)) continue
+        const text = minuteOfDayToString(schedule[day][hour].sTime) + '-' + (ch ? 'ч' : '') + (z ? 'з' : '');
+        if(prevDay === day) warningText += ', ' + text;
+        else warningText += '; ' + daysOfWeekShortened[day] + ' ' + text;
+        prevDay = day;
     }
 
     if(warningText === '') return ''
-    else return "Обнаружены большие поля названий уроков (" + warningText.substring(2) + "). Если в расписании присутствуют ошибки, "
+    else return "Потенциальные уроки не добавлены: " + warningText.substring(2) + ". Если в расписании присутствуют ошибки, "
         + "вы можете изменить его самостоятельно или <a href='./help-page.html' target='blank' class='link'>написать сюда</a>."
 }
 
@@ -516,8 +518,8 @@ let __debug_schedule_parsing_results;
 let __debug_start;
 let __schedule_debug_names;
 let __last_expected;//console.log(JSON.stringify(__last_expected[  ]));
-//__start()
-const __start = (mode, folder, ...args) => {
+
+function __start(mode, folder, ...args) {
     if(__debug_start) {
         console.error('Cannot run mor than one test at a time!')
         console.log('(set __debug_start=false and call again if bugged)')
@@ -541,7 +543,7 @@ const __start = (mode, folder, ...args) => {
         groupNames = args[1]
     }
 
-    loadDom.then(async () => {
+    return loadDom.then(async () => {
         async function readFile0(filename) {
             if(testFolder == undefined) return Promise.reject('test folder not given');
             const result = await fetch(testFolder + filename)
@@ -612,18 +614,19 @@ const __start = (mode, folder, ...args) => {
             }
         }
     }).finally(() => {
+        const n2 = testFolder == undefined ? '' : ' for ' + testFolder;
         if(__debug_start) {
-            updInfo({ msg: 'Everything done', type: 'processing', progress: 1 })
-            console.log('done')
+            updInfo({ msg: 'Everything done' + n2, type: 'processing', progress: 1 })
+            console.log('done' + n2)
         }
         else {
-            updInfo({ msg: 'Stopped', type: 'processing', progress: 1 })
-            console.log('done, stopped')
+            updInfo({ msg: 'Stopped' + n2, type: 'processing', progress: 1 })
+            console.log('done, stopped' + n2)
         }
         __debug_start = false
     })
 }
-            
+
 
 async function processPDF() {
     const stagesC = 4
@@ -637,7 +640,6 @@ async function processPDF() {
     ]).catch(e => { throw "не удалось загрузить зависомость " + e + ". Попробуйте перезагрузить страницу" })
 
     updInfo({ msg: 'Начинаем обработку', type: 'processing', progress: ns() })
-
     const contents = copy(currentFileContent)
     const name = dom.groupInputEl.value.trim()
     const nameFixed = nameFixup(name)
@@ -667,7 +669,8 @@ async function processPDF() {
         const maxBound = Math.max(nameFixed.length*2, nameFixed.length + 4)
 
         for(let j = 0; j < orig.numPages; j++) try {
-            const cont = (await (await orig.getPage(j+1)).getTextContent()).items;
+            const page = await orig.getPage(j+1);
+            const cont = (await page.getTextContent()).items;
             const contLength = cont.length
 
             for(let i = 0; i < contLength; i++) try {
@@ -678,11 +681,9 @@ async function processPDF() {
                     if(n < closestN) { closestName = cont[i].str; closestN = n; }
                     continue
                 }
-                const boundsH = findItemBoundsH(cont, i);
-                const vBounds = findDaysOfWeekHoursBoundsV(cont);
+
                 updInfo({ msg: 'Достаём расписание из файла', type: 'processing', progress: ns() })
-                const dates = findDates(cont, boundsH)
-                const [schedule, bigFields] = makeSchedule(cont, vBounds, boundsH);
+                const [schedule, dates, bigFields] = makeSchedule(cont, page.view, i);
                 destroyOrig()
                 if(__debug_schedule_parsing) { __debug_schedule_parsing_results[name] = schedule; return }
                 updInfo({ msg: 'Создаём PDF файл расписания', type: 'processing', progress: ns() })
@@ -725,28 +726,18 @@ async function processPDF() {
 }
 
 /*
-if(false) {
-    var viewport = page.getViewport({ scale: 1, });
-    // Support HiDPI-screens.
-    var outputScale = window.devicePixelRatio || 1;
-
+{
+    var viewport = page.getViewport({ scale: 1 });
+    console.log(viewport)
     var canvas = document.getElementById('the-canvas');
     var context = canvas.getContext('2d');
 
-    canvas.width = Math.floor(viewport.width * outputScale);
-    canvas.height = Math.floor(viewport.height * outputScale);
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
     canvas.style.width = Math.floor(viewport.width) + "px";
     canvas.style.height =  Math.floor(viewport.height) + "px";
 
-    var transform = outputScale !== 1
-        ? [outputScale, 0, 0, outputScale, 0, 0]
-        : null;
-
-    var renderContext = {
-        canvasContext: context,
-        transform: transform,
-        viewport: viewport
-    };
+    var renderContext = { canvasContext: context, viewport };
     await page.render(renderContext).promise
 }
 */

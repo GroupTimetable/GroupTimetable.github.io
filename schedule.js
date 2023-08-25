@@ -13,27 +13,23 @@ const daysOfWeekShortened = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'В
 const daysOfWeekShortenedLower = daysOfWeekShortened.map(it => it.toLowerCase())
 const mergeLeading = 0.2, mergeSpace = 0.1;
 
-function findItemBoundsH(cont, itemI) {
+function findColumnBounds(cont, itemBs, itemI) {
     const item = cont[itemI];
-    const bs = bounds(item);
+    const bs = itemBs[itemI];
     const itemCenter = 0.5 * (bs.l + bs.r)
 
-    const itemBounds = new Map();
     const items = new Set();
     const is = { l: bs.l, r: bs.r, t: bs.t, b: bs.b };
 
-    let curI = itemI;
     let totalHeight = item.height;
     let totalCount = 1;
     let curAdded;
 
-    const addItems = () => {
-        const nItem = cont[curI];
+    const addItems = (nI) => {
+        const nItem = cont[nI];
         if(nItem.str.trim() == '') return;
-        if(items.has(curI)) return;
-        let ns;
-        if(itemBounds.has(curI)) ns = itemBounds.get(curI);
-        else itemBounds.set(curI, ns = bounds(nItem));
+        if(items.has(nI)) return;
+        const ns = itemBs[nI];
 
         const h = (totalHeight + nItem.height) / (totalCount+1);
         const lea = h * mergeLeading;
@@ -43,7 +39,7 @@ function findItemBoundsH(cont, itemI) {
             curAdded++;
             totalHeight = totalHeight + nItem.height;
             totalCount++;
-            items.add(curI)
+            items.add(nI)
             is.l = Math.min(is.l, ns.l)
             is.b = Math.min(is.b, ns.b)
             is.r = Math.max(is.r, ns.r)
@@ -52,18 +48,19 @@ function findItemBoundsH(cont, itemI) {
         else return true;
     };
 
+    let curI = itemI;
     do { //add all items in row
         curAdded = 0;
         curI--;
-        for(; curI >= 0; curI--) if(addItems()) break;
+        for(; curI >= 0; curI--) if(addItems(curI)) break;
         curI++;
-        for(; curI < cont.length; curI++) if(addItems()) break;
+        for(; curI < cont.length; curI++) if(addItems(curI)) break;
     } while(curAdded !== 0);
 
     const itemsArr = Array.from(items);
     itemsArr.sort((a, b) => {
-        const ba = itemBounds.get(a);
-        const bb = itemBounds.get(b);
+        const ba = itemBs[a];
+        const bb = itemBs[b];
         const ac = (ba.l + ba.r) * 0.5;
         const bc = (bb.l + bb.r) * 0.5;
         return ac - bc;
@@ -73,7 +70,7 @@ function findItemBoundsH(cont, itemI) {
 
     const spaces = []
     {
-        const firstBs = itemBounds.get(itemsArr[0])
+        const firstBs = itemBs[itemsArr[0]]
         let colL = firstBs.l, colR = firstBs.r;
         let colXTotal = (colL + colR) * 0.5;
         let colCount = 1;
@@ -82,7 +79,7 @@ function findItemBoundsH(cont, itemI) {
         for(let i = 1;; i++) {
             let bs, center;
             if(i < itemsArr.length) {
-                bs = itemBounds.get(itemsArr[i])
+                bs = itemBs[itemsArr[i]]
                 center = (bs.l + bs.r) * 0.5;
                 if(intersects(bs.l, bs.r, colL, colR)) {
                     colXTotal += center;
@@ -127,7 +124,7 @@ function findItemBoundsH(cont, itemI) {
         spaces.splice(maxI, 1)
     }
 
-    if(avg != undefined) return { lef: itemCenter - avg/2, rig: itemCenter + avg/2, bottom: bs.b }; 
+    if(avg != undefined) return { l: itemCenter - avg*0.5, r: itemCenter + avg*0.5, t: bs.t, b: bs.b }; 
     else throw "Невозможно определить вертикальные границы расписания, [имя группы] = " + itemI + "/" + cont.length;
 }
 
@@ -158,7 +155,7 @@ function parseTime(str) {
     return hour * 60 + minute;
 }
 
-function bounds(item) {
+function calcItemBounds(item) {
     const h = 1;
     const w = item.width / item.height;
 
@@ -189,18 +186,17 @@ function bounds(item) {
 }
 
 
-function findDaysOfWeekHoursBoundsV(cont) {
+function findDaysOfWeekHours(cont, itemBs) {
     const dow = Array(daysOfWeek.length);
+    let hoursR = -Infinity;
     const hours = [];
-    let curStart = 0;
     for(let i = 0; i < cont.length; i++) {
         const str = cont[i].str.toLowerCase();
         for(let j = 0; j < daysOfWeek.length; j++) {
             if(str !== daysOfWeekLower[j]) continue;
             if(dow[j] != undefined) throw ["День недели " + j + " обнаружен дважды", "[дубликат] = " + i + "/" + cont.length];
 
-            dow[j] = { si: curStart, i: i };
-            curStart = i+1;
+            dow[j] = i;
             break;
         }
 
@@ -209,7 +205,11 @@ function findDaysOfWeekHoursBoundsV(cont) {
             if(h != undefined) {
                 for(let j = 1; j < 3; j++) {
                     let h2 = parseTime(cont[i+j].str);
-                    if(h2 != undefined) hours.push({ i: i, sTime: h, eTime: h2, items: [cont[i], cont[i+j]] });
+                    if(h2 != undefined) {
+                        hours.push({ first: i, last: i+j, sTime: h, eTime: h2 });
+                        hoursR = Math.max(hoursR, itemBs[i].r, itemBs[i+j].r);
+                        break
+                    }
                 }
             }
         }
@@ -217,63 +217,42 @@ function findDaysOfWeekHoursBoundsV(cont) {
 
     if(hours < 2) throw "В рассписании найдено меньше двух пар";
 
-    let hoursSpacing2; //height between hours labels / 2
+    let hoursT, hoursHeight;
     {
-        const b00 = bounds(hours[0].items[0])
-        const b01 = bounds(hours[0].items[1])
-        const b10 = bounds(hours[1].items[0])
-        const b11 = bounds(hours[1].items[1])
+        const b00 = itemBs[hours[0].first]
+        const b01 = itemBs[hours[0].last]
+        const b10 = itemBs[hours[1].first]
+        const b11 = itemBs[hours[1].last]
 
         const c0 = 0.5 * (Math.min(b00.b, b01.b) + Math.max(b00.t, b01.t)) //center of the 1st hours label
         const c1 = 0.5 * (Math.min(b10.b, b11.b) + Math.max(b10.t, b11.t)) // --- 2nd ---
 
-        hoursSpacing2 = Math.abs(c1 - c0) * 0.5;
-
-        hours[0].top = c0 + hoursSpacing2
-        hours[0].bot = c0 - hoursSpacing2
-        hours[1].top = c1 + hoursSpacing2
-        hours[1].bot = c1 - hoursSpacing2
+        hoursHeight = Math.abs(c1 - c0);
+        hoursT = c0 + hoursHeight * 0.5;
     }
 
-    for(let i = 2; i < hours.length; i++) {
-        const b0 = bounds(hours[i].items[0]);
-        const b1 = bounds(hours[i].items[1]);
-        const c = 0.5 * (Math.min(b0.b, b1.b) + Math.max(b0.t, b1.t))
-        hours[i].top = c + hoursSpacing2
-        hours[i].bot = c - hoursSpacing2
-    }
-
-    const info = Array(dow.length); //starting and ending indices for the days of week
-    let newHourI = 0;
+    const days = Array(dow.length);
+    let hourI = 0;
     for(let d = 0; d < dow.length; d++) {
         if(dow[d] == undefined) continue;
-        const it = {};
-        info[d] = it;
+        const dayHours = [];
+        days[d] = dayHours;
 
-        const si = dow[d].si;
-        let ei;
+        let nextDayStart = cont.length;
         for(let j = d+1; j < dow.length; j++) if(dow[j] != undefined) {
-            ei = dow[j].i - 1;
+            nextdayStart = dow[j].i;
             break;
         }
-        if(ei == undefined) ei = cont.length-1;
-
-        it.si = si;
-        it.ei = ei;
-        it.hours = [];
 
         let prevTime;
-        let i = newHourI;
-        while(i < hours.length && hours[i].i <= si) i++; 
-        while(i < hours.length && hours[i].i <= ei && (prevTime == undefined || hours[i].sTime > prevTime)) {
-            prevTime = hours[i].eTime;
-            it.hours.push(hours[i]);
-            i++;
+        while(hourI < hours.length && hours[hourI].last <= nextDayStart && (prevTime == undefined || hours[hourI].sTime > prevTime)) {
+            prevTime = hours[hourI].eTime;
+            dayHours.push(hours[hourI]);
+            hourI++;
         }
-        newHourI = i;
     }
 
-    return info;
+    return { days, hoursC: hourI, hoursR, hoursT, hoursHeight };
 }
 
 /*[a1; a2] & (b1, b2)*/
@@ -281,16 +260,15 @@ function intersects(a1, a2, b1, b2) {
     return a2 > b1 && a1 < b2;
 }
 
-function findDates(cont, hBounds) {
+function findDates(cont, bounds, colBounds) {
     const datesRegex = /(^|.*?\s)(\d\d)\.(\d\d)\.(\d\d\d\d)(\s.*?\s|\s)(\d\d)\.(\d\d)\.(\d\d\d\d)(\s|$)/
-    const bottom = hBounds.bottom
 
     for(let i = 0; i < cont.length; i++) {
         const item = cont[i]
-        const bs = bounds(item)
-        if(bs.t > bottom) continue;
-        if(!intersects(bs.l, bs.r, hBounds.lef, hBounds.rig)) continue;
-        const gs = item.str.match(datesRegex)
+        const bs = bounds[i]
+        if(bs.t > colBounds.t) continue;
+        if(!intersects(bs.l, bs.r, colBounds.l, colBounds.r)) continue;
+        const gs =  item.str.match(datesRegex)
         if(gs) return [
             new Date(gs[4], gs[3] - 1, gs[2]),
             new Date(gs[8], gs[7] - 1, gs[6]),
@@ -298,175 +276,175 @@ function findDates(cont, hBounds) {
     }
 }
 
-function makeSchedule(cont, vBounds, hBounds) {
-    const iterateHours = (func) => {
-        for(let d = 0; d < vBounds.length; d++) {
-            if(vBounds[d] == undefined) continue;
-            const day = vBounds[d];
-            const curS = schedule[d];
-            for(let h = 0; h < day.hours.length; h++) {
-                if(func(day, h, curS, d)) return;
-            }
+function makeSchedule(cont, pageView, groupNameI) {
+    if(cont.length < 1) throw 'Unreachable'
+
+    const itemBs = Array(cont.length);
+    for(let i = 0; i < itemBs.length; i++) {
+        const bs = itemBs[i] = calcItemBounds(cont[i]);
+        itemBs[i].c = 0.5 * (bs.t + bs.b);
+        itemBs[i].m = 0.5 * (bs.l + bs.r);
+    }
+
+    const pageR = Math.max(pageView[0], pageView[2])
+    const colBounds = findColumnBounds(cont, itemBs, groupNameI);
+    const { days, hoursC, hoursR, hoursT, hoursHeight } = findDaysOfWeekHours(cont, itemBs);
+    const dates = findDates(cont, itemBs, colBounds)
+    const colWidth = colBounds.r - colBounds.l;
+
+    const errX = colWidth * 0.02;
+    const curColI = Math.max(0, Math.floor((colBounds.l - hoursR + errX) / colWidth));
+    const colC = curColI + 1 + Math.max(0, Math.floor((pageR - colBounds.r + errX) / colWidth));
+    const tableL = colBounds.l - curColI * colWidth, tableR = tableL + colC * colWidth;
+    const tableT = hoursT, tableB = tableT - hoursC * hoursHeight;
+    const colFactor = 1 / colWidth, rowFactor = 1 / hoursHeight;
+
+    const bigFields_ = [];
+    const table = Array(colC * hoursC);
+    const rowDayHour = (() => { const a = Array(hoursC); a.length = 0; return a; })();
+    const schedule = Array(days.length);
+    for(let i = 0; i < table.length; i++) table[i] = Array(4);
+
+    for(let dayI = 0; dayI < days.length; dayI++) {
+        const day = days[dayI];
+        if(day == undefined) continue;
+        schedule[dayI] = Array(day.length);
+        for(let l = 0; l < day.length; l++) rowDayHour.push([dayI, l])
+    }
+
+    const addToCell = (cell, subs, result, ifError) => {
+        for(let i = 0; i < subs.length; i++) {
+            if(!subs[i]) continue;
+            if(cell[i] != undefined) { console.error('cell already filled!', ifError, i); continue; }
+            cell[i] = result;
+        }
+    };
+    const joinItems = (itemsIs) => {
+        let result = '' + cont[itemsIs[0]].str;
+        for(let i = 1; i < itemsIs.length; i++) result += ' ' + cont[itemsIs[i]].str;
+        return result;
+    };
+
+    const writeGroup = (group) => {
+        const cx = 0.5 * (group.l + group.r);
+        const cy = 0.5 * (group.t + group.b);
+        const x = Math.floor((cx - tableL) * colFactor);
+        const y = Math.floor((tableT - cy) * rowFactor);
+        if(!(x >= 0 && x < colC && y >= 0 && y < hoursC)) return;
+
+        const cellL = tableL + x * colWidth;
+        const cellR = cellL + colWidth;
+        const cellCX = tableL + x * colWidth + colWidth * 0.5;
+        const cellCY = tableT - (y * hoursHeight + hoursHeight * 0.5);
+
+        const descender = group.lineHeight * 0.2; //for some reason text coordinates start at baseline, but height is line height, and it overlaps at the bottom :/
+        // ^ 0.1 doesn't work. obviously.
+        //is top half, is bottom half ...
+        const t = group.t - descender > cellCY, b = group.b < cellCY;
+        if(group.l < cellL || group.r > cellR) {
+            group.t = t; group.b = b;
+            group.x = x; group.y = y;
+            bigFields_.push(group);
+        }
+        else {
+            const l = group.l < cellCX, r = group.r > cellCX;
+            const inCurCol = intersects(group.l, group.r, colBounds.l, colBounds.r);
+            const result = inCurCol ? joinItems(group.items) : true/*debug: group.items[0]. We don't need text bc it won't be used, just use nonnul*/;
+            const subs = [t && l, t && r, b && l, b && r]
+            addToCell(table[y * colC + x], subs, result, [x, y])
         }
     };
 
-    const schedule = Array(vBounds.length);
-    for(let dayI = 0; dayI < vBounds.length; dayI++) {
-        if(vBounds[dayI] == undefined) continue;
-        const day = vBounds[dayI];
-
-        const curS = Array(day.hours.length);
-        schedule[dayI] = curS;
-        for(let i = 0; i < day.hours.length; i++) curS[i] = {
-            sTime: day.hours[i].sTime,
-            eTime: day.hours[i].eTime,
-            lessons: ['', '', '', '']
-        };
-    }
-
-    const la = hBounds.lef, ra = hBounds.rig;
-    const ma = (la + ra) * 0.5;
-
-    const fields = []
+    //separate text into groups
+    let lastGroup = undefined;
     for(let i = 0; i < cont.length; i++) {
         const item = cont[i];
-        const ibounds = bounds(item)
-        const bi = ibounds.b, ti = ibounds.t; 
-        const li = ibounds.l, ri = ibounds.r;
-        if(!intersects(li, ri, la, ra)) continue;
+        if(item.str.trim() === '') continue;
+        const bounds = itemBs[i]
+        const bi = bounds.b, ti = bounds.t; 
+        const li = bounds.l, ri = bounds.r;
+        const cxi = 0.5 * (li + ri), cyi = 0.5 * (ti + bi);
+        if(!(tableL <= cxi && cxi <= tableR && tableB <= cyi && cyi <= tableT)) continue;
 
-        iterateHours((day, h) => {
-            const ba = day.hours[h].bot, ta = day.hours[h].top;
-            if(!intersects(bi, ti, ba, ta)) return;
-            fields.push({ item, bs: ibounds })
-            return true
-        });
-    }
-    if(fields.length === 0) throw "Не удалось найти ни одного урока для данной группы";
-
-    const fieldGroups = [];
-    let minYGroups;
-    for(let i = 0; i < fields.length; i++) {
-        const cur = fields[i]
-        const cbs = cur.bs;
-
-        let added = false, aboveMinGroup = true;
-        for(let j = fieldGroups.length-1; j >= 0 && aboveMinGroup; j--) {
-            aboveMinGroup = cbs.top <= minYGroups;
-            const other = fieldGroups[j];
-            const obs = other.bs;
-
-            const h = Math.min(cur.item.height, other.fields[0].height)
-            if(Math.abs(cur.item.height - other.fields[0].height) >= h * 0.1) continue;
+        let appendToGroup = lastGroup !== undefined
+        if(appendToGroup) {
+            const h = Math.min(item.height, lastGroup.lineHeight)
             const lea = h * mergeLeading;
-            const spa = h * mergeSpace;
-
-            const ih = intersects(cbs.l, cbs.r, obs.l - spa, obs.r + spa)
-            const iv = intersects(cbs.b, cbs.t, obs.b - lea, obs.t + lea)
-            if(!ih || !iv) continue;
-            const xh = intersects(cbs.l, cbs.r, obs.l, obs.r)
-            const xv = intersects(cbs.b, cbs.t, obs.b, obs.t)
-            if(xh && xv) continue;
-
-            other.fields.push(cur.item)
-            obs.l = Math.min(cbs.l, obs.l)
-            obs.r = Math.max(cbs.r, obs.r)
-            obs.b = Math.min(cbs.b, obs.b)
-            obs.t = Math.max(cbs.t, obs.t)
-            minYGroups = minYGroups == undefined ? other.bs.b : Math.min(minYGroups, other.bs.b);
-
-            added = true;
-            break;
+            appendToGroup = Math.abs(item.height - lastGroup.lineHeight) < h * 0.1
+                && intersects(li, ri, lastGroup.l, lastGroup.r) && intersects(bi, ti, lastGroup.b - lea, lastGroup.t + lea);
         }
-        if(!added) {
-            const other = { fields: [cur.item], bs: cbs }
-            fieldGroups.push(other)
-            minYGroups = minYGroups == undefined ? other.bs.b : Math.min(minYGroups, other.bs.b);
+
+        if(appendToGroup) {
+            lastGroup.items.push(i);
+            lastGroup.l = Math.min(lastGroup.l, li)
+            lastGroup.r = Math.max(lastGroup.r, ri)
+            lastGroup.b = Math.min(lastGroup.b, bi)
+            lastGroup.t = Math.max(lastGroup.t, ti)
+        }
+        else {
+            if(lastGroup !== undefined) writeGroup(lastGroup);
+            lastGroup = { items: [i], l: li, r: ri, t: ti, b: bi, lineHeight: cont[i].height };
         }
     }
+    if(lastGroup !== undefined) writeGroup(lastGroup);
 
-    const bigFields0 = new Set()
-    const bigFieldsLessons = []
-
-    //put field groups in the schedule
-    for(let gI = 0; gI < fieldGroups.length; gI++) {
-        const group = fieldGroups[gI];
-        const ibounds = group.bs;
-        const bi = ibounds.b, ti = ibounds.t; 
-        const li = ibounds.l, ri = ibounds.r;
-        const err = group.fields[0].height * 0.1;
-        const isBig = li + err < la || ri - err > ra
-        
-        const itemC = (bi + ti) * 0.5;
-        const itemM = (li + ri) * 0.5;
-
-        iterateHours((day, hours, curS, dayI) => {
-            const ba = day.hours[hours].bot, ta = day.hours[hours].top;
-            const ca = (ba + ta) * 0.5;
-
-            if(!(ba < itemC && itemC < ta) && !(bi + err > ba && ti - err < ta)) return;
-            const il = intersects(li, ri, la, ma);
-            const ir = intersects(li, ri, ma, ra);
-            if(!il && !ir) return;
-            const ib = intersects(bi, ti, ba, ca);
-            const it = intersects(bi, ti, ca, ta);
-            if(!it && !ib) return;
-
-            group.fields.sort((a, b) => {
-                const dy = a.transform[5] - b.transform[5];
-                if(Math.abs(dy) < 0.01 * Math.min(a.height, b.height)) return a.transform[4] - b.transform[4];
-                else return -dy //in pdf y is flipped
-            });
-            let result = '' + group.fields[0].str;
-            for(let i = 1; i < group.fields.length; i++) result += ' ' + group.fields[i].str;
-
-            const lessons = curS[hours].lessons;
-            const inters = [il && it, ir && it, il && ib, ir && ib];
-            for(let i = 0; i < inters.length; i++) {
-                if(!inters[i]) continue;
-                if(lessons[i].length !== 0) console.error('Cannot add more than one group per field', dayI, hours, lessonsI)
-                lessons[i] = result;
-                if(isBig) {
-                    bigFields0.add((BigInt(dayI) << BigInt(16)) + BigInt(hours));
-                    bigFieldsLessons.push([lessons, i])
+    //fix big fields
+    const bigFields = [];
+    for(let i = 0; i < bigFields_.length; i++) {
+        const f = bigFields_[i];
+        const inCurCol = intersects(f.l, f.r, colBounds.l, colBounds.r);
+        if(inCurCol) {
+            const cell = table[f.y*colC + curColI]
+            //note: make big fields take all horisontal space if allowed
+            const lt = f.t && cell[0] == undefined, lb = f.b && cell[2] == undefined;
+            const rt = f.t && cell[1] == undefined, rb = f.b && cell[3] == undefined;
+            addToCell(cell, [lt, rt, lb, rb], joinItems(f.items), [f.x, f.y]);
+        }
+        else {
+            const leftSide = curColI > f.x;
+            const dir = leftSide ? 1 : -1;
+            let empty = true;
+            let __i = 0;
+            for(let x = f.x + dir; (curColI - x)*dir > 0; x += dir) {
+                if(__i++ > 100) { //I don't trust this code to terminate in every case
+                    console.error('error in loop!')
+                    break
+                }
+                const cell = table[f.y*colC + x];
+                for(let i = 0; f.t && empty && i < 2; i++) empty = cell[i] == undefined;
+                for(let i = 2; f.b && empty && i < 4; i++) empty = cell[i] == undefined;
+                if(!empty) break
+            }
+            if(empty) {
+                const cell = table[f.y*colC + curColI];
+                const hOff = leftSide ? 0 : 1;
+                if((!f.t || cell[0 + hOff] == undefined) && (!f.b || cell[2 + hOff] == undefined)) {
+                    const dayHour = rowDayHour[f.y]
+                    bigFields.push([dayHour[0], dayHour[1], f.t, f.b])
                 }
             }
-
-            return true
-        })
-    }
-
-    //make big fields take all horisontal space if allowed
-    //[top left] -> +top right, [top right] -> +top left, ...
-    const otherIndex = [1, 0, 3, 2];
-    for(let i = 0; i < bigFieldsLessons.length; i++) {
-        const [lessons, index] = bigFieldsLessons[i];
-        const oi = otherIndex[index]
-        if(lessons[oi] === '') lessons[oi] = lessons[index]
+        }
     }
 
     //remove trailing empty lessons
     //? if day is completely empty => set to undefined ?
-    for(let dayI = 0; dayI < vBounds.length; dayI++) {
-        if(vBounds[dayI] == undefined) continue;
-        const curS = schedule[dayI]
+    for(let i = rowDayHour.length-1; i >= 0; i--) {
+        const [dayI, lessonI] = rowDayHour[i];
+        const day = schedule[dayI];
 
-        let empty = true;
-        for(let i = curS.length-1; i >= 0; i--) {
-            const l = curS[i];
-            for(let j = 0; j < 4 && empty; j++) empty &&= !l.lessons[j].length;
-            if(empty) curS.pop();
+        const cell = table[i*colC + curColI];
+        let empty = day.length === lessonI+1;
+        for(let i = 0; empty && i < cell.length; i++) empty = cell[i] == undefined;
+
+        if(!empty) {
+            for(let i = 0; i < cell.length; i++) cell[i] ??= '';
+            const lesson = days[dayI][lessonI];
+            day[lessonI] = { sTime: lesson.sTime, eTime: lesson.eTime, lessons: cell };
         }
+        else day.pop()
     }
 
-    const bigFields = []
-    bigFields0.forEach(it => {
-        const day = Number(it >> BigInt(16))
-        const hours = Number(it & ((BigInt(1) << BigInt(16)) - BigInt(1)))
-        bigFields.push({ day, hours })
-    })
-
-    return [schedule, bigFields]
+    return [schedule, dates, bigFields];
 }
 
 function heightAtSize(font, size) {
