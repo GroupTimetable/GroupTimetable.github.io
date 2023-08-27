@@ -934,21 +934,24 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
     let firstRows = Infinity, lastRows = 0;
     for(let i = 0; i < origPattern.length; i++) {
         const newCol = []
-        lastRows = 0;
+        let curRows = 0;
         for(let j = 0; j < origPattern[i].length; j++) {
             const index = origPattern[i][j];
             if(index === -1) continue;
             const day = schedule[index];
             if(!day || !day.length) continue;
 
-            lastRows += day.length;
+            curRows += day.length;
             newCol.push(index)
         }
-        if(dowOnTop) lastRows += newCol.length;
+        if(curRows > 0) {
+            if(dowOnTop) curRows += newCol.length;
 
-        if(firstRows === Infinity) firstRows = lastRows;
-        if(lastRows > maxRows) maxRows = lastRows;
-        if(newCol.length) renderPattern.push(newCol)
+            lastRows = curRows;
+            if(firstRows === Infinity) firstRows = curRows;
+            if(curRows > maxRows) maxRows = curRows;
+            renderPattern.push(newCol)
+        }
     }
 
     const rowMaxHeight = maxRows * rowHeight;
@@ -961,7 +964,7 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
     const groupSize = { w: colWidth, h: colWidth * rowRatio };
 
     const ch = (num) => !(num >= 1 && num < Infinity)
-    if(ch(pageSize[0]) || ch(pageSize[1])) {
+    if(!(maxRows > 0) || ch(pageSize[0]) || ch(pageSize[1])) {
         const [pdfDoc, font] = await getDocument()
         const page = pdfDoc.addPage([1, 1])
         return [1, await pdfDoc.save()] //no signature
