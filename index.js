@@ -451,7 +451,7 @@ async function loadFromListFiles(list) {
     dom.filenameEl.innerText = 'Файл' + (list.length === 1 ? '' : ' №' + (i+1)) + ': ' + res.filename
     dom.filenameEl.style.opacity = 1
     document.body.setAttribute('data-fileLoaded', '')
-    currentFilename = res.ext ? res.filename.substring(0, res.filename - 4) : res.filename;
+    currentFilename = res.ext ? res.filename.substring(0, res.filename.length - 4) : res.filename;
     currentFileContent = res.content;
 
     updInfo({ msg: 'Файл загружен', type: 'fieldUpdate' })
@@ -625,6 +625,7 @@ async function processPDF() {
 
     updInfo({ msg: 'Начинаем обработку', type: 'processing', progress: ns() })
     const contents = copy(currentFileContent)
+    const filename = currentFilename;
     const nameS = dom.groupInputEl.value.trim().split('$')
     const name = nameS[0]
     const indices = Array(nameS.length - 1)
@@ -639,7 +640,7 @@ async function processPDF() {
     const scheme = readScheduleScheme(readElementText(genSettings.scheduleLayoutEl))
 
     let userdata;
-    try { try { userdata = ['' + currentFilename, '' + name] } catch(e) { console.log(e) } } catch(e) {}
+    try { try { userdata = ['' + filename, '' + name] } catch(e) { console.log(e) } } catch(e) {}
 
     const origTask = pdfjsLib.getDocument({ data: contents });
     const origDestructor = [call1(origTask.destroy.bind(origTask))]
@@ -678,7 +679,7 @@ async function processPDF() {
                 const [width, doc] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
                 await destroyOrig() //https://github.com/mozilla/pdf.js/issues/16777
                 updInfo({ msg: 'Создаём предпросмотр', type: 'processing', progress: ns() })
-                const outFilename = currentFilename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
+                const outFilename = filename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
                 await createAndInitOutputElement(
                     doc, dom.outputsEl, outFilename, width,
                     { rowRatio, scheme, schedule, drawBorder, dowOnTop, borderFactor, dates },

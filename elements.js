@@ -120,6 +120,12 @@ function addClick_elements(el, name, func, usedFunc, useErrorFunc) {
 }
 
 async function createAndInitOutputElement(doc, parentElement, name, defWidth, editParams, userdata) {
+    let hideName = false;
+    try { if('hideName' in name) {
+        hideName = true;
+        name = name.nameS
+    } } catch(e) { /*I don't care that name is string*/ }
+
     const imagesForWidth = [];
     const imagePromise = createImage(defWidth, imagesForWidth, doc, false);
     const fileUrl = window.URL.createObjectURL(new Blob([copy(doc)], { type: 'application/pdf' }));
@@ -170,7 +176,7 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
     sessionStorage.setItem(storageId, JSON.stringify(editParams));
     
 
-    nameEl.textContent = name;
+    if(!hideName) nameEl.textContent = name;
     widthInputEl.value = defWidth;
 
     addClick2(viewPdfEl, 'vpdf', async() => {

@@ -1,6 +1,6 @@
 let orig/*
     rowRatio, scheme, schedule, drawBorder, dowOnTop, dates,
-    userdata, defaultWidth, borderFactor
+    userdata, defaultWidth, borderFactor, filename
 */ = (_ => {
     try {
         const prmstr = window.location.search.split("=");
@@ -320,6 +320,6 @@ async function processEdit() {
     const [width, pdf] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
     try { updateUserdataF('regDocumentEdited')(...params.userdata) } catch(e) {} 
     const outs = document.getElementById('outputs')
-    await createAndInitOutputElement(pdf, outs, '', width, params, params.userdata) 
+    await createAndInitOutputElement(pdf, outs, { hideName: 1, nameS: orig.filename }, width, params, params.userdata) 
 }
 
