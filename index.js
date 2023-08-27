@@ -105,7 +105,7 @@ Promise.all([loadDom, loadCommon]).then(_ => {
 })
 
 let currentFilename, currentFileContent;
-let currentPending, processing;
+let processing;
 
 let prevProgress
 let curStatus = {};
@@ -258,57 +258,38 @@ function showOverlay() {
 
 function checkShouldProcess() {
     if(processing) return;
-    if(!currentPending) return;
 
     if(currentFileContent == undefined) {
-        updInfo({ msg: 'Для продолжения требуется файл расписания', type: 'pending' })
+        updError({ msg: 'Для продолжения требуется файл расписания', progress: 1 })
         return
     }
     const name = dom.groupInputEl.value.trim()
     if(name == '') {
-        updInfo({
-            msg: 'Для продолжения введите имя группы (имгр123 и т.п.) и нажмите <span style="color: var(--hint-color)">Enter</span>', 
-            type: 'pending'
-        })
+        updError({ msg: 'Для продолжения требуется имя группы', progress: 1 })
         return
     }
-
+    dom.startButtonEl.setAttribute('data-pending'/*rename to data-processing, since this name is outdated*/, '')
     processing = true;
 
-    var startTime = performance.now()
+    const startTime = performance.now()
     processPDF()
         .catch(e => printScheduleError(e))
         .finally(() => {
-            var endTime = performance.now()
+            const endTime = performance.now()
             console.log(`call took ${endTime - startTime} milliseconds`)
-            updatePending(false);
+            dom.startButtonEl.removeAttribute('data-pending')
             processing = false;
         })
 }
 
-function updatePending(newValue) {
-    assertDomLoaded()
-    currentPending = newValue;
-    if(!currentPending && curStatus.level === 'info'
-        && (curStatus.type == undefined || curStatus.type === 'pending')
-    ) updInfo({ msg: '', type: 'pending' })
-    if(currentPending) dom.startButtonEl.setAttribute('data-pending', '')
-    else dom.startButtonEl.removeAttribute('data-pending')
-    checkShouldProcess()
-}
+loadDom.then(_ => { updInfo({ msg: 'Вы можете создать изображение или календарь занятий своей группы из общего расписания' }) })
 
 Promise.all([loadDom, loadCommon]).then(_ => {
-    dom.groupInputEl.addEventListener('blur', e => {
-        if(processing) return
-        checkShouldProcess() 
-    })
     dom.groupInputEl.addEventListener('keypress', e => {
-        if(processing) return
-        if (e.key === "Enter") updatePending(true)
+        if (e.key === "Enter") checkShouldProcess()
     })
     addClick(dom.startButtonEl, _ => {
-        if(processing) return;
-        updatePending(!currentPending)
+        checkShouldProcess()
     })
 
     new ResizeObserver(() => resizeProgressBar(curStatus.progress, true)).observe(dom.groupBarEl)
@@ -323,8 +304,6 @@ Promise.all([loadDom, loadCommon]).then(_ => {
         f.click();
         setTimeout(() => document.body.removeChild(f), 0);
     })
-
-    updatePending(true)
 })
 
 function resizeProgressBar(progress, immediately) {
@@ -332,17 +311,21 @@ function resizeProgressBar(progress, immediately) {
     const w = dom.groupBarEl.offsetWidth
     const b = dom.groupBarEl.offsetHeight * 0.5 
 
-    if(progress < 0 || progress > 1) {
-        console.error('progress out of bounds', progress)
+    let newW;
+    if(progress === undefined) newW = 0;
+    else {
         progress = Math.min(Math.max(progress, 0), 1)
+        if(!(progress >= 0 && progress <= 1)) {
+            console.error('progress out of bounds', progress)
+            progress = 0;
+        }
+
+        if(progress === 1) newW = w;
+        else newW = progress * (w - 2*b) + b;
     }
 
     dom.moveWithBorderEls.forEach(it => it.style.marginRight = it.style.marginLeft = b + 'px')
 
-    let newW;
-    if(progress === undefined) newW = 0;
-    else if(progress === 1) newW = w;
-    else newW = progress * (w - 2*b) + b;
     //https://stackoverflow.com/a/21594219/18704284
     dom.progressBarEl.setAttribute('data-transition', !immediately)
     dom.progressBarEl.style.width = newW + 'px'
@@ -397,12 +380,8 @@ function updStatus() { try {
 
 } finally { prevProgress = curStatus.progress } }
 
-function updIfndef(obj, prop, value) {
-    if(!obj.hasOwnProperty(prop)) obj[prop] = value
-}
 function updError(statusParams) {
     statusParams.level = 'error'
-    updIfndef(statusParams, 'progress', curStatus.progress)
     curStatus = statusParams
     updStatus()
 }
@@ -427,7 +406,7 @@ function nameFixup(name) {
 
 async function loadFromListFiles(list) {
     if(list.length === 0) { //if you drop files fast enough sometimes files list would be empty
-        updError({ msg: 'Не удалось получить файлы. Попробуйте ещё раз', type: 'fieldUpdate', progress: undefined });
+        if(!processing) updError({ msg: 'Не удалось получить файлы. Попробуйте ещё раз', progress: 1 });
         return
     }
 
@@ -444,7 +423,7 @@ async function loadFromListFiles(list) {
     }
 
     if(res.content.length === 0) { //no idea why this happens
-        updError({ msg: 'Получен пустой файл', type: 'fieldUpdate', progress: undefined })
+        if(!processing) updError({ msg: 'Получен пустой файл', progress: 1 })
         return;
     }
 
@@ -454,8 +433,11 @@ async function loadFromListFiles(list) {
     currentFilename = res.ext ? res.filename.substring(0, res.filename.length - 4) : res.filename;
     currentFileContent = res.content;
 
-    updInfo({ msg: 'Файл загружен', type: 'fieldUpdate' })
-    checkShouldProcess()
+    if(!processing) {
+        const name = dom.groupInputEl.value.trim()
+        if(name == '') updInfo({ msg: 'Введите имя группы (ИМгр-123, имгр123 и т.п.)' })
+        else updInfo({ msg: 'Файл загружен' })
+    }
 }
 
 function readElementText(element) {
@@ -600,11 +582,11 @@ function __start(mode, folder, ...args) {
     }).finally(() => {
         const n2 = testFolder == undefined ? '' : ' for ' + testFolder;
         if(__debug_start) {
-            updInfo({ msg: 'Everything done' + n2, type: 'processing', progress: 1 })
+            updInfo({ msg: 'Everything done' + n2, progress: 1 })
             console.log('done' + n2)
         }
         else {
-            updInfo({ msg: 'Stopped' + n2, type: 'processing', progress: 1 })
+            updInfo({ msg: 'Stopped' + n2, progress: 1 })
             console.log('done, stopped' + n2)
         }
         __stop();
@@ -617,27 +599,27 @@ async function processPDF() {
     let stage = 0
     const ns = () => { return ++stage / (stagesC+1) }
 
-    updInfo({ msg: 'Ожидаем зависимости', type: 'processing', progress: 0 })
+    updInfo({ msg: 'Ожидаем зависимости', progress: 0 })
     await Promise.all([
         loadSchedule, loadCommon, loadElements, loadPopups, createGenSettings, 
         loadPdfjs, loadPdflibJs, loadFontkit
     ]).catch(e => { throw "не удалось загрузить зависомость " + e + ". Попробуйте перезагрузить страницу" })
 
-    updInfo({ msg: 'Начинаем обработку', type: 'processing', progress: ns() })
-    const contents = copy(currentFileContent)
+    updInfo({ msg: 'Начинаем обработку', progress: ns() });
+    const contents = copy(currentFileContent);
     const filename = currentFilename;
-    const nameS = dom.groupInputEl.value.trim().split('$')
-    const name = nameS[0]
-    const indices = Array(nameS.length - 1)
+    const nameS = dom.groupInputEl.value.trim().split('$');
+    const name = nameS[0];
+    const indices = Array(nameS.length - 1);
     for(let i = 1; i < nameS.length; i++) indices[i-1] = Number.parseInt(nameS[i]);
-    const nameFixed = nameFixup(name)
-    const rowRatio = Number(genSettings.heightEl.value) / 100
-    const borderFactor = Number(genSettings.borderSizeEl.value) / 1000
-    if(!(rowRatio < 1000 && rowRatio > 0.001)) throw ['неправильное значение высоты строки', genSettings.heightEl.value]
-    if(!(borderFactor < 1000 && borderFactor >= 0)) throw ['неправильное значение ширины границы', genSettings.borderSizeEl.value]
-    const drawBorder = genSettings.drawBorder
-    const dowOnTop = genSettings.dowOnTop
-    const scheme = readScheduleScheme(readElementText(genSettings.scheduleLayoutEl))
+    const nameFixed = nameFixup(name);
+    const rowRatio = Number(genSettings.heightEl.value) / 100;
+    const borderFactor = Number(genSettings.borderSizeEl.value) / 1000;
+    if(!(rowRatio < 1000 && rowRatio > 0.001)) throw ['неправильное значение высоты строки', genSettings.heightEl.value];
+    if(!(borderFactor < 1000 && borderFactor >= 0)) throw ['неправильное значение ширины границы', genSettings.borderSizeEl.value];
+    const drawBorder = genSettings.drawBorder;
+    const dowOnTop = genSettings.dowOnTop;
+    const scheme = readScheduleScheme(readElementText(genSettings.scheduleLayoutEl));
 
     let userdata;
     try { try { userdata = ['' + filename, '' + name] } catch(e) { console.log(e) } } catch(e) {}
@@ -670,15 +652,15 @@ async function processPDF() {
                     continue
                 }
 
-                updInfo({ msg: 'Достаём расписание из файла', type: 'processing', progress: ns() })
+                updInfo({ msg: 'Достаём расписание из файла', progress: ns() })
                 const [schedule, dates, bigFields] = makeSchedule(cont, page.view, i, indices);
                 const warningText = makeWarningText(schedule, scheme, bigFields)
                 if(__debug_start && __debug_mode === 0) { __debug_schedule_parsing_results[name] = schedule; if(bigFields.length != 0) __debug_warningOn.push([name, warningText]); return }
                 destroyOrig()
-                updInfo({ msg: 'Создаём PDF файл расписания', type: 'processing', progress: ns() })
+                updInfo({ msg: 'Создаём PDF файл расписания', progress: ns() })
                 const [width, doc] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
                 await destroyOrig() //https://github.com/mozilla/pdf.js/issues/16777
-                updInfo({ msg: 'Создаём предпросмотр', type: 'processing', progress: ns() })
+                updInfo({ msg: 'Создаём предпросмотр', progress: ns() })
                 const outFilename = filename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
                 await createAndInitOutputElement(
                     doc, dom.outputsEl, outFilename, width,
@@ -686,7 +668,7 @@ async function processPDF() {
                     userdata
                 )
 
-                updInfo({ msg: 'Готово', warning: warningText, type: 'processing', progress: ns() })
+                updInfo({ msg: 'Готово', warning: warningText, progress: ns() })
                 updateUserdataF('regDocumentCreated')(...userdata) 
                 return
             }
@@ -745,7 +727,7 @@ function printScheduleError(e) {
         console.error(e)
     }
 
-    updError({ msg: str, type: 'processing' })
+    updError({ msg: str, progress: curStatus.progress })
 }
 
 function levenshteinDistance(str1, str2) {
