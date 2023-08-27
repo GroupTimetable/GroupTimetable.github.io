@@ -1004,40 +1004,29 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
 }
 
 function readScheduleScheme(str) {
-    const dowa = daysOfWeekShortenedLower
     const texts = str.split('\n')
 
     const scheme = []
-    function appS(row, col, day) {
-        while(scheme.length <= col) scheme.push([])
-        const c = scheme[col]
-        while(c.length <= row) c.push(undefined)
-        c[row] = day
-    }
 
     for(let i = 0; i < texts.length; i++) {
-        const line = texts[i].trimEnd()
-        const count = Math.floor(line.length+1)/3
-        if(count*3-1 !== line.length) throw ['Неправильная строка расположения дней: `' + line + '`', '[строка] = ' + i + '/' + texts.length]
+        const line = texts[i].trimEnd();
+        if(line.length === 0) continue;
+        const count = Math.floor((line.length+1)/3);
+        if(count*3-1 !== line.length) throw ['Неправильная строка расположения дней: `' + line + '`', '[строка] = ' + i + '/' + texts.length];
 
         for(let j = 0; j < count; j++) {
             const sp = j*3;
-            const p = line.substring(sp, sp+2).toLowerCase()
+            const p = line.substring(sp, sp+2).toLowerCase();
+            if(p.trim() === '') continue;
 
-            if(p.trim() === '');
+            const k = daysOfWeekShortenedLower.indexOf(p);
+            if(k === -1) throw ['Неправильный день недели `' + p + '`  в строке: `' + line + '` на ' + (sp+1) + ':' +  i];
             else {
-                let found = false;
-                for(let k = 0; k < dowa.length; k++) {
-                    if(dowa[k] === p) {
-                        found = true;
-                        appS(i, j, k)
-                        break
-                    }
-                }
-                if(!found) throw ['Неправильный день недели `' + p + '`  в строке: `' + line + '` на ' + (sp+1) + ':' +  i]
+                while(scheme.length <= j) scheme.push([])
+                scheme[j].push(k)
             }
         }
     }
 
-    return scheme
+    return scheme;
 }
