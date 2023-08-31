@@ -1,6 +1,7 @@
 <html>
     <head>
         <script type="text/javascript" src="https://vk.com/js/api/openapi.js?169"></script>
+        <script type="module" src="./userdata.js"></script>
         <link rel="stylesheet" href="colors.css">
         <link rel="stylesheet" href="styles.css">
     </head>
@@ -9,12 +10,14 @@
         <a href="https://vk.com/club221983441" class="link">ссылке на группу</a>.
         <br>Если у вас проблемы с созданием расписания, пожалуйста добавьте к сообщению файл расписания и название группы.
         <div>Ваш id на сайте: <span id="uuid">???</span></div>
+        <button id="send-data" style="visibility: hidden">Отправить данные</button>
         <div id="messages"></div>
         <script type="text/javascript">
             try {
                 VK.Widgets.CommunityMessages("messages", 221983441, {widgetPosition: "left", expanded: "1", disableExpandChatSound: "1", disableButtonTooltip: "1"});
-            } catch(e) { console.log(e) }
+            } catch(e) { console.error(e) }
 
+            let userUuid;
             try {
                 function readData() {
                     try { 
@@ -33,10 +36,27 @@
                 }
                 const data = readData()
                 if(data && data.uuid) { 
+                    userUuid = data.uuid;
                     const el = document.getElementById('uuid')
                     el.innerText = data.uuid
                 }
             } catch(e) { console.error(e) }
+
+            const button = document.getElementById('send-data');
+            window.addEventListener('load', () => {
+                button.style.visibility = 'visible';
+                button.addEventListener('click', () => {
+                    let result;
+                    try { result = updateUserdataF('regDebugInfo', true)(); } catch(e) { console.error(e) }
+                    if(!result) {
+                        button.innerText = 'Ошибка';
+                    }
+                    else {
+                        button.innerText = 'Готово';
+                    }
+                })
+            });
+
         </script>
     </body>
 </html>

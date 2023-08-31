@@ -53,6 +53,20 @@ regFunctions.regDocumentCreated = (userUuid, randName, documentName, groupName) 
     console.error('data not sent for', userUuid, documentName, groupName)
 }
 
+regFunctions.regDebugInfo = (userUuid, randName) => {
+    if(userAgent.trim() == '') return false;
+
+    for(let i = 0; i < 3; i++) try {
+        db.set(db.ref(database, 'users/' + userUuid + '/' + randName), {
+            act: 'dbg', ua: userAgent                     
+        });
+        return true;
+    } catch(e) { 
+        console.error(e);
+    } 
+    return false;
+}
+
 regFunctions.regDocumentUsed = (userUuid, randName, documentName, groupName, useType) => { 
     if(!userUuid) {
         console.error('no user uuid for', documentName, groupName)
@@ -177,22 +191,23 @@ window.getUserdataAllowed = () => {
     return !userData.noUserdata
 }
 
-window.updateUserdataF = (userdataFuncName) => { 
+window.updateUserdataF = (userdataFuncName, forceSend) => { 
     try{ try {
         const func = regFunctions[userdataFuncName]
         if(!func) throw 'Function not found'
         const funcName = '' + userdataFuncName
 
         return (...params) => { try { try {
-            if(userData.noUserdata) return;
+            if(userData.noUserdata && !forceSend) return;
             const userUUID = userData.uuid
 
             const randNum = new DataView(crypto.getRandomValues(new Uint32Array(1)).buffer).getUint32(0, true)
                 .toString(16).toUpperCase().padStart('0', 8)
             const randName = new Date().toISOString().replace('.', '!') + '+' + randNum;
 
-            func(userUUID, randName, ...params)
+            const result = func(userUUID, randName, ...params)
             console.log('sent', funcName, 'with', ...params)
+            return result;
         } catch(e) { console.error(e) } } catch(e) {} }
     } catch(e) { console.error(e); console.error(userdataFuncName) }
     } catch(e) {} 
