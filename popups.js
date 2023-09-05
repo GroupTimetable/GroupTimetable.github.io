@@ -79,7 +79,7 @@ function updatePopup(owner, id, newState) {
     if(item.state === oldState) return
 
     const opened = item.state === stateShown
-    item.popup.element.setAttribute('shown', opened)
+    item.popup.element.setAttribute('data-shown', opened)
     for(let i = 0; i < popupList[id].openedArgElements.length; i++) {
         const [el, name] = popupList[id].openedArgElements[i]
         if(el) {

@@ -72,7 +72,7 @@ function createOutputElement() {
 }
 
 function insertPopup(par, onTop) {
-    const el = htmlToElement(`<span class='popup-container' shown="false"><div><div class="safe-zone"><div class="popup"></div></div></div></span>`);
+    const el = htmlToElement(`<span class='popup-container' data-shown="false"><div><div class="safe-zone"><div class="popup"></div></div></div></span>`);
     par.append(el);
     if(onTop) el.setAttribute('data-anchor', 'top');
 
@@ -291,13 +291,13 @@ const css = `
     &:focus-within { z-index: 998; }
     &:hover        { z-index: 999; }
 
-    &[shown=true] {
+    &[data-shown=true] {
         transform: translateY(0);
         opacity: 1;
         & > * { transform: scale(1); transition: transform 0s; }
     }
 
-    &:not([shown=true]) {
+    &:not([data-shown=true]) {
         &:not([data-anchor=top]) { transform: translateY( 0.7rem); }
         &[data-anchor=top]       { transform: translateY(-0.7rem); }
         opacity: 0;
