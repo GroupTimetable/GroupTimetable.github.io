@@ -1,18 +1,12 @@
-*[data-custom-button] {
-    &:focus:not(:focus-visible) {
-        outline: 0;
-        box-shadow: none;
-    }
-    &:focus-visible { outline: -webkit-focus-ring-color auto 1px; }
+*[data-custom-button]:focus:not(:focus-visible) {
+    outline: 0;
+    box-shadow: none;
 }
+*[data-custom-button]:focus-visible { outline: -webkit-focus-ring-color auto 1px; }
 
-body {
-    font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-}
+body { font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif; }
 
-.no-select {
-    user-select: none;
-}
+.no-select { user-select: none; }
 
 .header {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
@@ -40,15 +34,13 @@ body {
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-
-    & > .link {
-        padding: 0.5rem;
-    }
 }
+
+#footer > .link { padding: 0.5rem; }
 
 .link {
     color: var(--link-color);
     cursor: pointer;
-
-    &:not(:hover) { text-decoration: none; }
 }
+
+.link:not(:hover) { text-decoration: none; }

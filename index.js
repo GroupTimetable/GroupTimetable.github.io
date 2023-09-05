@@ -132,7 +132,7 @@ const createGenSettings = Promise.all([loadDom, loadCommon ]).then(_ => {
                 <input class="height-input" type="number" style="
                     text-align: right; font-size: 1rem;
                     color: white; border-bottom: 0.1rem solid white;
-                    padding: 0; padding-right: 0.1em;" max="6" min="0">
+                    padding: 0; padding-right: 0.1em; width: 6ch;">
                 %
             </span>
 
@@ -147,8 +147,7 @@ const createGenSettings = Promise.all([loadDom, loadCommon ]).then(_ => {
                 <input class="border-input" type="number" style="
                     text-align: right; font-size: 1em; color: white;
                     border-bottom: 0.1rem solid white;
-                    padding: 0; padding-right: 0.1em;
-                    " max="6" min="0">
+                    padding: 0; padding-right: 0.1em; width: 6ch;">
                 ‰
             </span>
 

@@ -868,6 +868,27 @@ function drawDay(
     })
 }
 
+function createOffscreenCanvas(width, height) {
+    //this is certainly my job to check all of this
+    if (window.OffscreenCanvas !== undefined) {
+        const c = new window.OffscreenCanvas(width, height);
+        return [c, c.convertToBlob.bind(c)];
+    }
+    else {
+        const c = document.createElement('canvas');
+        c.width = width;
+        c.height = height;
+        return [c, (function(options) {
+            return new Promise((res, rej) => {
+                this.toBlob((blob) => {
+                    if(blob === null) rej('cannot create blob from canvas');
+                    else res(blob);
+                }, options?.type, options?.quality);
+            })
+        }).bind(c)];
+    }
+}
+
 async function renderPDF(doc, width, type = 'image/png', quality = 1) {
     const pdfTask = pdfjsLib.getDocument(doc); try {
     const pdf = await pdfTask.promise
@@ -876,10 +897,10 @@ async function renderPDF(doc, width, type = 'image/png', quality = 1) {
     const m1 = (num) => { if(num > 1 && num < Infinity) return num; else return 1 }
     const viewport = page.getViewport({ scale: m1(width) / page.getViewport({scale:1}).width })
 
-    const canvas = new OffscreenCanvas(
+    const [canvas, getBlob] = createOffscreenCanvas(
         m1(Math.floor(viewport.width)),
         m1(Math.floor(viewport.height))
-    )
+    );
     const context = canvas.getContext("2d");
 
     const renderContext = {
@@ -889,7 +910,7 @@ async function renderPDF(doc, width, type = 'image/png', quality = 1) {
     
     await page.render(renderContext).promise;
 
-    return await canvas.convertToBlob({ type, quality });
+    return await getBlob({ type, quality });
     } finally { await pdfTask.destroy() }
 }
 

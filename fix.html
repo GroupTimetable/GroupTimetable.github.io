@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -16,38 +17,6 @@
         <script defer src="fix.js"></script>
 
         <script>
-            if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
-                const head = document.head || document.getElementsByTagName('head')[0];
-
-                function insertCss(css) {
-                    const style = document.createElement('style');
-                    style.type = 'text/css';
-                    if (style.styleSheet) style.styleSheet.cssText = css;
-                    else style.appendChild(document.createTextNode(css));
-                    head.appendChild(style);
-                    return style;
-                }
-
-                const loadCss = insertCss(`body { display: none }`)
-                document.addEventListener('DOMContentLoaded', _ => {
-                    const hideCss = insertCss(`body > * { display: none !important; }`);
-
-                    var el = document.createElement('div'), button = document.createElement('button');
-                    el.style = 'background-color: white; color: black; display: block !important';
-                    el.append("Firefox? Он не работает. ");
-                    el.innerHTML += ' <a href="./help-page.html" target="_blank">Напишите сюда</a>, если хотите, чтобы я сделал расписание за вас.';
-                    button.innerHTML = 'Всё равно открыть страницу';
-                    button.addEventListener('click', () => {
-                        hideCss.remove();
-                        el.remove();
-                    })
-                    el.append(button);
-                    document.body.appendChild(el);
-
-                    loadCss.remove();
-                })
-            }
-
             const pdfjsWorker = (() => {
                 const workerString = `importScripts("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js")`;
                 return new Worker(URL.createObjectURL(new Blob([workerString], { type: 'text/javascript' })));
@@ -65,9 +34,8 @@
             <div class="main-flex" style="flex: 1 0 auto; align-items: stretch">
                 <div class="edit-area">
                     <div style="margin-bottom: 1rem">
-                        <div style="margin-top: 1rem; display: flex; gap: 0.8rem; align-items: baseline;">
+                        <div style="margin-top: 1rem; display: flex; gap: 0.8rem;">
                             <div id="collapse-button" class="no-select">
-                                &ZeroWidthSpace;
                                 <div><svg xmlns="http://www.w3.org/2000/svg" viewBox="-.2 0.1 1.4 0.8"><path d="M0 .75L.5 .25L1 0.75"></path></svg></div>
                             </div>
                             <div id="reset" class="no-select">Сбросить</div>

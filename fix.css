@@ -29,13 +29,8 @@
 
 
 @media (orientation: portrait) {
-    .main-flex {
-        flex-direction: column;
-
-        & .edit-area {
-            height: 70vh;
-        }
-    }
+    .main-flex { flex-direction: column; }
+    .main-flex .edit-area { height: 70vh; }
 }
 
 #create, #reset {
@@ -50,14 +45,14 @@
 #reset {
     background: var(--button-color);
     color: var(--text-color);
-    &:hover { background: var(--button-hover) } 
 }
+#reset:hover { background: var(--button-hover) } 
 
 #create {
     background: var(--primary-color);
     color: var(--primary-contrast-color);
-    &:hover { filter: brightness(115%); }
 }
+#create:hover { filter: brightness(115%); }
 
 .text-area {
     flex: 1 1 auto; 
@@ -66,56 +61,56 @@
     overflow: hidden;
 
     display: flex;
+}
 
-    & > * {
-        flex: 1 1 auto;
-        padding: 0.5rem;
+.text-area > * {
+    flex: 1 1 auto;
+    padding: 0.5rem;
 
-        appearance: none; 
-        resize: none; 
-        border: none;
-        outline: none; 
+    appearance: none; 
+    resize: none; 
+    border: none;
+    outline: none; 
 
-        overflow: scroll; 
+    overflow: scroll; 
 
-        font-family: monospace; 
-        background: var(--bg2-color); 
-        color: var(--text-color);
-    }
+    font-family: monospace; 
+    background: var(--bg2-color); 
+    color: var(--text-color);
 }
 
 #collapse-button {
     display: flex;
     justify-content: center;
     align-items: center;
+}
 
-    & > * {
-        display: inline;
-        padding: 0.5em;
+#collapse-button > * {
+    display: inline;
+    padding: 0.5em;
 
-        border: 0px solid transparent;
-        border-radius: 999999px;
-        background: var(--button-color);
+    border: 0px solid transparent;
+    border-radius: 999999px;
+    background: var(--button-color);
 
-        cursor: pointer;
+    cursor: pointer;
+}
 
-        &:hover { background: var(--button-hover) } 
+#collapse-button > *:hover { background: var(--button-hover) } 
+#collapse-button > * > * {
+    display: block;
+    fill: none;
+    stroke: var(--hint-color);
+    height: 1em; /*sadly, we cant use lh instaed of em. now this button is smaller than others (but at least it is square) */
+    width: 1em;
+    stroke-width: 0.2;
+    stroke-linecap: round;
+    transform: rotate(180deg);
+    transition: transform 250ms;
+}
 
-        & > * {
-            fill: none;
-            stroke: var(--hint-color);
-            height: 1lh;
-            width: 1lh;
-            stroke-width: 0.2;
-            stroke-linecap: round;
-            transform: rotate(180deg);
-            transition: transform 250ms;
-        }
-    }
-
-    &[collapsed=true] > * > * {
-        transform: rotate(0);
-    }
+#collapse-button[data-collapsed=true] > * > * {
+    transform: rotate(0);
 }
 
 #collapse-content {

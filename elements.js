@@ -151,8 +151,7 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
                     text-align: right;
                     font-size: 1rem;
                     color: var(--primary-contrast-color);
-                    border-bottom: 0.1rem solid var(--primary-contrast-color);" 
-                    max="4" min="0"></input>
+                    border-bottom: 0.1rem solid var(--primary-contrast-color); width: 4ch;"></input>
                 пикс.
             </div>
         `)
@@ -278,9 +277,6 @@ const css = `
     left: 50%;
     position: relative;
 
-    &:not([data-anchor=top]) { top: 0.3em; }
-    &[data-anchor=top]       { bottom: calc(100% + 0.3em); align-items: end; }
-
     display: flex;
     justify-content: center; 
 
@@ -288,79 +284,75 @@ const css = `
     transition: opacity 300ms, transform 300ms;
 
     z-index: 997;
-    &:focus-within { z-index: 998; }
-    &:hover        { z-index: 999; }
+}
 
-    &[data-shown=true] {
-        transform: translateY(0);
-        opacity: 1;
-        & > * { transform: scale(1); transition: transform 0s; }
-    }
+.popup-container:not([data-anchor=top]) { top: 0.3em; }
+.popup-container[data-anchor=top]       { bottom: calc(100% + 0.3em); align-items: end; }
 
-    &:not([data-shown=true]) {
-        &:not([data-anchor=top]) { transform: translateY( 0.7rem); }
-        &[data-anchor=top]       { transform: translateY(-0.7rem); }
-        opacity: 0;
-        & > * { transform: scale(0); transition: transform 0s 300ms; }
-    }
+.popup-container:focus-within { z-index: 998; }
+.popup-container:hover        { z-index: 999; }
 
-    & > * {
-        pointer-events: none;
-    }
+.popup-container[data-shown=true] { transform: translateY(0); opacity: 1; }
+.popup-container[data-shown=true] > * { transform: scale(1); transition: transform 0s; }
+.popup-container:not([data-shown=true]) { opacity: 0; }
 
-    & > * > .safe-zone {
-        padding: 2rem; 
-        margin-top: -2rem; 
-        margin-bottom: -2rem; 
+.popup-container:not([data-shown=true]):not([data-anchor=top]) { transform: translateY( 0.7rem); }
+.popup-container:not([data-shown=true])[data-anchor=top]       { transform: translateY(-0.7rem); }
+.popup-container:not([data-shown=true]) > * { transform: scale(0); transition: transform 0s 300ms; }
 
-        & > .popup {
-            box-sizing: border-box;
-            box-shadow: 0px 0px var(--shadow2-size) 0px var(--shadow1-color);
-            border: 0px solid transparent;
-            border-radius: 10px;
-            padding: 0.8rem;
-        }
+.popup-container > * { pointer-events: none; }
 
-        & > .popup:not(.popup-no-default-style) {
-            background-color: var(--primary-color);
-            color: var(--primary-contrast-color);
+.popup-container > * > .safe-zone {
+    padding: 2rem; 
+    margin-top: -2rem; 
+    margin-bottom: -2rem; 
+}
 
-            pointer-events: all;
+.popup-container > * > .safe-zone > .popup {
+    box-sizing: border-box;
+    box-shadow: 0px 0px var(--shadow2-size) 0px var(--shadow1-color);
+    border: 0px solid transparent;
+    border-radius: 10px;
+    padding: 0.8rem;
+}
 
-            & input::-webkit-outer-spin-button,
-            & input::-webkit-inner-spin-button {
-              -webkit-appearance: none;
-              margin: 0;
-            }
-            & input[type=number] { -moz-appearance: textfield; }
+.popup-container > * > .safe-zone > .popup:not(.popup-no-default-style) {
+    background-color: var(--primary-color);
+    color: var(--primary-contrast-color);
+    pointer-events: all;
+}
 
-            & input[type=number] { -moz-appearance: textfield; }
-            & input { border: none; outline: none; background: none; }
-            &:hover { outline: 1px solid var(--primary-contrast-color); }
-        }
+.popup-container > * > .safe-zone > .popup:not(.popup-no-default-style) input::-webkit-outer-spin-button,
+.popup-container > * > .safe-zone > .popup:not(.popup-no-default-style) input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
 
-        & > .popup.hint-popup {
-            font-size: 0.8em;
-            background-color: var(--bg2-color);
-            color: var(--hint-color);
-            pointer-events: all;
-            position: relative;
-            cursor: grabbing; /*no better alternative*/
+.popup-container > * > .safe-zone > .popup:not(.popup-no-default-style) input[type=number] { -moz-appearance: textfield; }
+.popup-container > * > .safe-zone > .popup:not(.popup-no-default-style) input[type=number] { -moz-appearance: textfield; }
+.popup-container > * > .safe-zone > .popup:not(.popup-no-default-style) input { border: none; outline: none; background: none; }
+.popup-container > * > .safe-zone > .popup:not(.popup-no-default-style):hover { outline: 1px solid var(--primary-contrast-color); }
 
-            &::before {
-                pointer-events: none;
-                position: absolute;
-                top: 0px; left: 0px; right: 0px; bottom: 0px;
-                content: '';
-                border: 0px solid transparent;
-                border-radius: inherit;
-            }
+.popup-container > * > .safe-zone > .popup.hint-popup {
+    font-size: 0.8em;
+    background-color: var(--bg2-color);
+    color: var(--hint-color);
+    pointer-events: all;
+    position: relative;
+    cursor: grabbing; /*no better alternative*/
+}
 
-            &:hover::before {
-                background: var(--bg-hover-text);
-            }
-        }
-    }
+.popup-container > * > .safe-zone > .popup.hint-popup::before {
+    pointer-events: none;
+    position: absolute;
+    top: 0px; left: 0px; right: 0px; bottom: 0px;
+    content: '';
+    border: 0px solid transparent;
+    border-radius: inherit;
+}
+
+.popup-container > * > .safe-zone > .popup.hint-popup:hover::before {
+    background: var(--bg-hover-text);
 }
 
 @keyframes opacity01 {
@@ -381,117 +373,122 @@ const css = `
       @keyframes AAA { from{} to { opacity: 1 } }
     */
     /*animation-fill-mode: both*/ 
-
-    & > .name {
-        color: var(--text-color);
-    }
-
-    & .output {
-        display: grid;
-        align-items: center;
-        justify-items: center;
-        background: white;
-        box-shadow: 0px 0px var(--shadow2-size) 0px var(--shadow1-color);
-        & > * { grid-row: 1; grid-column: 1; }
-    }
-
-    & .out-overlay {
-        width: 100%; height: 100%; 
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-
-        & > .main-action {
-            flex: 1 1 auto;
-            display: flex; 
-            justify-content: center; 
-            align-items: center;
-
-            & > * {
-                fill: var(--text-color-dark);
-
-                min-width: 3rem;
-                min-height: 3rem;
-                max-width: max(30%, 3rem);
-                max-height: max(30%, 3rem);
-            }
-        }
-    }
-
-    & .out-icons > *:not(.not-icon), & .main-action {
-        position: relative;
-        transition: background 200ms;
-        cursor: pointer;
-        &:hover { background: var(--bg-hover-outputicon); }
-
-        &::before {
-            pointer-events: none;
-            position: absolute;
-            top: 0px; left: 0px; right: 0px; bottom: 0px;
-            content: '';
-            border: 0px solid transparent;
-            border-radius: inherit;
-            opacity: 0.4;
-        }
-
-        &[data-anim]::before {
-            transition: opacity 200ms;
-            opacity: 0;
-        }
-
-        &[data-anim=err]::before {
-            background: var(--error-color);
-        }
-        &[data-anim=ok]::before {
-            background: var(--bg-click-outputicon);
-        }
-    }
-
-    & *.out-icons {
-        display: flex;
-        padding: 0.3rem;
-
-        & > *:not(.not-icon) {
-            margin-left: 0.2rem;
-            border: 0px solid transparent;
-            border-radius: 999999px;
-
-            & > *:first-child {
-                border: inherit;
-                border-radius: inherit;
-                padding: 0.4em;
-                overflow: visible;
-                display: block;
-                height: 1.4rem;
-                fill: var(--text-color-dark);
-                stroke: var(--text-color-dark);
-            }
-
-            &[data-pressed=true] {
-                background-color: var(--primary-contrast-color);
-                & > *:first-child {
-                    fill: var(--primary-color);
-                    stroke: var(--primary-color);
-                }
-            }
-
-            &.copy-img {
-                flex: 1 0 auto;
-                display: flex;
-                justify-content: center;
-            }
-        }
-    }
-
-    & .out-overlay { 
-        opacity: 0;
-        transition: opacity 200ms;
-    }
-
-    &:hover, &:has(:focus-visible), &[data-popup-opened]:not([data-popup-opened=""]) { 
-        .out-overlay { opacity: 1; }
-    }
 }
+
+.output-cont > .name {
+    color: var(--text-color);
+}
+
+.output-cont .output {
+    display: grid;
+    align-items: center;
+    justify-items: center;
+    background: white;
+    box-shadow: 0px 0px var(--shadow2-size) 0px var(--shadow1-color);
+}
+.output-cont .output > * { grid-row: 1; grid-column: 1; }
+
+.output-cont .out-overlay {
+    width: 100%; height: 100%; 
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.output-cont .out-overlay > .main-action {
+    flex: 1 1 auto;
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+}
+
+.output-cont .out-overlay > .main-action > * {
+    fill: var(--text-color-dark);
+
+    min-width: 3rem;
+    min-height: 3rem;
+    max-width: max(30%, 3rem);
+    max-height: max(30%, 3rem);
+}
+
+.output-cont .out-overlay .out-icons > *:not(.not-icon), .output-cont .outout-cont .out-overlay .main-action {
+    position: relative;
+    transition: background 200ms;
+    cursor: pointer;
+}
+
+.output-cont .out-overlay .out-icons > *:not(.not-icon):hover, .output-cont .out-overlay .main-action:hover {
+    background: var(--bg-hover-outputicon);
+}
+
+.output-cont .out-overlay .out-icons > *:not(.not-icon)::before, .output-cont .out-overlay .main-action::before {
+    pointer-events: none;
+    position: absolute;
+    top: 0px; left: 0px; right: 0px; bottom: 0px;
+    content: '';
+    border: 0px solid transparent;
+    border-radius: inherit;
+    opacity: 0.4;
+}
+
+.output-cont .out-overlay .out-icons > *:not(.not-icon)[data-anim]::before, .output-cont .out-overlay .main-action[data-anim]::before {
+    transition: opacity 200ms;
+    opacity: 0;
+}
+
+.output-cont .out-overlay .out-icons > *:not(.not-icon)[data-anim=err]::before, .output-cont .out-overlay .main-action[data-anim=err]::before {
+    background: var(--error-color);
+}
+.output-cont .out-overlay .out-icons > *:not(.not-icon)[data-anim=ok]::before, .output-cont .out-overlay .main-action[data-anim=ok]::before {
+    background: var(--bg-click-outputicon);
+}
+
+.output-cont *.out-icons {
+    display: flex;
+    padding: 0.3rem;
+}
+
+.output-cont *.out-icons > *:not(.not-icon) {
+    margin-left: 0.2rem;
+    border: 0px solid transparent;
+    border-radius: 999999px;
+}
+
+.output-cont *.out-icons > *:not(.not-icon) > *:first-child {
+    border: inherit;
+    border-radius: inherit;
+    padding: 0.4em;
+    overflow: visible;
+    display: block;
+    height: 1.4rem;
+    fill: var(--text-color-dark);
+    stroke: var(--text-color-dark);
+}
+
+.output-cont *.out-icons > *:not(.not-icon)[data-pressed=true]:hover,
+    .output-cont *.out-icons > *:not(.not-icon)[data-pressed=true]:not(:hover) {
+    background-color: var(--primary-contrast-color);
+}
+
+.output-cont *.out-icons > *:not(.not-icon)[data-pressed=true] > *:first-child {
+    fill: var(--primary-color);
+    stroke: var(--primary-color);
+}
+
+.output-cont *.out-icons > *:not(.not-icon).copy-img {
+    flex: 1 0 auto;
+    display: flex;
+    justify-content: center;
+}
+
+.output-cont .out-overlay { 
+    opacity: 0;
+    transition: opacity 200ms;
+}
+
+.output-cont:hover > .output > .out-overlay { opacity: 1; }
+.output-cont[data-popup-opened]:not([data-popup-opened=""]) > .output > .out-overlay { opacity: 1; }
+.output-cont:has(:focus-visible) > .output > .out-overlay { opacity: 1; }
 
 @media (pointer: fine) {
     .output-cont .out-overlay { 
@@ -504,8 +501,7 @@ const css = `
     .output-cont .main-action { opacity: 0 }
     .output-cont .out-icons { background: var(--outputoverlay-color); }
 }
-
-`
+`;
 
 { //https://stackoverflow.com/a/524721/18704284
     const head = document.head || document.getElementsByTagName('head')[0],

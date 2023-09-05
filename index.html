@@ -6,38 +6,6 @@
     <title>Расписание</title>
 
     <script>
-        if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
-            const head = document.head || document.getElementsByTagName('head')[0];
-
-            function insertCss(css) {
-                const style = document.createElement('style');
-                style.type = 'text/css';
-                if (style.styleSheet) style.styleSheet.cssText = css;
-                else style.appendChild(document.createTextNode(css));
-                head.appendChild(style);
-                return style;
-            }
-
-            const loadCss = insertCss(`body { display: none }`);
-            document.addEventListener('DOMContentLoaded', _ => {
-                const hideCss = insertCss(`body > * { display: none !important; }`);
-
-                var el = document.createElement('div'), button = document.createElement('button');
-                el.style = 'background-color: white; color: black; display: block !important';
-                el.append("Firefox? Он не работает. ");
-                el.innerHTML += ' <a href="./help-page.html" target="_blank">Напишите сюда</a>, если хотите, чтобы я сделал расписание за вас.';
-                button.innerHTML = 'Всё равно открыть страницу';
-                button.addEventListener('click', () => {
-                    hideCss.remove();
-                    el.remove();
-                })
-                el.append(button);
-                document.body.appendChild(el);
-
-                loadCss.remove();
-            })
-        }
-
         const files = new Array(9);
         for(let i = 0; i < 9; i++) {
             const file = files[i] = new Array(3);

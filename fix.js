@@ -56,7 +56,7 @@ const collapseButton = document.querySelector('#collapse-button')
 addClick(collapseButton, _ => {
     collapsed = !collapsed;
 
-    collapseButton.setAttribute('collapsed', collapsed)
+    collapseButton.setAttribute('data-collapsed', collapsed)
     if(collapsed) {
         collapseContent.style.display = 'none';
     }
