@@ -63,7 +63,8 @@ function findColumnBounds(cont, itemBs, itemI) {
         return ac - bc;
     })
 
-    if(typeof __schedule_debug_names != 'undefined' && __schedule_debug_names) console.log(itemsArr.map(it => '"' + cont[it].str + '"') + ',')
+    //if(typeof __schedule_debug_names != 'undefined' && __schedule_debug_names) console.log(itemsArr.map(it => '"' + cont[it].str + '"') + ',')
+    //results = results.concat(itemsArr.map(it => cont[it].str))
 
     const spaces = []
     {

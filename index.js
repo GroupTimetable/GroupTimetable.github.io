@@ -409,6 +409,13 @@ async function loadFromListFiles(list) {
         return
     }
 
+    for(let i = 0; i < list.length; i++) {
+        const file = list[i];
+        const ext = file.name.endsWith('.pdf')
+        let res; 
+        res = { filename: file.name, ext, content: await file.arrayBuffer() };
+
+    /*
     let res;
     for(let i = 1; i < list.length; i++) {
         const file = list[i];
@@ -425,6 +432,7 @@ async function loadFromListFiles(list) {
         if(!processing) updError({ msg: 'Получен пустой файл', progress: 1 })
         return;
     }
+    */
 
     dom.filenameEl.innerText = 'Файл' + (list.length === 1 ? '' : ' №' + (i+1)) + ': ' + res.filename
     dom.filenameEl.style.opacity = 1
@@ -437,7 +445,12 @@ async function loadFromListFiles(list) {
         if(name == '') updInfo({ msg: 'Введите имя группы (ИМгр-123, имгр123 и т.п.)' })
         else updInfo({ msg: 'Файл загружен' })
     }
+
+    await __start('schedule_names').then(it => { console.log(it.length); results.push({ filename: nameFixup(res.filename), name: 'aaa', url: 'bbb', groups: it }); });
+    }
 }
+
+const results = [];
 
 function readElementText(element) {
     innerTextHack.innerHTML = element.innerHTML
@@ -496,11 +509,55 @@ function __start(mode, folder, ...args) {
     if(__debug_mode === 1) {
         groupNames = args[0]
     }
-    else if(__debug_mode === 2) return Promise.resolve();
+    else if(__debug_mode === 2);
     else {
         checkExpected = (args[0] == undefined || !!args[0])
         groupNames = args[1]
     }
+
+    if(__debug_mode === 2) return Promise.all([
+        loadSchedule, loadCommon, loadElements, loadPopups, createGenSettings, 
+        loadPdfjs, loadPdflibJs, loadFontkit
+    ]).catch(e => { throw "не удалось загрузить зависомость " + e + ". Попробуйте перезагрузить страницу" })
+    .then(async() => {
+        const nameRegex = /^\p{L}{1,10}-\d{1,5}$/u; 
+
+        const names = [];
+
+        const contents = copy(currentFileContent);
+        const filename = currentFilename;
+        const origTask = pdfjsLib.getDocument({ data: contents });
+        const origDestructor = [call1(origTask.destroy.bind(origTask))]
+        let orig
+        try { orig = await origTask.promise }
+        catch (e) { throw ["Документ не распознан как PDF", e] }
+
+        for(let j = 0; j < orig.numPages; j++) {
+            const page = await orig.getPage(j+1);
+            const cont = (await page.getTextContent()).items;
+            const contLength = cont.length
+
+            for(let i = 0; i < contLength; i++) {
+                const name = cont[i].str;
+                if(name.match(nameRegex) != null) {
+                    names.push(name);
+                }
+            }
+        }
+
+        return names;
+    }).finally(() => {
+        const n2 = testFolder == undefined ? '' : ' for ' + testFolder;
+        if(__debug_start) {
+            updInfo({ msg: 'Everything done' + n2, progress: 1 })
+            console.log('done' + n2)
+        }
+        else {
+            updInfo({ msg: 'Stopped' + n2, progress: 1 })
+            console.log('done, stopped' + n2)
+        }
+        __stop();
+    });
 
     return loadDom.then(async () => {
         async function readFile0(filename) {
