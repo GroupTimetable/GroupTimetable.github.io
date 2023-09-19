@@ -5,7 +5,7 @@ const loadSchedule = files[3][0];
 const loadCommon   = files[4][0];
 const loadElements = files[5][0];
 const loadPopups   = files[6][0];
-const loadUserdata = files[7][0];
+const loadDatabase = files[7][0];
 //const loadIndex    = files[8][0]; 
 const loadDom = domPromise;
 
@@ -13,9 +13,8 @@ loadPdfjs.then(arr => {
     pdfjsLib.GlobalWorkerOptions.workerPort = pdfjsWorker;
 });
 
-let isDomLoaded, isUserdataLoaded;
+let isDomLoaded;
 loadDom.then(_ => isDomLoaded = true);
-loadUserdata.then(_ => isUserdataLoaded = true);
 function assertDomLoaded() { if(!isDomLoaded) throw 'Страница не была загружена до конца'; }
 
 const dom = {}
@@ -29,7 +28,10 @@ loadDom.then(_ => {
     dom.progressBarEl = qs('progress-bar')
     dom.statusEl = qs('status')
     dom.warningEl = qs('warning')
+    dom.fileInfoEl = qs('file-info')
     dom.filenameEl = qs('filename')
+    dom.fileTypeEl = qs('file-type')
+    dom.deleteFile = qs('delete-file')
     dom.outputsEl = qs('outputs')
     dom.dataAccept = qs('data-acc')
     dom.dataDecline = qs('data-dec')
@@ -37,7 +39,7 @@ loadDom.then(_ => {
     dom.dropZoneEl = qs('drop-zone')
 })
 
-Promise.all([loadDom, loadUserdata]).then(_ => {
+Promise.all([loadDom, loadDatabase]).then(_ => {
     let messageInteracted;
     try { messageInteracted = localStorage.getItem('index__userdata_interacted') } catch(e) { console.error(e) }
 
@@ -104,6 +106,7 @@ Promise.all([loadDom, loadCommon]).then(_ => {
     innerTextHack = document.body.appendChild(htmlToElement(`<div style="position: absolute; width: 0px; height: 0px; top: 0; left: 0; transform: scale(0);"></div>`))
 })
 
+let lastFileDataUrl;
 let currentFilename, currentFileContent;
 let processing;
 
@@ -258,10 +261,6 @@ function showOverlay() {
 function checkShouldProcess() {
     if(processing) return;
 
-    if(currentFileContent == undefined) {
-        updError({ msg: 'Для продолжения требуется файл расписания', progress: 1 })
-        return
-    }
     const name = dom.groupInputEl.value.trim()
     if(name == '') {
         updError({ msg: 'Для продолжения требуется имя группы', progress: 1 })
@@ -284,8 +283,11 @@ function checkShouldProcess() {
 loadDom.then(_ => { updInfo({ msg: 'Вы можете создать изображение или календарь занятий своей группы из общего расписания' }) })
 
 Promise.all([loadDom, loadCommon]).then(_ => {
-    dom.groupInputEl.addEventListener('keypress', e => {
+    dom.groupInputEl.addEventListener('keydown', e => {
         if (e.key === "Enter") checkShouldProcess()
+    })
+    dom.groupInputEl.addEventListener('input', e => {
+        if(dom.groupInputEl.value.trim() !== '') document.body.setAttribute('data-group-name-added', '');
     })
     addClick(dom.startButtonEl, _ => {
         checkShouldProcess()
@@ -414,11 +416,11 @@ async function loadFromListFiles(list) {
         const file = list[i];
         const ext = file.name.endsWith('.pdf')
         if(!ext) continue;
-        res = { filename: file.name, ext, content: await file.arrayBuffer() };
+        res = { filename: file.name, ext, content: await file.arrayBuffer(), type: file.type };
     }
     if(res == undefined) {
         const file = list[0];
-        res = { filename: file.name, ext: file.name.endsWith('.pdf'), content: await file.arrayBuffer() };
+        res = { filename: file.name, ext: file.name.endsWith('.pdf'), content: await file.arrayBuffer(), type: file.type };
     }
 
     if(res.content.length === 0) { //no idea why this happens
@@ -426,16 +428,39 @@ async function loadFromListFiles(list) {
         return;
     }
 
-    dom.filenameEl.innerText = 'Файл' + (list.length === 1 ? '' : ' №' + (i+1)) + ': ' + res.filename
-    dom.filenameEl.style.opacity = 1
-    document.body.setAttribute('data-fileLoaded', '')
     currentFilename = res.ext ? res.filename.substring(0, res.filename.length - 4) : res.filename;
     currentFileContent = res.content;
+
+    const fileDataUrl = lastFileDataUrl;
+    lastFileDataUrl = URL.createObjectURL(new Blob([currentFileContent], { type: res.type }));
+    updateFilenameDisplay('Файл' + (list.length === 1 ? '' : ' №' + (i+1)) + ': ', res.filename, lastFileDataUrl);
+    URL.revokeObjectURL(fileDataUrl);
 
     if(!processing) {
         const name = dom.groupInputEl.value.trim()
         if(name == '') updInfo({ msg: 'Введите имя группы (ИМгр-123, имгр123 и т.п.)' })
         else updInfo({ msg: 'Файл загружен' })
+    }
+}
+
+loadDom.then(() => {
+    dom.deleteFile.addEventListener('click', () => {
+        updateFilenameDisplay();
+        currentFileContent = undefined;
+        currentFilename = undefined;
+    })
+})
+
+function updateFilenameDisplay(fileType, filename, href) {
+    if(filename == undefined) {
+        dom.fileInfoEl.setAttribute('data-visible', false);
+    }
+    else {
+        dom.fileInfoEl.setAttribute('data-visible', true);
+        dom.fileTypeEl.innerText = fileType;
+        dom.filenameEl.innerText = filename;
+        dom.filenameEl.href = href;
+        dom.deleteFile.style.pointer = '';
     }
 }
 
@@ -463,7 +488,7 @@ function makeWarningText(schedule, scheme, bigFields) {
 
     if(warningText === '') return ''
     else return "Возможно пропущены уроки: " + warningText.substring(2)
-        + ". Чтобы добавить их в расписание, допишите $<i>индекс_из_скобок</i> к имени группы, напр. ИМгр-123$0$2$39."
+        + ". Чтобы добавить их в расписание, допишите $<i>индекс_из_скобок</i> к имени группы, напр. ИМгр-123 $0 $2 $39."
         + " Также вы можете отредактировать расписание вручную, нажав на кнопку с карандашом на изображении"
         + " или <a href='./help-page.html' target='blank' class='link'>написать сюда</a>.";
 }
@@ -521,9 +546,7 @@ function __start(mode, folder, ...args) {
             groupNames ??= await readJson('names.txt')
             await contP.then(it => { if(it != undefined) {
                 currentFileContent = it
-                dom.filenameEl.innerText = 'Test folder: ' + testFolder;
-                dom.filenameEl.style.opacity = 1
-                document.body.setAttribute('data-fileLoaded', '')
+                updateFilenameDisplay('Test folder: ', testFolder);
             } })
             let expected = checkExpected ? await expectedP : undefined;
             if(expected != undefined) __last_expected = expected
@@ -564,9 +587,7 @@ function __start(mode, folder, ...args) {
             const contP = readFile('file.pdf')
             await contP.then(it => { if(it != undefined) {
                 currentFileContent = it
-                dom.filenameEl.innerText = 'Test folder: ' + testFolder;
-                dom.filenameEl.style.opacity = 1
-                document.body.setAttribute('data-fileLoaded', '')
+                updateFilenameDisplay('Test folder: ', testFolder);
             } })
 
             if(groupNames == undefined) throw 'No group names provided'
@@ -592,21 +613,51 @@ function __start(mode, folder, ...args) {
     })
 }
 
+async function loadFileFromDatabase(groupName) {
+    let dbInfo;
+    try { dbInfo = await findGroupInfo(groupName); }
+    catch(e) {
+        if(e == 1) e = 'Группа `' + groupName + '` не найдена в базе, проверьте правильность написания или попробуйте загрузить файл своего института';
+        else if(e == 2) e = 'Институт группы `' + groupName + '` не найден в базе (внутренняя ошибка)';
+
+        updateUserdataF('regGeneralError')('' + e) 
+        throw e;
+    }
+
+    //thank you, corsproxy.io
+    const url = `https://corsproxy.io/?` + dbInfo.url
+
+    const result = await fetch(url, { 
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+            'Content-Type': 'application/pdf',
+            'Origin': window.location.origin,
+        },
+    });
+    const buf = await result.arrayBuffer();
+
+    currentFilename = dbInfo.name;
+    updateFilenameDisplay('Ссылка: ', currentFilename, dbInfo.url);
+    currentFileContent = buf;
+}
 
 async function processPDF() {
-    const stagesC = 4
-    let stage = 0
+    const loadFile = currentFileContent == undefined; 
+
+    const stagesC = 4 + (loadFile ? 1 : 0);
+    let stage = 0;
     const ns = () => { return ++stage / (stagesC+1) }
 
     updInfo({ msg: 'Ожидаем зависимости', progress: 0 })
-    await Promise.all([
+    const dependencies = [
         loadSchedule, loadCommon, loadElements, loadPopups, createGenSettings, 
         loadPdfjs, loadPdflibJs, loadFontkit
-    ]).catch(e => { throw "не удалось загрузить зависомость " + e + ". Попробуйте перезагрузить страницу" })
+    ];
+    if(loadFile) dependencies.push(loadDatabase);
+    await Promise.all(dependencies).catch(e => { throw "не удалось загрузить зависомость " + e + ". Попробуйте перезагрузить страницу" })
 
     updInfo({ msg: 'Начинаем обработку', progress: ns() });
-    const contents = copy(currentFileContent);
-    const filename = currentFilename;
     const nameS = dom.groupInputEl.value.trim().split('$');
     const name = nameS[0];
     const indices = Array(nameS.length - 1);
@@ -620,10 +671,19 @@ async function processPDF() {
     const dowOnTop = genSettings.dowOnTop;
     const scheme = readScheduleScheme(readElementText(genSettings.scheduleLayoutEl));
 
+    console.log(currentFileContent, loadFile);
+
+    if(loadFile) {
+        updInfo({ msg: 'Загружаем файл расписания', progress: ns() });
+        await loadFileFromDatabase(nameFixed);
+    }
+
+    const filename = currentFilename;
+
     let userdata;
     try { try { userdata = ['' + filename, '' + name] } catch(e) { console.log(e) } } catch(e) {}
 
-    const origTask = pdfjsLib.getDocument({ data: contents });
+    const origTask = pdfjsLib.getDocument({ data: copy(currentFileContent) });
     const origDestructor = [call1(origTask.destroy.bind(origTask))]
     const destroyOrig = () => Promise.all(origDestructor.map(it => it()))
     try {
@@ -715,10 +775,10 @@ function printScheduleError(e) {
     if(Array.isArray(e)) {
         console.error('ERROR')
         for(let i = 0; i < e.length; i++) {
-            console.error(e[i])
             if(i !== 0) str += ', '
             str += e[i]
         }
+        console.error(e)
         console.error('RORRE')
     }
     else {

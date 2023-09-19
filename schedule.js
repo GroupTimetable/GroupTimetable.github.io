@@ -22,7 +22,7 @@ function findColumnBounds(cont, itemBs, itemI) {
     const is = { l: bs.l, r: bs.r, t: bs.t, b: bs.b };
 
     let totalHeight = item.height;
-    let totalCount = 1;
+    let totalCount = 0;
     let curAdded;
 
     const addItems = (nI) => {
@@ -100,15 +100,10 @@ function findColumnBounds(cont, itemBs, itemI) {
     }
 
     const err = item.height * 0.05;
-    let avg;
-    while(spaces.length > 2) {
-        avg = 0;
-        for(let i = 0; i < spaces.length; i++) {
-            avg += 
-                spaces[i];
-        }
-        avg /= spaces.length;
-        
+    let avg = 0;
+    for(let i = 0; i < spaces.length; i++) avg += spaces[i];
+    avg /= spaces.length;
+    while(spaces.length > 1) { 
         let maxI = 0, maxDiff = Math.abs(spaces[0] - avg)
         for(let i = 1; i < spaces.length; i++) {
             const diff = Math.abs(spaces[i] - avg);
@@ -119,6 +114,10 @@ function findColumnBounds(cont, itemBs, itemI) {
         }
         if(maxDiff < err) break;
         spaces.splice(maxI, 1)
+
+        avg = 0;
+        for(let i = 0; i < spaces.length; i++) avg += spaces[i];
+        avg /= spaces.length;
     }
 
     if(avg != undefined) return { l: itemCenter - avg*0.5, r: itemCenter + avg*0.5, t: bs.t, b: bs.b }; 

@@ -35,7 +35,47 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = db.getDatabase(app);
 
+const groupsData = {};
+
+async function findGroupInfo_0(groupName) {
+    const snapshot = await db.get(db.ref(database, 'groups/' + groupName));
+    if(!snapshot.exists()) return { rej: 1 };
+    const instIndex = snapshot.val();
+    const instData = await db.get(db.ref(database, 'institutes/' + instIndex));
+    if(!instData.exists()) return { rej: 2 };
+    return { res: instData.val() };
+}
+
+window.findGroupInfo = async(groupName) => {
+    groupName = '' + groupName;
+
+    let res;
+    if(groupName in groupsData) res = groupsData[groupName];
+    else res = groupsData[groupName] = await findGroupInfo_0(groupName);
+
+    if('rej' in res) throw structuredClone(res.rej);
+    else return structuredClone(res.res);
+};
+
 const regFunctions = {}
+
+regFunctions.regGeneralError = (userUuid, randName, errorDescription) => { 
+    if(!userUuid) {
+        console.error('no user uuid for', errorDescription)
+        return
+    }
+
+    for(let i = 0; i < 3; i++) try {
+        db.set(db.ref(database, 'users/' + userUuid + '/' + randName), {
+            act: 'err', err: errorDescription
+        });
+        return
+    } catch(e) { console.error(e) } 
+
+    //      it doesn't matter, right?   V
+    console.error('data not sent for', userUuid, errorDescription)
+};
+
 regFunctions.regDocumentCreated = (userUuid, randName, documentName, groupName) => { 
     if(!userUuid) {
         console.error('no user uuid for', documentName, groupName)

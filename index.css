@@ -30,7 +30,7 @@ body {
     text-align: center; 
     color: var(--primary-color);
 
-    max-width: max(40rem, 114vh);
+    max-width: max(40rem, 100vh);
     font-size: 2rem;
     font-weight: bold;
 }
@@ -39,12 +39,48 @@ body {
     cursor: pointer;
     margin: 0 auto;
 }
-#file-picker > span { word-wrap:break-word; }
+#file-picker > span { word-wrap: break-word; }
 
+#file-info > .content {
+    transform: scaleY(0);
+    will-change: transform; /*chrome bug (some screen resolutions)*/
+    opacity: 0;
+    transition: opacity 100ms, transform 0ms 100ms;
+}
+#file-info[data-visible=true] > .content {
+    opacity: 1;
+    transform: scaleY(1);
+    transition: opacity 100ms, transform 0ms 0ms;
+}
+
+#group-name-hint {
+    color: var(--hint-color);
+}
+/*body:not([data-group-name-added]) #group-name-hint {
+    color: var(--hint-color);
+}
+body[data-group-name-added] #group-name-hint {
+    transition: color 400ms;
+}*/
+
+#file-type { color: var(--secondary-text-color);; }
 #filename {
     color: var(--secondary-text-color); 
-    opacity: 0;
-    transition: opacity 100ms;
+}
+#delete-file {
+    background: none;
+    border: none;
+    outline: none;
+    padding: 0px;
+    margin: 0px;
+    cursor: pointer;
+}
+#delete-file > svg {
+    height: 0.7rem;
+
+    stroke: var(--secondary-text-color);
+    stroke-width: 1.7;
+    stroke-linecap: round;
 }
 
 #status {
@@ -373,13 +409,3 @@ body {
      width: 25%;
      height: 25%;
  }
-
-body:not([data-fileLoaded]) #load-file-text {
-    color: var(--hint-color);
-}
-
-body[data-fileLoaded] #group-input:placeholder-shown {
-    border: 0px solid transparent;
-    border-radius: 0.5rem;
-    background-color: var(--hint-color-15) !important;
-}

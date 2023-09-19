@@ -50,12 +50,19 @@
                 <div class="header">Создание расписания группы</div>
                 <div class="h-text" style="padding-bottom: 1rem; padding-top: 1rem; flex: 1 1 auto">
                     <div id="file-picker" class="no-select">
-                        <span>Перетащите файл или нажмите здесь чтобы</span> <span id="load-file-text">загрузить PDF файл расписания</span> 
+                        <span id="group-name-hint">Введите название группы</span><span> или загрузите свой PDF-файл расписания</span>
                     </div>
                 </div>
 
                 <div class="group-bar-formatting">
-                    <div id="filename" class="move-with-border">&ZeroWidthSpace;</div>
+                    <div class="move-with-border" id="file-info">
+                        &ZeroWidthSpace;
+                        <div class="content">
+                            <span id="file-type"></span>
+                            <a id="filename" target="_blank"></a>
+                            <button id="delete-file" title="Удалить файл"> <svg viewBox="-1 -1 12 12" xmlns="http://www.w3.org/2000/svg"><path d="M0 0L10 10M10 0L0 10"></path></svg></button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
