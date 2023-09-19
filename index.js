@@ -106,6 +106,17 @@ Promise.all([loadDom, loadCommon]).then(_ => {
     innerTextHack = document.body.appendChild(htmlToElement(`<div style="position: absolute; width: 0px; height: 0px; top: 0; left: 0; transform: scale(0);"></div>`))
 })
 
+addEventListener("unhandledrejection", (event) => {
+    const res = '' + event.reason;
+    loadDatabase.then(() => { updateUserdataF('regGeneralError')('$rej$' + res) });
+});
+
+addEventListener('error', (event) => {
+    const res = '' + event.error;
+    loadDatabase.then(() => { updateUserdataF('regGeneralError')('$err$' + res) });
+});
+
+
 let lastFileDataUrl;
 let currentFilename, currentFileContent;
 let processing;
@@ -624,21 +635,17 @@ async function loadFileFromDatabase(groupName) {
         throw e;
     }
 
-    //thank you, corsproxy.io
-    const url = `https://corsproxy.io/?` + dbInfo.url
+    updateFilenameDisplay('Ссылка: ', dbInfo.name, dbInfo.url);
 
-    const result = await fetch(url, { 
-        method: 'GET',
-        mode: 'cors',
-        headers: {
-            'Content-Type': 'application/pdf',
-            'Origin': window.location.origin,
-        },
+    const url = `https://api.allorigins.win/raw?url=` + encodeURIComponent(`https://corsproxy.io/?` + dbInfo.url)
+    const result = await fetch(url).catch(error => { 
+        throw 'Не удалось загрузить файл группы `' + groupName + '` института `' + dbInfo.name + '` по ссылке `' + url + '`: `' + error + '`';
     });
+    if(!result.ok) throw 'Не удалось загрузить файл группы `' + groupName + '` института `' + dbInfo.name + '` по ссылке `' + url + '`, статус: ' + result.status;
+
     const buf = await result.arrayBuffer();
 
     currentFilename = dbInfo.name;
-    updateFilenameDisplay('Ссылка: ', currentFilename, dbInfo.url);
     currentFileContent = buf;
 }
 
@@ -671,10 +678,8 @@ async function processPDF() {
     const dowOnTop = genSettings.dowOnTop;
     const scheme = readScheduleScheme(readElementText(genSettings.scheduleLayoutEl));
 
-    console.log(currentFileContent, loadFile);
-
     if(loadFile) {
-        updInfo({ msg: 'Загружаем файл расписания', progress: ns() });
+        updInfo({ msg: 'Загружаем файл расписания (долго!)', progress: ns() });
         await loadFileFromDatabase(nameFixed);
     }
 
