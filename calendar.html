@@ -1,10 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
     <head>
+        <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
         <link rel="icon" type="image/png" href="favicon.png">
+        <title>Экспорт расписания в календарь</title>
+
         <script defer src="./common.js"></script>
-        <script defer src="./database.js" type="module"></script>
+        <script src="./database.js" type="module"></script>
         <script defer src="./calendar.js"></script>
 
         <link rel="stylesheet" href="colors.css">
@@ -29,8 +32,8 @@
                 </div>
                 <p>
                     2. Скачайте файл расписания для своей группы: 
-                    <a href id="file1" class="link">1 группа</a> 
-                    <a href id="file2" class="link">2 группа</a>
+                    <a href="javascript:;" id="file1" class="link">1 группа</a> 
+                    <a href="javascript:;" id="file2" class="link">2 группа</a>
                 </p>
                 <p class="warning-text" style="display: none">
                 </p>
@@ -46,5 +49,6 @@
                 <a class="link no-select" href="./help-page.html" target="_blank">Помощь</a>
                 <a class="link no-select" href="https://github.com/VanaIgr/ScheduleRenderingJs" target="_blank">Проект на GitHub</a>
             </div>
+        </div>
     </body>
 </html>

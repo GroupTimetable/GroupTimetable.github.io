@@ -1,7 +1,11 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
         <link rel="icon" type="image/png" href="favicon.png">
+        <title>Помощь</title>
+
         <script type="text/javascript" src="https://vk.com/js/api/openapi.js?169"></script>
         <script type="module" src="./database.js"></script>
         <link rel="stylesheet" href="colors.css">
@@ -14,7 +18,7 @@
         <div>Ваш id на сайте: <span id="uuid">???</span></div>
         <button id="send-data" style="visibility: hidden">Отправить данные</button>
         <div id="messages"></div>
-        <script type="text/javascript">
+        <script>
             try {
                 VK.Widgets.CommunityMessages("messages", 221983441, {widgetPosition: "left", expanded: "1", disableExpandChatSound: "1", disableButtonTooltip: "1"});
             } catch(e) { console.error(e) }

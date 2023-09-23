@@ -10,6 +10,11 @@
     align-items: stretch;
 }
 
+#edit-input {
+    white-space: nowrap;
+    overflow: auto;
+}
+
 #outputs {
     margin: 1em;
     padding: 1em;
