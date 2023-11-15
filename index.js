@@ -106,14 +106,21 @@ Promise.all([loadDom, loadCommon]).then(_ => {
     innerTextHack = document.body.appendChild(htmlToElement(`<div style="position: absolute; width: 0px; height: 0px; top: 0; left: 0; transform: scale(0);"></div>`))
 })
 
+let handling = false
 addEventListener("unhandledrejection", (event) => {
+    try{ if(handling) return } catch(e) { return } // or completely hang the browser
+    handling = true
     const res = '' + event.reason;
-    loadDatabase.then(() => { updateUserdataF('regGeneralError')('$rej$' + res) });
+    loadDatabase.then(() => { updateUserdataF('regGeneralError')('$rej$' + res) })
+        .then(() => { handling = false }) // not finally
 });
 
 addEventListener('error', (event) => {
+    try{ if(handling) return } catch(e) { return } // or completely hang the browser
+    handling = true
     const res = '' + event.error;
-    loadDatabase.then(() => { updateUserdataF('regGeneralError')('$err$' + res) });
+    loadDatabase.then(() => { updateUserdataF('regGeneralError')('$err$' + res) })
+        .then(() => { handling = false })
 });
 
 
