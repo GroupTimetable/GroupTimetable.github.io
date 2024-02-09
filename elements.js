@@ -270,9 +270,9 @@ const css = `
 .popup-container > * { pointer-events: none; }
 
 .popup-container > * > .safe-zone {
-    padding: 2rem;
-    margin-top: -2rem;
-    margin-bottom: -2rem;
+    padding: 1rem;
+    margin-top: -1rem;
+    margin-bottom: -1rem;
 }
 
 .popup-container > * > .safe-zone > .popup {

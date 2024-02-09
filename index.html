@@ -6,6 +6,8 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <title>Расписание</title>
 
+    <style> @import url('https://fonts.googleapis.com/css2?family=Open+Sans&display=swap'); </style>
+
     <script>
         const files = new Array(9);
         for(let i = 0; i < 9; i++) {
@@ -46,22 +48,23 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="index.css">
 </head>
-<body style="overflow-x: hidden; margin: 0;">
+<body style="margin: 0;">
 
     <!-- <canvas id='the-canvas'></canvas> -->
-    <div style="min-width: 100vw; min-height: 100vh; display: flex; flex-direction: column">
+    <div style="min-width: 100%; min-height: 100vh; display: flex; flex-direction: column">
         <div class="centerel-vert" style="flex: 1 1 auto">
             <div class="before" style="display: flex; flex-direction: column; align-items: stretch;">
-                <div class="header">Создание расписания группы</div>
-                <div class="h-text" style="padding-bottom: 1rem; padding-top: 1rem; flex: 1 1 auto">
+                <div class="header">
+                  Создание расписания группы
+                </div>
+                <div class="h-text">
                     <div id="file-picker" class="no-select">
-                        <span id="group-name-hint">Введите название группы</span><span> или загрузите свой PDF-файл расписания</span>
+                        <span>Нажмите здесь чтобы загрузить файл расписания</span>
                     </div>
                 </div>
 
                 <div class="group-bar-formatting">
                     <div class="move-with-border" id="file-info">
-                        &ZeroWidthSpace;
                         <div class="content">
                             <span id="file-type"></span>
                             <a href="javascript:;" id="filename" target="_blank"></a>
@@ -106,7 +109,7 @@
                 <div id="footer">
                     <a class="link no-select" href="./fix.html" target="_blank">Расписание из текста</a>
                     <a class="link no-select" href="./help-page.html" target="_blank">Помощь</a>
-                    <a class="link no-select" href="https://github.com/VanaIgr/ScheduleRenderingJs" target="_blank">Проект на GitHub</a>
+                    <a class="link no-select" href="https://github.com/VanaIgr/ScheduleRenderingJs" target="_blank">GitHub</a>
                 </div>
             </div>
         </div>

@@ -19,28 +19,25 @@ body {
 
 .h-text {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
     justify-content: end;
     align-items: center;
-}
 
-
-.h-text > * {
-    font-family: -apple-system, BlinkMacSystemFont, 'Roboto', 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-
-    text-align: center; 
-    color: var(--primary-color);
-
-    max-width: max(40rem, 100vh);
-    font-size: 2rem;
-    font-weight: bold;
+    padding-bottom: 0.3rem;
+    padding-top: 0.3rem;
 }
 
 #file-picker {
     cursor: pointer;
     margin: 0 auto;
+    max-width: max(30rem, 100vh);
+    text-align: center;
+    word-wrap: break-word;
+    font-family: sans-serif;
+    color: var(--hint-color);
+    font-size: 1.9rem;
 }
-#file-picker > span { word-wrap: break-word; }
 
 #file-info > .content {
     transform: scaleY(0);
@@ -54,19 +51,9 @@ body {
     transition: opacity 100ms, transform 0ms 0ms;
 }
 
-#group-name-hint {
-    color: var(--hint-color);
-}
-/*body:not([data-group-name-added]) #group-name-hint {
-    color: var(--hint-color);
-}
-body[data-group-name-added] #group-name-hint {
-    transition: color 400ms;
-}*/
-
 #file-type { color: var(--secondary-text-color);; }
 #filename {
-    color: var(--secondary-text-color); 
+    color: var(--secondary-text-color);
 }
 #delete-file {
     background: none;
@@ -90,10 +77,10 @@ body[data-group-name-added] #group-name-hint {
 }
 
 #warning {
-    max-width: min(45rem, 90vw); 
-    margin: 0 auto; 
-    color: var(--hint-color); 
-    opacity: 0; 
+    max-width: min(45rem, 90vw);
+    margin: 0 auto;
+    color: var(--hint-color);
+    opacity: 0;
     transition: opacity 100ms;
 }
 
@@ -127,10 +114,10 @@ body[data-group-name-added] #group-name-hint {
 
 #group-bar:hover { outline: 1px solid var(--outline-color); }
 
-#group-bar #group-input {
+#group-input {
         color-scheme: light dark;
-        width: 100%; 
-        flex: 1 1 0px; 
+        width: 100%;
+        flex: 1 1 0px;
         appearance: none; border: none; outline: none;
         margin: 0.1rem 0px 0.1rem;
         color: var(--text-color);
@@ -152,7 +139,7 @@ body[data-group-name-added] #group-name-hint {
     overflow: hidden;
 
     display: block;
-    height: 1.4rem; 
+    height: 1.4rem;
     width: auto;
     fill: var(--text-color);
     padding: 0.4rem;
@@ -211,17 +198,17 @@ body[data-group-name-added] #group-name-hint {
 #group-bar #progress-bar[data-transition=true] { transition: width 100ms; }
 
 #group-bar > .group-bar-double {
-    position: absolute; 
-    top: 0; bottom: 0; right: 0; left: 0; 
+    position: absolute;
+    top: 0; bottom: 0; right: 0; left: 0;
 
-    visibility: hidden; 
-    overflow: clip; 
+    visibility: hidden;
+    overflow: clip;
     contain: strict;
 
-    border-radius: inherit; 
-    border: inherit; 
+    border-radius: inherit;
+    border: inherit;
 
-    display: flex; 
+    display: flex;
     flex-direction: column-reverse;
 }
 #group-bar > .group-bar-double > * {
@@ -246,7 +233,7 @@ body[data-group-name-added] #group-name-hint {
     transition-timing-function: ease-out;
 }
 
-#group-bar .gen-settings-switch:hover > * { 
+#group-bar .gen-settings-switch:hover > * {
     transform: translateX(-0.1rem);
     background: var(--hint-color-50);
 }
@@ -271,7 +258,7 @@ body[data-group-name-added] #group-name-hint {
     flex-wrap: wrap;
     row-gap: 3rem;
     column-gap: 3rem;
-    padding-left: 1.5em; 
+    padding-left: 1.5em;
     padding-right: 1.5em;
     justify-content: center;
     align-items: flex-start;
@@ -315,7 +302,7 @@ body[data-group-name-added] #group-name-hint {
     stroke: var(--error-color);
 }
 
-#open-data-usage:hover > * { 
+#open-data-usage:hover > * {
     background: var(--bg-hover-text);
 }
 
@@ -355,9 +342,9 @@ body[data-group-name-added] #group-name-hint {
     cursor: pointer;
 }
 
-.data-usage > .close-button > * { 
-    width: 2em; height: 2em; 
-    pointer-events: none; 
+.data-usage > .close-button > * {
+    width: 2em; height: 2em;
+    pointer-events: none;
 }
 
 .data-usage > .close-button > * > svg {
