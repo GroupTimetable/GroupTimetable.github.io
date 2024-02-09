@@ -19,8 +19,8 @@ const outputElementOrig = htmlToElement(`
 
                 <div title="Скопировать изображение" class="copy-img no-select">
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path fill-rule="evenodd" clip-rule="evenodd" d="M21 8C21 6.34315 19.6569 5 18 5H10C8.34315 5 7 6.34315 7 8V20C7 21.6569 8.34315 23 10 23H18C19.6569 23 21 21.6569 21 20V8ZM19 8C19 7.44772 18.5523 7 18 7H10C9.44772 7 9 7.44772 9 8V20C9 20.5523 9.44772 21 10 21H18C18.5523 21 19 20.5523 19 20V8Z"></path> 
-                            <path d="M6 3H16C16.5523 3 17 2.55228 17 2C17 1.44772 16.5523 1 16 1H6C4.34315 1 3 2.34315 3 4V18C3 18.5523 3.44772 19 4 19C4.55228 19 5 18.5523 5 18V4C5 3.44772 5.44772 3 6 3Z"></path> 
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M21 8C21 6.34315 19.6569 5 18 5H10C8.34315 5 7 6.34315 7 8V20C7 21.6569 8.34315 23 10 23H18C19.6569 23 21 21.6569 21 20V8ZM19 8C19 7.44772 18.5523 7 18 7H10C9.44772 7 9 7.44772 9 8V20C9 20.5523 9.44772 21 10 21H18C18.5523 21 19 20.5523 19 20V8Z"></path>
+                            <path d="M6 3H16C16.5523 3 17 2.55228 17 2C17 1.44772 16.5523 1 16 1H6C4.34315 1 3 2.34315 3 4V18C3 18.5523 3.44772 19 4 19C4.55228 19 5 18.5523 5 18V4C5 3.44772 5.44772 3 6 3Z"></path>
                     </svg>
                 </div>
 
@@ -32,7 +32,7 @@ const outputElementOrig = htmlToElement(`
             </div>
 
             <div class="main-action view-img no-select" title="Открыть изображение">
-                <svg version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 -10 540 540" xml:space="preserve"> 
+                <svg version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 -10 540 540" xml:space="preserve">
                     <path d="M449.803,62.197C408.443,20.807,353.85-0.037,299.646-0.006C245.428-0.037,190.85,20.807,149.49,62.197 C108.1,103.557,87.24,158.15,87.303,212.338c-0.047,37.859,10.359,75.766,30.547,109.359L15.021,424.525 c-20.016,20.016-20.016,52.453,0,72.469c20,20.016,52.453,20.016,72.453,0L190.318,394.15 c33.578,20.203,71.5,30.594,109.328,30.547c54.203,0.047,108.797-20.797,150.156-62.188 c41.375-41.359,62.234-95.938,62.188-150.172C512.053,158.15,491.178,103.557,449.803,62.197z M391.818,304.541 c-25.547,25.531-58.672,38.125-92.172,38.188c-33.5-0.063-66.609-12.656-92.188-38.188c-25.531-25.578-38.125-58.688-38.188-92.203 c0.063-33.484,12.656-66.609,38.188-92.172c25.578-25.531,58.688-38.125,92.188-38.188c33.5,0.063,66.625,12.656,92.188,38.188 c25.531,25.563,38.125,58.688,38.188,92.172C429.959,245.854,417.365,278.963,391.818,304.541z"></path>
                 </svg>
             </div>
@@ -44,9 +44,9 @@ const outputElementOrig = htmlToElement(`
                     </svg>
                 </div>
 
-                <div class="edit no-select" title="Изменить"> 
+                <div class="edit no-select" title="Изменить">
                     <svg viewBox="3 3 18 18" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M13.2942 7.95881C13.5533 7.63559 13.5013 7.16358 13.178 6.90453C12.8548 6.64549 12.3828 6.6975 12.1238 7.02072L13.2942 7.95881ZM6.811 14.8488L7.37903 15.3385C7.38489 15.3317 7.39062 15.3248 7.39623 15.3178L6.811 14.8488ZM6.64 15.2668L5.89146 15.2179L5.8908 15.2321L6.64 15.2668ZM6.5 18.2898L5.7508 18.2551C5.74908 18.2923 5.75013 18.3296 5.75396 18.3667L6.5 18.2898ZM7.287 18.9768L7.31152 19.7264C7.36154 19.7247 7.41126 19.7181 7.45996 19.7065L7.287 18.9768ZM10.287 18.2658L10.46 18.9956L10.4716 18.9927L10.287 18.2658ZM10.672 18.0218L11.2506 18.4991L11.2571 18.491L10.672 18.0218ZM17.2971 10.959C17.5562 10.6358 17.5043 10.1638 17.1812 9.90466C16.8581 9.64552 16.386 9.69742 16.1269 10.0206L17.2971 10.959ZM12.1269 7.02052C11.8678 7.34365 11.9196 7.81568 12.2428 8.07484C12.5659 8.33399 13.0379 8.28213 13.2971 7.95901L12.1269 7.02052ZM14.3 5.50976L14.8851 5.97901C14.8949 5.96672 14.9044 5.95412 14.9135 
+                        <path d="M13.2942 7.95881C13.5533 7.63559 13.5013 7.16358 13.178 6.90453C12.8548 6.64549 12.3828 6.6975 12.1238 7.02072L13.2942 7.95881ZM6.811 14.8488L7.37903 15.3385C7.38489 15.3317 7.39062 15.3248 7.39623 15.3178L6.811 14.8488ZM6.64 15.2668L5.89146 15.2179L5.8908 15.2321L6.64 15.2668ZM6.5 18.2898L5.7508 18.2551C5.74908 18.2923 5.75013 18.3296 5.75396 18.3667L6.5 18.2898ZM7.287 18.9768L7.31152 19.7264C7.36154 19.7247 7.41126 19.7181 7.45996 19.7065L7.287 18.9768ZM10.287 18.2658L10.46 18.9956L10.4716 18.9927L10.287 18.2658ZM10.672 18.0218L11.2506 18.4991L11.2571 18.491L10.672 18.0218ZM17.2971 10.959C17.5562 10.6358 17.5043 10.1638 17.1812 9.90466C16.8581 9.64552 16.386 9.69742 16.1269 10.0206L17.2971 10.959ZM12.1269 7.02052C11.8678 7.34365 11.9196 7.81568 12.2428 8.07484C12.5659 8.33399 13.0379 8.28213 13.2971 7.95901L12.1269 7.02052ZM14.3 5.50976L14.8851 5.97901C14.8949 5.96672 14.9044 5.95412 14.9135
             5.94123L14.3 5.50976ZM15.929 5.18976L16.4088 4.61332C16.3849 4.59344 16.3598 4.57507 16.3337 4.5583L15.929 5.18976ZM18.166 7.05176L18.6968 6.52192C18.6805 6.50561 18.6635 6.49007 18.6458 6.47532L18.166 7.05176ZM18.5029 7.87264L19.2529 7.87676V7.87676L18.5029 7.87264ZM18.157 8.68976L17.632 8.15412C17.6108 8.17496 17.5908 8.19704 17.5721 8.22025L18.157 8.68976ZM16.1271 10.0203C15.8678 10.3433 15.9195 10.8153 16.2425 11.0746C16.5655 11.3339 17.0376 11.2823 17.2969 10.9593L16.1271 10.0203ZM13.4537 7.37862C13.3923 6.96898 13.0105 6.68666 12.6009 6.74805C12.1912 6.80943 11.9089 7.19127 11.9703 7.60091L13.4537 7.37862ZM16.813 11.2329C17.2234 11.1772 17.5109 10.7992 17.4552 10.3888C17.3994 9.97834 17.0215 9.69082 16.611 9.74659L16.813 11.2329ZM12.1238 7.02072L6.22577 14.3797L7.39623 15.3178L13.2942 7.95881L12.1238 7.02072ZM6.24297 14.359C6.03561 14.5995 5.91226 14.9011 5.89159 15.218L7.38841 15.3156C7.38786 15.324 7.38457 15.3321 7.37903 15.3385L6.24297 14.359ZM5.8908 15.2321L5.7508 18.2551L7.2492 18.3245L7.3892 15.3015L5.8908 15.2321ZM5.75396 18.3667C5.83563 19.1586 6.51588 19.7524 7.31152 19.7264L7.26248 18.2272C7.25928 18.2273 7.25771 18.2268 7.25669 18.2264C7.25526 18.2259 7.25337 18.2249 7.25144 18.2232C7.2495 18.2215 7.24825 18.2198 7.24754 18.2185C7.24703 18.2175 7.24637 18.216 7.24604 18.2128L5.75396 18.3667ZM7.45996 19.7065L10.46 18.9955L10.114 17.536L7.11404 18.247L7.45996 19.7065ZM10.4716 18.9927C10.7771 18.9151 11.05 18.7422 11.2506 18.499L10.0934 17.5445C10.0958 17.5417 10.0989 17.5397 10.1024 17.5388L10.4716 18.9927ZM11.2571 18.491L17.2971 10.959L16.1269 10.0206L10.0869 17.5526L11.2571 18.491ZM13.2971 7.95901L14.8851 5.97901L13.7149 5.04052L12.1269 7.02052L13.2971 7.95901ZM14.9135 5.94123C15.0521 5.74411 15.3214 5.6912 15.5243 5.82123L16.3337 4.5583C15.4544 3.99484 14.2873 4.2241 13.6865 5.0783L14.9135 5.94123ZM15.4492 5.7662L17.6862 7.6282L18.6458 6.47532L16.4088 4.61332L15.4492 5.7662ZM17.6352 7.58161C17.7111 7.6577 17.7535 7.761 17.7529 7.86852L19.2529 7.87676C19.2557 7.36905 19.0555 6.88127 18.6968 6.52192L17.6352 7.58161ZM17.7529 7.86852C17.7524 7.97604 17.7088 8.07886 17.632 8.15412L18.682 9.22541C19.0446 8.87002 19.2501 8.38447 19.2529 7.87676L17.7529 7.86852ZM17.5721 8.22025L16.1271 10.0203L17.2969 10.9593L18.7419 9.15928L17.5721 8.22025ZM11.9703 7.60091C12.3196 9.93221 14.4771 11.5503 16.813 11.2329L16.611 9.74659C15.0881 9.95352 13.6815 8.89855 13.4537 7.37862L11.9703 7.60091Z"></path></svg>
                 </div>
 
@@ -56,7 +56,7 @@ const outputElementOrig = htmlToElement(`
 
                 <span class="not-icon" style="flex: 1 1 0px"></span>
 
-                <div class="delete no-select" title="Удалить"> 
+                <div class="delete no-select" title="Удалить">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                         <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path>
                     </svg>
@@ -76,14 +76,12 @@ function insertPopup(par, onTop) {
     par.append(el);
     if(onTop) el.setAttribute('data-anchor', 'top');
 
-    return { 
-        element: el, 
-        popup: el.querySelector('.popup'), 
+    return {
+        element: el,
+        popup: el.querySelector('.popup'),
         safeZone: el.querySelector('.safe-zone')
     };
 }
-
-let elements__new_calendar_1;
 
 async function createImage(width, ifw, doc, retOrig) {
     for(let i = 0; i < ifw.length; i++) if(ifw[i].width === width) return retOrig ? ifw[i].img : ifw[i].url;
@@ -100,7 +98,7 @@ function updateUserdataF_elements(userdata, ...params) { try { try {
     return (...params2) => { try { try {
         func(...userdata, ...params2);
     } catch(e) { console.error(e); } } catch(e) {} }
-} catch(e) { console.error(e); } } catch(e) {} 
+} catch(e) { console.error(e); } } catch(e) {}
     return () => { console.error('no funcion defined'); };
 }
 
@@ -109,7 +107,7 @@ function addClick_elements(el, name, func, usedFunc, useErrorFunc) {
         el.removeAttribute('data-anim');
         setTimeout(_ => el.setAttribute('data-anim', isError ? 'err' : 'ok'));
     }
-    addClick(el, _ => func().then(_ => { 
+    addClick(el, _ => func().then(_ => {
         iconAnim(el);
         if(name) usedFunc(name);
     }, e => {
@@ -130,7 +128,6 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
     const imagePromise = createImage(defWidth, imagesForWidth, doc, false);
     const fileUrl = window.URL.createObjectURL(new Blob([copy(doc)], { type: 'application/pdf' }));
     let settingsPopupId, calendarHintPopupId;
-    let closeCalendarHintPopup = () => {};
 
     const outputElement = createOutputElement();
     const settingsEl = outputElement.querySelector('.settings');
@@ -160,7 +157,6 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         settingsPopupId = registerPopup(popupEl)
         popupAddHoverClick(settingsPopupId, settingsEl.firstElementChild, (pressed) => settingsEl.setAttribute('data-pressed', pressed))
         addOpenedArgumentToElement(settingsPopupId, 'settings', outputElement)
-        popupList[settingsPopupId].onStateChange = () => closeCalendarHintPopup(); 
         return popupEl.element.querySelector('input');
     })();
 
@@ -173,13 +169,12 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
     editParams.filename = name;
     const storageId = "parms" + String(Date.now());
     sessionStorage.setItem(storageId, JSON.stringify(editParams));
-    
+
 
     if(!hideName) nameEl.textContent = name;
     widthInputEl.value = defWidth;
 
     addClick2(viewPdfEl, 'vpdf', async() => {
-        closeCalendarHintPopup();
         const tab = window.open();
         if(tab == null) {
             downloadUrl(fileUrl, name + '.pdf');
@@ -188,7 +183,6 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         tab.location.href = fileUrl;
     })
     addClick2(viewImgEl, 'vimg', async() => {
-        closeCalendarHintPopup();
         const img = await getImage();
         const tab = window.open();
         if(tab == null) {
@@ -198,11 +192,9 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         tab.location.href = img;
     })
     addClick2(downloadImgEl, 'dimg', async() => {
-        closeCalendarHintPopup();
         downloadUrl(await getImage(), name + '.png');
     })
     addClick2(copyImgEl, 'cimg', async() => {
-        closeCalendarHintPopup();
         try {
             const img = await getImage(true);
             const obj = {};
@@ -215,7 +207,6 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         }
     })
     addClick2(editEl, null, async() => {
-        closeCalendarHintPopup();
         window.open("./fix.html" + "?sid=" + storageId);
     })
     addClick2(delEl, null, async() => {
@@ -226,7 +217,7 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         el.style.animation = null;
         el.style.animationDirection = 'reverse';
         el.style.animationDuration = '125ms';
-        el.addEventListener('animationend', _ => { 
+        el.addEventListener('animationend', _ => {
             parentElement.removeChild(el);
             unregisterPopup(settingsPopupId);
             if(calendarHintPopupId) unregisterPopup(calendarHintPopupId);
@@ -237,32 +228,8 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         })
     })
     addClick2(calendarEl, null, async() => {
-        closeCalendarHintPopup()
         window.open("./calendar.html" + "?sid=" + storageId);
     })
-
-    if(elements__new_calendar_1 == undefined) elements__new_calendar_1 = localStorage.getItem('elements__new_calendar_1');
-    if(!elements__new_calendar_1) try {
-        const popup = insertPopup(calendarEl, true);
-        const popupId = registerPopup(popup);
-        calendarHintPopupId = popupId;
-        popup.popup.innerHTML = "<span style='color: var(--error-color)'>Новое!</span>&nbsp;Экспорт в&nbsp;календарь";
-        popup.popup.classList.add('popup-no-default-style');
-        popup.popup.classList.add('hint-popup');
-        addOwner('main', popupId);
-        addOpenedArgumentToElement(popupId, 'calendar-hint', outputElement);
-        addClick(popup.popup, (e) => {
-             closeCalendarHintPopup();
-             e.stopPropagation();
-        })
-        closeCalendarHintPopup = () => {
-            try { popup.popup.blur() } catch(e) { console.error(e) }
-            try { localStorage.setItem('elements__new_calendar_1', '1') } catch(e) { console.error(e) };
-            try { updatePopup('main', popupId, stateHidden); } catch(e) { console.error(e) };
-        }
-        updatePopup('main', popupId, stateShown);
-        elements__new_calendar_1 = true;
-    } catch(e) { console.error(e); }
 
     imageEl.src = await imagePromise;
 
@@ -278,7 +245,7 @@ const css = `
     position: relative;
 
     display: flex;
-    justify-content: center; 
+    justify-content: center;
 
     will-change: transform; /*chrome bug*/
     transition: opacity 300ms, transform 300ms;
@@ -303,9 +270,9 @@ const css = `
 .popup-container > * { pointer-events: none; }
 
 .popup-container > * > .safe-zone {
-    padding: 2rem; 
-    margin-top: -2rem; 
-    margin-bottom: -2rem; 
+    padding: 2rem;
+    margin-top: -2rem;
+    margin-bottom: -2rem;
 }
 
 .popup-container > * > .safe-zone > .popup {
@@ -364,7 +331,7 @@ const css = `
     animation-duration: 200ms;
 
     /*https://stackoverflow.com/questions/26099421/css-animation-fill-mode-and-z-index-issue*/
-    /*This is the closest reason for this to happen      
+    /*This is the closest reason for this to happen
     https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_positioned_layout/Understanding_z-index/Stacking_context#:~:text=Element%20with%20an%20opacity%20value%20less%20than%201%20(See%20the%20specification%20for%20opacity).
     cool behavior! even if the animation uses opacity only once, even if animates from 1 to 1,
     the browser still creates stacking context for the element.
@@ -372,7 +339,7 @@ const css = `
       @keyframes aaa { from{ opacity: 1 } to { opacity: 1 } }
       @keyframes AAA { from{} to { opacity: 1 } }
     */
-    /*animation-fill-mode: both*/ 
+    /*animation-fill-mode: both*/
 }
 
 .output-cont > .name {
@@ -389,7 +356,7 @@ const css = `
 .output-cont .output > * { grid-row: 1; grid-column: 1; }
 
 .output-cont .out-overlay {
-    width: 100%; height: 100%; 
+    width: 100%; height: 100%;
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -397,8 +364,8 @@ const css = `
 
 .output-cont .out-overlay > .main-action {
     flex: 1 1 auto;
-    display: flex; 
-    justify-content: center; 
+    display: flex;
+    justify-content: center;
     align-items: center;
 }
 
@@ -481,7 +448,7 @@ const css = `
     justify-content: center;
 }
 
-.output-cont .out-overlay { 
+.output-cont .out-overlay {
     opacity: 0;
     transition: opacity 200ms;
 }
@@ -491,7 +458,7 @@ const css = `
 .output-cont:has(:focus-visible) > .output > .out-overlay { opacity: 1; }
 
 @media (pointer: fine) {
-    .output-cont .out-overlay { 
+    .output-cont .out-overlay {
         background: var(--outputoverlay-color);
     }
 }
