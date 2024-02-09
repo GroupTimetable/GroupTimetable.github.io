@@ -31,7 +31,7 @@ loadDom.then(_ => {
     dom.fileInfoEl = qs('file-info')
     dom.filenameEl = qs('filename')
     dom.fileTypeEl = qs('file-type')
-    dom.deleteFile = qs('delete-file')
+    dom.fileIsPdfEl = qs('is-pdf')
     dom.outputsEl = qs('outputs')
     dom.dataAccept = qs('data-acc')
     dom.dataDecline = qs('data-dec')
@@ -445,6 +445,22 @@ function nameFixup(name) {
     else return newName;
 }
 
+const pdfMagicNumbers = [0x25, 0x50, 0x44, 0x46]; // %PDF
+function isPDF(arrayBuffer) {
+    try {
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        for (let i = 0; i < pdfMagicNumbers.length; i++) {
+            if (uint8Array[i] !== pdfMagicNumbers[i]) return false;
+        }
+        return true;
+    }
+    catch(e) {
+        console.error(e)
+        return false;
+    }
+}
+
 async function loadFromListFiles(list) {
     if(list.length === 0) { //if you drop files fast enough sometimes files list would be empty
         if(!processing) updError({ msg: 'Не удалось получить файлы. Попробуйте ещё раз', progress: 1 });
@@ -476,20 +492,14 @@ async function loadFromListFiles(list) {
     updateFilenameDisplay('Файл' + (list.length === 1 ? '' : ' №' + (i+1)) + ': ', res.filename, lastFileDataUrl);
     URL.revokeObjectURL(fileDataUrl);
 
+    dom.fileIsPdfEl.style.visibility = isPDF(currentFileContent) ? 'hidden' : ''
+
     if(!processing) {
         const name = dom.groupInputEl.value.trim()
         if(name == '') updInfo({ msg: 'Введите имя группы (ИМгр-123, имгр123 и т.п.)' })
         else updInfo({ msg: 'Файл загружен' })
     }
 }
-
-loadDom.then(() => {
-    dom.deleteFile.addEventListener('click', () => {
-        updateFilenameDisplay();
-        currentFileContent = undefined;
-        currentFilename = undefined;
-    })
-})
 
 function updateFilenameDisplay(fileType, filename, href) {
     if(filename == undefined) {
@@ -500,7 +510,6 @@ function updateFilenameDisplay(fileType, filename, href) {
         dom.fileTypeEl.innerText = fileType;
         dom.filenameEl.innerText = filename;
         dom.filenameEl.href = href;
-        dom.deleteFile.style.pointer = '';
     }
 }
 

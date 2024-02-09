@@ -37,7 +37,7 @@ body {
     font-family: sans-serif;
     color: var(--hint-color);
     font-size: 1.9rem;
-}
+
 
 #file-info > .content {
     transform: scaleY(0);
@@ -69,6 +69,22 @@ body {
     stroke: var(--secondary-text-color);
     stroke-width: 1.7;
     stroke-linecap: round;
+}
+
+#is-pdf {
+    position: relative;
+    color: #ffd100;
+    font-weight: bold;
+}
+
+#is-pdf::before {
+    content: '';
+    position: absolute;
+    top: -0.75em;
+    bottom: -0.75em;
+    left: -1.25em;
+    right: -1.25em;
+    cursor: help;
 }
 
 #status {
