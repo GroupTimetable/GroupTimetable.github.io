@@ -279,6 +279,10 @@ function showOverlay() {
 function checkShouldProcess() {
     if(processing) return;
 
+    if(currentFileContent == undefined) {
+        updError({ msg: 'Для продолжения требуется файл расписания', progress: 1 })
+        return
+    }
     const name = dom.groupInputEl.value.trim()
     if(name == '') {
         updError({ msg: 'Для продолжения требуется имя группы', progress: 1 })
@@ -649,45 +653,16 @@ function __start(mode, folder, ...args) {
     })
 }
 
-async function loadFileFromDatabase(groupName) {
-    let dbInfo;
-    try { dbInfo = await findGroupInfo(groupName); }
-    catch(e) {
-        if(e == 1) e = 'Группа `' + groupName + '` не найдена в базе, проверьте правильность написания или попробуйте загрузить файл своего института';
-        else if(e == 2) e = 'Институт группы `' + groupName + '` не найден в базе (внутренняя ошибка)';
-
-        updateUserdataF('regGeneralError')('' + e)
-        throw e;
-    }
-
-    updateFilenameDisplay('Ссылка: ', dbInfo.name, dbInfo.url);
-
-    const url = `https://api.allorigins.win/raw?url=` + encodeURIComponent(`https://corsproxy.io/?` + dbInfo.url)
-    const result = await fetch(url).catch(error => {
-        throw 'Не удалось загрузить файл группы `' + groupName + '` института `' + dbInfo.name + '` по ссылке `' + url + '`: `' + error + '`';
-    });
-    if(!result.ok) throw 'Не удалось загрузить файл группы `' + groupName + '` института `' + dbInfo.name + '` по ссылке `' + url + '`, статус: ' + result.status;
-
-    const buf = await result.arrayBuffer();
-
-    currentFilename = dbInfo.name;
-    currentFileContent = buf;
-}
-
 async function processPDF() {
-    const loadFile = currentFileContent == undefined;
-
-    const stagesC = 4 + (loadFile ? 1 : 0);
+    const stagesC = 4;
     let stage = 0;
     const ns = () => { return ++stage / (stagesC+1) }
 
     updInfo({ msg: 'Ожидаем зависимости', progress: 0 })
-    const dependencies = [
+    Promise.all([
         loadSchedule, loadCommon, loadElements, loadPopups, createGenSettings,
         loadPdfjs, loadPdflibJs, loadFontkit
-    ];
-    if(loadFile) dependencies.push(loadDatabase);
-    await Promise.all(dependencies).catch(e => { throw "не удалось загрузить зависомость " + e + ". Попробуйте перезагрузить страницу" })
+    ]).catch(e => { throw "не удалось загрузить зависомость " + e + ". Попробуйте перезагрузить страницу" })
 
     updInfo({ msg: 'Начинаем обработку', progress: ns() });
     const nameS = dom.groupInputEl.value.trim().split('$');
@@ -702,11 +677,6 @@ async function processPDF() {
     const drawBorder = genSettings.drawBorder;
     const dowOnTop = genSettings.dowOnTop;
     const scheme = readScheduleScheme(readElementText(genSettings.scheduleLayoutEl));
-
-    if(loadFile) {
-        updInfo({ msg: 'Загружаем файл расписания (долго!)', progress: ns() });
-        await loadFileFromDatabase(nameFixed);
-    }
 
     const filename = currentFilename;
 

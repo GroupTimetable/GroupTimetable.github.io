@@ -37,29 +37,9 @@ const database = db.getDatabase(app);
 
 const groupsData = {};
 
-async function findGroupInfo_0(groupName) {
-    const snapshot = await db.get(db.ref(database, 'groups/' + groupName));
-    if(!snapshot.exists()) return { rej: 1 };
-    const instIndex = snapshot.val();
-    const instData = await db.get(db.ref(database, 'institutes/' + instIndex));
-    if(!instData.exists()) return { rej: 2 };
-    return { res: instData.val() };
-}
-
-window.findGroupInfo = async(groupName) => {
-    groupName = '' + groupName;
-
-    let res;
-    if(groupName in groupsData) res = groupsData[groupName];
-    else res = groupsData[groupName] = await findGroupInfo_0(groupName);
-
-    if('rej' in res) throw structuredClone(res.rej);
-    else return structuredClone(res.res);
-};
-
 const regFunctions = {}
 
-regFunctions.regGeneralError = (userUuid, randName, errorDescription) => { 
+regFunctions.regGeneralError = (userUuid, randName, errorDescription) => {
     if(!userUuid) {
         console.error('no user uuid for', errorDescription)
         return
@@ -70,13 +50,13 @@ regFunctions.regGeneralError = (userUuid, randName, errorDescription) => {
             act: 'err', err: errorDescription
         });
         return
-    } catch(e) { console.error(e) } 
+    } catch(e) { console.error(e) }
 
     //      it doesn't matter, right?   V
     console.error('data not sent for', userUuid, errorDescription)
 };
 
-regFunctions.regDocumentCreated = (userUuid, randName, documentName, groupName) => { 
+regFunctions.regDocumentCreated = (userUuid, randName, documentName, groupName) => {
     if(!userUuid) {
         console.error('no user uuid for', documentName, groupName)
         return
@@ -87,7 +67,7 @@ regFunctions.regDocumentCreated = (userUuid, randName, documentName, groupName) 
             act: 'crt', doc: documentName, grp: groupName, ua: userAgent
         });
         return
-    } catch(e) { console.error(e) } 
+    } catch(e) { console.error(e) }
 
     //      it doesn't matter, right?   V
     console.error('data not sent for', userUuid, documentName, groupName)
@@ -98,16 +78,16 @@ regFunctions.regDebugInfo = (userUuid, randName) => {
 
     for(let i = 0; i < 3; i++) try {
         db.set(db.ref(database, 'users/' + userUuid + '/' + randName), {
-            act: 'dbg', ua: userAgent                     
+            act: 'dbg', ua: userAgent
         });
         return true;
-    } catch(e) { 
+    } catch(e) {
         console.error(e);
-    } 
+    }
     return false;
 }
 
-regFunctions.regDocumentUsed = (userUuid, randName, documentName, groupName, useType) => { 
+regFunctions.regDocumentUsed = (userUuid, randName, documentName, groupName, useType) => {
     if(!userUuid) {
         console.error('no user uuid for', documentName, groupName)
         return
@@ -118,13 +98,13 @@ regFunctions.regDocumentUsed = (userUuid, randName, documentName, groupName, use
             act: 'use', doc: documentName, grp: groupName, utp: useType, ua: userAgent
         });
         return
-    } catch(e) { console.error(e) } 
+    } catch(e) { console.error(e) }
 
     //      it doesn't matter, right?   V
     console.error('data not sent for', userUuid, documentName, groupName)
 }
 
-regFunctions.regDocumentUseError = (userUuid, randName, documentName, groupName, useType) => { 
+regFunctions.regDocumentUseError = (userUuid, randName, documentName, groupName, useType) => {
     if(!userUuid) {
         console.error('no user uuid for', documentName, groupName)
         return
@@ -135,13 +115,13 @@ regFunctions.regDocumentUseError = (userUuid, randName, documentName, groupName,
             act: 'eus', doc: documentName, grp: groupName, utp: useType, ua: userAgent
         });
         return
-    } catch(e) { console.error(e) } 
+    } catch(e) { console.error(e) }
 
     //      it doesn't matter, right?   V
     console.error('data not sent for', userUuid, documentName, groupName)
 }
 
-regFunctions.regDocumentEdited = (userUuid, randName, documentName, groupName) => { 
+regFunctions.regDocumentEdited = (userUuid, randName, documentName, groupName) => {
     if(!userUuid) {
         console.error('no user uuid for', documentName, groupName)
         return
@@ -152,13 +132,13 @@ regFunctions.regDocumentEdited = (userUuid, randName, documentName, groupName) =
             act: 'edt', doc: documentName, grp: groupName, ua: userAgent
         });
         return
-    } catch(e) { console.error(e) } 
+    } catch(e) { console.error(e) }
 
     //      it doesn't matter, right?   V
     console.error('data not sent for', userUuid, documentName, groupName)
 }
 
-regFunctions.regDocumentError = (userUuid, randName, documentName, groupName, error) => { 
+regFunctions.regDocumentError = (userUuid, randName, documentName, groupName, error) => {
     if(!userUuid) {
         console.error('no user uuid for', documentName, groupName)
         return
@@ -169,7 +149,7 @@ regFunctions.regDocumentError = (userUuid, randName, documentName, groupName, er
             act: 'error', doc: documentName, grp: groupName, err: error, ua: userAgent
         });
         return
-    } catch(e) { console.error(e) } 
+    } catch(e) { console.error(e) }
 
     //      it doesn't matter, right?   V
     console.error('data not sent for', userUuid, documentName, groupName, error)
@@ -188,12 +168,12 @@ function get_Cookie() {
 
 //used in help-page
 function updateUserdata() {
-    try { 
-        const userData = JSON.parse(localStorage.getItem('userdata')) 
+    try {
+        const userData = JSON.parse(localStorage.getItem('userdata'))
         if(userData != undefined) return [userData, false]
     } catch(e) { console.error(e) }
 
-    try { 
+    try {
         const userData = get_Cookie();
         if(userData != undefined) return [userData, true]
     } catch(e) { console.error(e) }
@@ -213,8 +193,8 @@ const userData = (_ => {
         updated = true
     }
 
-    if(updated) try { 
-        localStorage.setItem('userdata', JSON.stringify(userData)) 
+    if(updated) try {
+        localStorage.setItem('userdata', JSON.stringify(userData))
         document.cookie = '' //TODO: remove sometime later
     } catch(e) { console.error(e) }
 
@@ -231,7 +211,7 @@ window.getUserdataAllowed = () => {
     return !userData.noUserdata
 }
 
-window.updateUserdataF = (userdataFuncName, forceSend) => { 
+window.updateUserdataF = (userdataFuncName, forceSend) => {
     try{ try {
         const func = regFunctions[userdataFuncName]
         if(!func) throw 'Function not found'
@@ -250,7 +230,7 @@ window.updateUserdataF = (userdataFuncName, forceSend) => {
             return result;
         } catch(e) { console.error(e) } } catch(e) {} }
     } catch(e) { console.error(e); console.error(userdataFuncName) }
-    } catch(e) {} 
- 
+    } catch(e) {}
+
     return () => {}
 }
