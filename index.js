@@ -306,16 +306,13 @@ loadDom.then(_ => {
     updInfo({ msg: 'Вы можете создать изображение или календарь занятий своей группы из общего расписания' })
 
     const inputCharRegex = /[\p{L}0-9\-]/u
-    document.addEventListener('keydown', function(event) {
+    document.body.addEventListener('keydown', function(event) {
         if (
             event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey
             && inputCharRegex.test(event.key)
         ) {
             const inputField = dom.groupInputEl
-
-            if (document.activeElement !== inputField) {
-                inputField.focus();
-            }
+            inputField.focus();
             inputField.value += event.key;
             event.preventDefault();
         }
@@ -496,9 +493,16 @@ async function loadFromListFiles(list) {
 
     if(!processing) {
         const name = dom.groupInputEl.value.trim()
-        if(name == '') updInfo({ msg: 'Введите имя группы (ИМгр-123, имгр123 и т.п.)' })
+        if(name == '') {
+            updInfo({ msg: 'Введите имя группы (ИМгр-123, имгр123 и т.п.)' })
+            try {
+                dom.groupInputEl.focus({ preventScroll: true })
+            }
+            catch(e) { console.log(e) }
+        }
         else updInfo({ msg: 'Файл загружен' })
     }
+
 }
 
 function updateFilenameDisplay(fileType, filename, href) {

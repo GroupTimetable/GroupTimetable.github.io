@@ -37,7 +37,7 @@ body {
     font-family: sans-serif;
     color: var(--hint-color);
     font-size: 1.9rem;
-
+}
 
 #file-info > .content {
     transform: scaleY(0);
