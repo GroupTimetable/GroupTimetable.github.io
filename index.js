@@ -298,14 +298,32 @@ function checkShouldProcess() {
         })
 }
 
-loadDom.then(_ => { updInfo({ msg: 'Вы можете создать изображение или календарь занятий своей группы из общего расписания' }) })
+loadDom.then(_ => {
+    updInfo({ msg: 'Вы можете создать изображение или календарь занятий своей группы из общего расписания' })
+
+    const inputCharRegex = /[\p{L}0-9\-]/u
+    document.addEventListener('keydown', function(event) {
+        if (
+            event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey
+            && inputCharRegex.test(event.key)
+        ) {
+            const inputField = dom.groupInputEl
+
+            if (document.activeElement !== inputField) {
+                inputField.focus();
+            }
+            inputField.value += event.key;
+            event.preventDefault();
+        }
+        else if (event.keyCode == 13) {
+            checkShouldProcess()
+        }
+    });
+})
 
 Promise.all([loadDom, loadCommon]).then(_ => {
     dom.groupInputEl.addEventListener('keyup', e => {
         if (e.keyCode == 13) checkShouldProcess()
-    })
-    dom.groupInputEl.addEventListener('input', e => {
-        if(dom.groupInputEl.value.trim() !== '') document.body.setAttribute('data-group-name-added', '');
     })
     addClick(dom.startButtonEl, _ => {
         checkShouldProcess()
