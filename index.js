@@ -6,7 +6,7 @@ const loadCommon   = files[4][0];
 const loadElements = files[5][0];
 const loadPopups   = files[6][0];
 const loadDatabase = files[7][0];
-//const loadIndex    = files[8][0]; 
+//const loadIndex    = files[8][0];
 const loadDom = domPromise;
 
 loadPdfjs.then(arr => {
@@ -21,7 +21,7 @@ const dom = {}
 loadDom.then(_ => {
     const qs = document.getElementById.bind(document)
 
-    dom.groupInputEl = qs('group-input') 
+    dom.groupInputEl = qs('group-input')
     dom.startButtonEl = qs('start-button')
     dom.groupBarEl = qs('group-bar')
     dom.moveWithBorderEls = document.body.querySelectorAll('.move-with-border')
@@ -185,7 +185,7 @@ const createGenSettings = Promise.all([loadDom, loadCommon ]).then(_ => {
     `)
 
     genSettings.popupEl = genPopupHTML
-    genSettings.scheduleLayoutEl = genPopupHTML.querySelector('.days-scheme') 
+    genSettings.scheduleLayoutEl = genPopupHTML.querySelector('.days-scheme')
     genSettings.heightEl = genPopupHTML.querySelector('.height-input')
     genSettings.borderSizeEl = genPopupHTML.querySelector('.border-input')
     genSettings.borderTypeEl = genPopupHTML.querySelector('.border-color')
@@ -197,7 +197,7 @@ const createGenSettings = Promise.all([loadDom, loadCommon ]).then(_ => {
     ]
     let curSettings = 0;
 
-    function updBorderCol(value) { 
+    function updBorderCol(value) {
         genSettings.drawBorder = value
         genSettings.borderTypeEl.innerText = value ? 'заливка' : 'отступ'
     }
@@ -269,7 +269,7 @@ function showOverlay() {
 
     window.addEventListener("dragover", function (e) { e.preventDefault(); });
 
-    window.addEventListener('drop', function(ev) { 
+    window.addEventListener('drop', function(ev) {
         ev.preventDefault();
         hideOverlay()
         loadFromListFiles(ev.dataTransfer.files)
@@ -301,8 +301,8 @@ function checkShouldProcess() {
 loadDom.then(_ => { updInfo({ msg: 'Вы можете создать изображение или календарь занятий своей группы из общего расписания' }) })
 
 Promise.all([loadDom, loadCommon]).then(_ => {
-    dom.groupInputEl.addEventListener('keydown', e => {
-        if (e.key === "Enter") checkShouldProcess()
+    dom.groupInputEl.addEventListener('keyup', e => {
+        if (e.keyCode == 13) checkShouldProcess()
     })
     dom.groupInputEl.addEventListener('input', e => {
         if(dom.groupInputEl.value.trim() !== '') document.body.setAttribute('data-group-name-added', '');
@@ -328,7 +328,7 @@ Promise.all([loadDom, loadCommon]).then(_ => {
 function resizeProgressBar(progress, immediately) {
     assertDomLoaded()
     const w = dom.groupBarEl.offsetWidth
-    const b = dom.groupBarEl.offsetHeight * 0.5 
+    const b = dom.groupBarEl.offsetHeight * 0.5
 
     let newW;
     if(progress === undefined) newW = 0;
@@ -375,7 +375,7 @@ function updStatus() { try {
         progressBarEl.style.backgroundColor = 'var(--primary-color)'
         if(prevProgress !== s.progress) resizeProgressBar(s.progress)
 
-        if(!s.msg || s.msg.trim() === '') { 
+        if(!s.msg || s.msg.trim() === '') {
             statusEl.innerHTML = '\u200c'
             statusEl.style.opacity = 0
         }
@@ -638,14 +638,14 @@ async function loadFileFromDatabase(groupName) {
         if(e == 1) e = 'Группа `' + groupName + '` не найдена в базе, проверьте правильность написания или попробуйте загрузить файл своего института';
         else if(e == 2) e = 'Институт группы `' + groupName + '` не найден в базе (внутренняя ошибка)';
 
-        updateUserdataF('regGeneralError')('' + e) 
+        updateUserdataF('regGeneralError')('' + e)
         throw e;
     }
 
     updateFilenameDisplay('Ссылка: ', dbInfo.name, dbInfo.url);
 
     const url = `https://api.allorigins.win/raw?url=` + encodeURIComponent(`https://corsproxy.io/?` + dbInfo.url)
-    const result = await fetch(url).catch(error => { 
+    const result = await fetch(url).catch(error => {
         throw 'Не удалось загрузить файл группы `' + groupName + '` института `' + dbInfo.name + '` по ссылке `' + url + '`: `' + error + '`';
     });
     if(!result.ok) throw 'Не удалось загрузить файл группы `' + groupName + '` института `' + dbInfo.name + '` по ссылке `' + url + '`, статус: ' + result.status;
@@ -657,7 +657,7 @@ async function loadFileFromDatabase(groupName) {
 }
 
 async function processPDF() {
-    const loadFile = currentFileContent == undefined; 
+    const loadFile = currentFileContent == undefined;
 
     const stagesC = 4 + (loadFile ? 1 : 0);
     let stage = 0;
@@ -665,7 +665,7 @@ async function processPDF() {
 
     updInfo({ msg: 'Ожидаем зависимости', progress: 0 })
     const dependencies = [
-        loadSchedule, loadCommon, loadElements, loadPopups, createGenSettings, 
+        loadSchedule, loadCommon, loadElements, loadPopups, createGenSettings,
         loadPdfjs, loadPdflibJs, loadFontkit
     ];
     if(loadFile) dependencies.push(loadDatabase);
@@ -740,19 +740,19 @@ async function processPDF() {
                 )
 
                 updInfo({ msg: 'Готово', warning: warningText, progress: ns() })
-                updateUserdataF('regDocumentCreated')(...userdata) 
+                updateUserdataF('regDocumentCreated')(...userdata)
                 return
             }
             catch(e) {
                 const add = "[название группы] = " + i + '/' + contLength
                 if(Array.isArray(e)) { e.push(add); throw e }
-                else throw [e, add] 
+                else throw [e, add]
             }
         }
         catch(e) {
             const add = "[страница] = " + j + '/' + orig.numPages
             if(Array.isArray(e)) { e.push(add); throw e }
-            else throw [e, add] 
+            else throw [e, add]
 
         }
 
@@ -760,7 +760,7 @@ async function processPDF() {
         if(closestName != undefined) cloS = ", возможно вы имели в виду `" + closestName + "`"
         throw ["имя `" + name + "` не найдено" + cloS, "количество страниц = " + orig.numPages];
     } catch(e) {
-        updateUserdataF('regDocumentError')(...userdata, e) 
+        updateUserdataF('regDocumentError')(...userdata, e)
         throw e
     } finally { await destroyOrig() }
 }
