@@ -783,11 +783,11 @@ async function processPDF(userdata) {
             const warningText = makeWarningText(schedule, scheme, bigFields)
             if(__debug_start && __debug_mode === 0) { __debug_schedule_parsing_results[name] = schedule; if(bigFields.length != 0) __debug_warningOn.push([name, warningText]); return }
             updInfo({ msg: 'Создаём PDF файл расписания', progress: 0.3 })
-            const [width, doc] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
+            const { doc, w, h } = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
             updInfo({ msg: 'Создаём предпросмотр', progress: 0.4 })
             const outFilename = filename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
             await createAndInitOutputElement(
-                doc, dom.outputsEl, outFilename, width,
+                doc, w, h, dom.outputsEl, outFilename,
                 { rowRatio, scheme, schedule, drawBorder, dowOnTop, borderFactor, dates },
                 userdata
             )

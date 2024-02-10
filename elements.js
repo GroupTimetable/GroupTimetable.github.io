@@ -83,11 +83,32 @@ function insertPopup(par, onTop) {
     };
 }
 
-async function createImage(width, ifw, doc, retOrig) {
+async function renderPDF(pageP, width) {
+    const page = await pageP
+
+    const m1 = (num) => { if(num > 1 && num < Infinity) return num; else return 1 }
+    const viewport = page.getViewport({ scale: m1(width) / page.getViewport({scale:1}).width })
+
+    const [canvas, getBlob] = createOffscreenCanvas(
+        m1(Math.floor(viewport.width)),
+        m1(Math.floor(viewport.height))
+    );
+    const context = canvas.getContext("2d");
+
+    const renderContext = {
+        canvasContext: context,
+        transform: null, viewport,
+    };
+
+    await page.render(renderContext).promise;
+    return await getBlob({ type: 'image/png', quality: 1 });
+}
+
+async function createImage(width, ifw, pageP, retOrig) {
     for(let i = 0; i < ifw.length; i++) if(ifw[i].width === width) return retOrig ? ifw[i].img : ifw[i].url;
 
     if(ifw.length > 4) URL.revokeObjectURL(ifw.pop().img);
-    const img = await renderPDF(copy(doc), width);
+    const img = await renderPDF(pageP, width);
     const url = URL.createObjectURL(img);
     ifw.unshift({ width, img, url });
     return retOrig ? img : url;
@@ -117,16 +138,23 @@ function addClick_elements(el, name, func, usedFunc, useErrorFunc) {
     }));
 }
 
-async function createAndInitOutputElement(doc, parentElement, name, defWidth, editParams, userdata) {
+var lastTaskDestroy
+
+async function createAndInitOutputElement(doc, width, height, parentElement, name, editParams, userdata) {
     let hideName = false;
     try { if('hideName' in name) {
         hideName = true;
         name = name.nameS
     } } catch(e) { /*I don't care that name is string*/ }
 
+    // rendering preview in default resolution is faster overall since
+    // otherwise we would need to render 2 images
+    const pdfTask = pdfjsLib.getDocument(copy(doc));
+    const pageP = (async(task) => await (await task.promise).getPage(1))(pdfTask)
+
     const imagesForWidth = [];
-    const imagePromise = createImage(defWidth, imagesForWidth, doc, false);
-    const fileUrl = window.URL.createObjectURL(new Blob([copy(doc)], { type: 'application/pdf' }));
+    const imagePromise = createImage(width, imagesForWidth, pageP, false);
+    const fileUrl = window.URL.createObjectURL(new Blob([doc], { type: 'application/pdf' }));
     let settingsPopupId, calendarHintPopupId;
 
     const outputElement = createOutputElement();
@@ -160,7 +188,7 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         return popupEl.element.querySelector('input');
     })();
 
-    const getImage = (retOrig) => createImage(Number.parseInt(widthInputEl.value), imagesForWidth, doc, retOrig);
+    const getImage = (retOrig) => createImage(Number.parseInt(widthInputEl.value), imagesForWidth, pageP, retOrig);
     const usedFunc = updateUserdataF_elements(userdata, 'regDocumentUsed');
     const useErrorFunc = updateUserdataF_elements(userdata, 'regDocumentUseError');
     const addClick2 = (el, name, func) => addClick_elements(el, name, func, usedFunc, useErrorFunc);
@@ -172,7 +200,7 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
 
 
     if(!hideName) nameEl.textContent = name;
-    widthInputEl.value = defWidth;
+    widthInputEl.value = width;
 
     addClick2(viewPdfEl, 'vpdf', async() => {
         const tab = window.open();
@@ -218,6 +246,9 @@ async function createAndInitOutputElement(doc, parentElement, name, defWidth, ed
         el.style.animationDirection = 'reverse';
         el.style.animationDuration = '125ms';
         el.addEventListener('animationend', _ => {
+            // https://github.com/mozilla/pdf.js/issues/16777
+            if (lastTaskDestroy == undefined) lastTaskDestroy = pdfTask.destroy();
+            else lastTaskDestroy.then(() => lastTaskDestroy = pdfTask.destroy());
             parentElement.removeChild(el);
             unregisterPopup(settingsPopupId);
             if(calendarHintPopupId) unregisterPopup(calendarHintPopupId);

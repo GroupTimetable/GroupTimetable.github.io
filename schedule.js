@@ -6,7 +6,7 @@ const daysOfWeek = [
     "Пятница",
     "Суббота",
     "Воскресенье"
-]; 
+];
 
 const daysOfWeekLower = daysOfWeek.map(a => a.toLowerCase())
 const daysOfWeekShortened = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
@@ -103,7 +103,7 @@ function findColumnBounds(cont, itemBs, itemI) {
     let avg = 0;
     for(let i = 0; i < spaces.length; i++) avg += spaces[i];
     avg /= spaces.length;
-    while(spaces.length > 1) { 
+    while(spaces.length > 1) {
         let maxI = 0, maxDiff = Math.abs(spaces[0] - avg)
         for(let i = 1; i < spaces.length; i++) {
             const diff = Math.abs(spaces[i] - avg);
@@ -120,7 +120,7 @@ function findColumnBounds(cont, itemBs, itemI) {
         avg /= spaces.length;
     }
 
-    if(avg != undefined) return { l: itemCenter - avg*0.5, r: itemCenter + avg*0.5, t: bs.t, b: bs.b }; 
+    if(avg != undefined) return { l: itemCenter - avg*0.5, r: itemCenter + avg*0.5, t: bs.t, b: bs.b };
     else throw "Невозможно определить вертикальные границы расписания, [имя группы] = " + itemI + "/" + cont.length;
 }
 
@@ -157,7 +157,7 @@ function calcItemBounds(item) {
 
     const op = [[0,0], [0,h], [w,0], [w,h]]
     const a = item.transform[0], b = item.transform[1], c = item.transform[2], d = item.transform[3]
-    
+
     const min = Number.MIN_VALUE, max = Number.MAX_VALUE;
     const bs = { l: max, b: max, r: min, t: min }
     for(let i = 0; i < 4; i++) {
@@ -353,7 +353,7 @@ function makeSchedule(cont, pageView, groupNameI, bigFieldsInclude) {
         const item = cont[i];
         if(item.str.trim() === '') continue;
         const bounds = itemBs[i]
-        const bi = bounds.b, ti = bounds.t; 
+        const bi = bounds.b, ti = bounds.t;
         const li = bounds.l, ri = bounds.r;
         const cxi = 0.5 * (li + ri), cyi = 0.5 * (ti + bi);
         if(!(tableL <= cxi && cxi <= tableR && tableB <= cyi && cyi <= tableT)) continue;
@@ -495,7 +495,7 @@ function drawTextCentered(text, page, font, fontSize, center, precompWidths = un
             widths[i] = textWidth;
         }
     }
-    
+
     const d = descenderAtHeight(font, fontSize);
     const offY = center.y - d + lineHeight*text.length * 0.5;
 
@@ -562,10 +562,10 @@ const textBreak = new (function() {
                     foundPos = cur;
                     break;
                 }
-                                
-                for(startFrom = Math.max(startFrom, base+1); 
+
+                for(startFrom = Math.max(startFrom, base+1);
                     startFrom <= Math.min(str.length-1, base + maxOffset)
-                        && !(startFrom - base >= base - foundPos); 
+                        && !(startFrom - base >= base - foundPos);
                     startFrom++
                 ) if(str[startFrom] === ' ') {
                     foundPos = startFrom++;
@@ -651,7 +651,7 @@ function drawLessonText(lesson, secondWeek, page, font, coord, blockSize, border
         const [text, fontSize, widths] = fitTextBreakLines(t, font, innerSize)
 
         drawTextCentered(
-            text, page, font, fontSize, 
+            text, page, font, fontSize,
             { x: coord.x + blockSize.w*0.5, y: coord.y - blockSize.h*0.5 },
             widths
         );
@@ -696,7 +696,7 @@ function drawTime(lesson, page, font, coord, blockSize, borderWidth) {
     for(let i = 0; i < widths.length; i++) widths[i] *= coeff
 
     drawTextCentered(
-        texts, page, font, fontSize, 
+        texts, page, font, fontSize,
         { x: coord.x + blockSize.w*0.5, y: coord.y - blockSize.h*0.5 },
         widths
     );
@@ -781,7 +781,7 @@ function drawTextWidthinBounds(text, page, font, coord, size, params) {
             const offsetWidth = 0;
             return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, newSize]
         }
-        else if(params.alignRight) { 
+        else if(params.alignRight) {
             const offsetWidth = maxWidth * (1 - padding) - scaledWidth
             return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, newSize]
         }
@@ -798,7 +798,7 @@ function drawTextWidthinBounds(text, page, font, coord, size, params) {
     const y = coord.y + (params.rotated ? -size.h + offsetWidth : -offsetHeight)
 
     if(params.backgroundColor) drawRectangle(page, {
-        x, y, 
+        x, y,
         width: params.rotated ? -th : tw,
         height: params.rotated ? tw : th,
         color: params.backgroundColor
@@ -823,12 +823,12 @@ function drawTextWidthinBounds(text, page, font, coord, size, params) {
 }
 
 function drawDay(
-    page, font, 
-    day, dayI, 
-    outerCoord, groupSize, 
+    page, font,
+    day, dayI,
+    outerCoord, groupSize,
     borderWidth,  innerBorderWidth, drawBorder, dowOnTop
 ) {
-    const borderOffset = (drawBorder 
+    const borderOffset = (drawBorder
         ? Math.max(0, borderWidth - innerBorderWidth)
         : borderWidth + innerBorderWidth) -1/*? border is drawn 1px less than it should ?*/;
     let x = outerCoord.x + borderOffset * 0.5;
@@ -888,34 +888,9 @@ function createOffscreenCanvas(width, height) {
     }
 }
 
-async function renderPDF(doc, width, type = 'image/png', quality = 1) {
-    const pdfTask = pdfjsLib.getDocument(doc); try {
-    const pdf = await pdfTask.promise
-    const page = await pdf.getPage(1)
-
-    const m1 = (num) => { if(num > 1 && num < Infinity) return num; else return 1 }
-    const viewport = page.getViewport({ scale: m1(width) / page.getViewport({scale:1}).width })
-
-    const [canvas, getBlob] = createOffscreenCanvas(
-        m1(Math.floor(viewport.width)),
-        m1(Math.floor(viewport.height))
-    );
-    const context = canvas.getContext("2d");
-
-    const renderContext = {
-        canvasContext: context,
-        transform: null, viewport,
-    };
-    
-    await page.render(renderContext).promise;
-
-    return await getBlob({ type, quality });
-    } finally { await pdfTask.destroy() }
-}
-
 async function getDocument() {
     const pdfDoc = await PDFLib.PDFDocument.create() /*
-        we can't reuse the document and glyph cache because of 
+        we can't reuse the document and glyph cache because of
         library issue: https://github.com/Hopding/pdf-lib/issues/1492
     */
     pdfDoc.registerFontkit(window.fontkit)
@@ -987,7 +962,7 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
     if(!(maxRows > 0) || ch(pageSize[0]) || ch(pageSize[1])) {
         const [pdfDoc, font] = await getDocument()
         const page = pdfDoc.addPage([1, 1])
-        return [1, await pdfDoc.save()] //no signature
+        return { doc: await pdfDoc.save(), w: 1, h: 1 } //no signature
     }
 
     const [pdfDoc, font] = await getDocument()
@@ -995,14 +970,14 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
 
     for(let i = 0; i < renderPattern.length; i++) {
         let curY = pageSize[1];
-    
-        for(let j = 0; j < renderPattern[i].length; j++) { 
+
+        for(let j = 0; j < renderPattern[i].length; j++) {
             const index = renderPattern[i][j];
             if(index == undefined || schedule[index] == undefined) continue;
             drawDay(
-                page, font, 
-                schedule[index], index, 
-                { x: i*groupSize.w, y: curY }, groupSize, 
+                page, font,
+                schedule[index], index,
+                { x: i*groupSize.w, y: curY }, groupSize,
                 borderWidth, innerBorderWidth, drawBorder, dowOnTop
             );
             curY = curY - groupSize.h * (schedule[index].length + (dowOnTop ? 1 : 0));
@@ -1014,13 +989,13 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
     const alignLeft = signFirst;
 
     drawTextWidthinBounds(
-        'vanaigr.github.io', page, font, 
-        { x: signX, y: signatureHeight + signaturePadding }, 
-        { w: colWidth*0.8, h: signatureHeight }, 
+        'vanaigr.github.io', page, font,
+        { x: signX, y: signatureHeight + signaturePadding },
+        { w: colWidth*0.8, h: signatureHeight },
         { alignRight, alignLeft, noBorder: true, padding: 0, backgroundColor: PDFLib.rgb(1, 1, 1) }
     )
 
-    return [pageSize[0], await pdfDoc.save()];
+    return { doc: await pdfDoc.save(), w: pageSize[0], h: pageSize[1] }
 }
 
 function readScheduleScheme(str) {

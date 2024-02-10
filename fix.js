@@ -75,10 +75,10 @@ function lessonToSimple(lesson, indent) {
     const v1 = ll[0] === ll[2]
     const v2 = ll[1] === ll[3]
 
-    function a(key, index) { 
+    function a(key, index) {
         const value = ll[index]
         if(value.trim() === '') return
-        result = result + '\n' + ' '.repeat(indent+4) + '"' + key + '": "' + value + '",'; 
+        result = result + '\n' + ' '.repeat(indent+4) + '"' + key + '": "' + value + '",';
     }
 
     const added = Array(4)
@@ -147,7 +147,7 @@ function scheduleToSimple(schedule) {
         result += '"Дата начала": "???",\n'
         result += '"Дата конца": "???",\n'
     }
-    
+
     result += '"Граница дней заливкой": "' + (orig.drawBorder ? 'да' : 'нет') + '",\n'
     result += '"Дни недели наверху": "' + (orig.dowOnTop ? 'да' : 'нет') + '",\n'
     result += '"Размер границы дней": "' + (orig.borderFactor*1000) + '",\n'
@@ -250,10 +250,10 @@ async function jsonToSchedule(si) {
                 const w1 = f === 'ч'
                 const w2 = f === 'з'
 
-                if(g1 && w1) ls[0] = l 
-                else if(g2 && w1) ls[1] = l 
-                else if(g1 && w2) ls[2] = l 
-                else if(g2 && w2) ls[3] = l 
+                if(g1 && w1) ls[0] = l
+                else if(g2 && w1) ls[1] = l
+                else if(g1 && w2) ls[2] = l
+                else if(g2 && w2) ls[3] = l
                 else if(g1) ls[0] = ls[2] = l
                 else if(g2) ls[1] = ls[3] = l
                 else if(w1) ls[0] = ls[1] = l
@@ -282,7 +282,7 @@ async function jsonToSchedule(si) {
 async function processEdit() {
     const text = '{' + document.getElementById('edit-input').value + '}'
     let si
-    try { si = JSON5.parse(text); } 
+    try { si = JSON5.parse(text); }
     catch(e) {
         throw ['Не удалось прочитать изменения', e]
     }
@@ -298,14 +298,14 @@ async function processEdit() {
     const startDate = parseDate(si["Дата начала"])
     const endDate   = parseDate(si["Дата конца"])
 
-    const schemeSA = si['Расположение дней'] 
+    const schemeSA = si['Расположение дней']
     let schemeS = ''
     for(let i = 0; i < schemeSA.length; i++) {
         schemeS += schemeSA[i] + '\n';
     }
     schemeS.substring(0, schemeS.length-1)
 
-    const scheme = readScheduleScheme(schemeS) 
+    const scheme = readScheduleScheme(schemeS)
 
     let schedule;
 
@@ -317,9 +317,9 @@ async function processEdit() {
     if(startDate != undefined) params.dates[0] = startDate
     if(endDate != undefined) params.dates[1] = endDate
 
-    const [width, pdf] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
-    try { updateUserdataF('regDocumentEdited')(...params.userdata) } catch(e) {} 
+    const { doc, w, h } = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
+    try { updateUserdataF('regDocumentEdited')(...params.userdata) } catch(e) {}
     const outs = document.getElementById('outputs')
-    await createAndInitOutputElement(pdf, outs, { hideName: 1, nameS: orig.filename }, width, params, params.userdata) 
+    await createAndInitOutputElement(doc, w, h, outs, { hideName: 1, nameS: orig.filename }, params, params.userdata)
 }
 
