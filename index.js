@@ -125,7 +125,7 @@ addEventListener('error', (event) => {
 
 
 let lastFileDataUrl;
-let currentFilename, currentFileContent;
+let currentFilename, currentDocumentData;
 let processing;
 
 let prevProgress
@@ -279,7 +279,7 @@ function showOverlay() {
 function checkShouldProcess() {
     if(processing) return;
 
-    if(currentFileContent == undefined) {
+    if(currentDocumentData == undefined) {
         updError({ msg: 'Для продолжения требуется файл расписания', progress: 1 })
         return
     }
@@ -291,9 +291,15 @@ function checkShouldProcess() {
     dom.startButtonEl.setAttribute('data-pending'/*rename to data-processing, since this name is outdated*/, '')
     processing = true;
 
+    let userdata;
+    try { try { userdata = ['' + currentFilename, '' + dom.groupInputEl.value.trim()] } catch(e) { console.error(e) } } catch(e) {}
+
     const startTime = performance.now()
-    processPDF()
-        .catch(e => printScheduleError(e))
+    processPDF(userdata)
+        .catch(e => {
+            updateUserdataF('regDocumentError')(...userdata, e)
+            printScheduleError(e)
+        }) // same in loadFromListFiles()
         .finally(() => {
             const endTime = performance.now()
             console.log(`call took ${endTime - startTime} milliseconds`)
@@ -481,15 +487,16 @@ async function loadFromListFiles(list) {
         return;
     }
 
-    currentFilename = res.ext ? res.filename.substring(0, res.filename.length - 4) : res.filename;
-    currentFileContent = res.content;
+
+    const filename = '' + (res.ext ? res.filename.substring(0, res.filename.length - 4) : res.filename);
+    const fileContent = res.content;
 
     const fileDataUrl = lastFileDataUrl;
-    lastFileDataUrl = URL.createObjectURL(new Blob([currentFileContent], { type: res.type }));
+    lastFileDataUrl = URL.createObjectURL(new Blob([fileContent], { type: res.type }));
     updateFilenameDisplay('Файл' + (list.length === 1 ? '' : ' №' + (i+1)) + ': ', res.filename, lastFileDataUrl);
     URL.revokeObjectURL(fileDataUrl);
 
-    dom.fileIsPdfEl.style.visibility = isPDF(currentFileContent) ? 'hidden' : ''
+    dom.fileIsPdfEl.style.visibility = isPDF(fileContent) ? 'hidden' : ''
 
     if(!processing) {
         const name = dom.groupInputEl.value.trim()
@@ -503,6 +510,43 @@ async function loadFromListFiles(list) {
         else updInfo({ msg: 'Файл загружен' })
     }
 
+    // first update interface, only then decode some pages ahead of time
+    async function getDocumentPage(orig, pageI) {
+        const page = await orig.getPage(1 + pageI)
+        return { page, text: (await page.getTextContent()).items }
+    }
+
+    const prevDocumentData = currentDocumentData
+    const thisDocumentData = (async(fileContent) => {
+        if (prevDocumentData) try {
+            await (await prevDocumentData).task.destroy();
+        } catch(e) { console.error(e) }
+
+        const origTask = pdfjsLib.getDocument({ data: copy(fileContent) });
+        let orig
+        try { orig = await origTask.promise }
+        catch (e) { throw ["Документ не распознан как PDF", e] }
+
+        const pageCount = Math.min(orig.numPages, 20)
+        const pages = new Array(pageCount)
+        const result = { task: origTask, taskPromise: orig, pages }
+
+        for(let i = 0; i < pageCount; i++) {
+            pages[i] = getDocumentPage(orig, i)
+        }
+
+        return result
+    })(fileContent)
+
+    currentDocumentData = thisDocumentData;
+    currentFilename = filename;
+
+    thisDocumentData.catch((err) => {
+        if (currentDocumentData != thisDocumentData) return;
+        if (processing) return; // if processing, then the error would be updated by the processing function
+        updateUserdataF('regDocumentError')(filename, 'no group', err)
+        printScheduleError(err)
+    })
 }
 
 function updateFilenameDisplay(fileType, filename, href) {
@@ -666,18 +710,14 @@ function __start(mode, folder, ...args) {
     })
 }
 
-async function processPDF() {
-    const stagesC = 4;
-    let stage = 0;
-    const ns = () => { return ++stage / (stagesC+1) }
-
+async function processPDF(userdata) {
     updInfo({ msg: 'Ожидаем зависимости', progress: 0 })
-    Promise.all([
+    await Promise.all([
         loadSchedule, loadCommon, loadElements, loadPopups, createGenSettings,
         loadPdfjs, loadPdflibJs, loadFontkit
     ]).catch(e => { throw "не удалось загрузить зависомость " + e + ". Попробуйте перезагрузить страницу" })
 
-    updInfo({ msg: 'Начинаем обработку', progress: ns() });
+    updInfo({ msg: 'Начинаем обработку', progress: 0.1 });
     const nameS = dom.groupInputEl.value.trim().split('$');
     const name = nameS[0];
     const indices = Array(nameS.length - 1);
@@ -693,77 +733,72 @@ async function processPDF() {
 
     const filename = currentFilename;
 
-    let userdata;
-    try { try { userdata = ['' + filename, '' + name] } catch(e) { console.log(e) } } catch(e) {}
+    const docData = await currentDocumentData
+    try { orig = await docData.taskPromise }
+    catch (e) { throw ["Документ не распознан как PDF", e] }
 
-    const origTask = pdfjsLib.getDocument({ data: copy(currentFileContent) });
-    const origDestructor = [call1(origTask.destroy.bind(origTask))]
-    const destroyOrig = () => Promise.all(origDestructor.map(it => it()))
-    try {
-        let orig
-        try { orig = await origTask.promise }
-        catch (e) { throw ["Документ не распознан как PDF", e] }
+    let closestName = undefined, closestN = Infinity;
+    const minBound = Math.min(nameFixed.length*0.5, nameFixed.length - 4)
+    const maxBound = Math.max(nameFixed.length*2, nameFixed.length + 4)
 
-        origDestructor.push(call1(orig.cleanup.bind(orig))) //do I even need this?
+    for(let j = 0; j < orig.numPages; j++) try {
+        var page, cont
+        const pageDataP = docData.pages[j]
+        if (pageDataP != undefined) {
+            const pageData = await pageDataP
+            page = pageData.page
+            cont = pageData.text
+        }
+        else {
+            page = await orig.getPage(j+1);
+            cont = (await page.getTextContent()).items;
+        }
 
-        let closestName = undefined, closestN = Infinity;
-        const minBound = Math.min(nameFixed.length*0.5, nameFixed.length - 4)
-        const maxBound = Math.max(nameFixed.length*2, nameFixed.length + 4)
+        const contLength = cont.length
 
-        for(let j = 0; j < orig.numPages; j++) try {
-            const page = await orig.getPage(j+1);
-            const cont = (await page.getTextContent()).items;
-            const contLength = cont.length
-
-            for(let i = 0; i < contLength; i++) try {
-                const oname = nameFixup(cont[i].str)
-                if(oname.length < minBound || oname.length > maxBound) continue;
-                const n = levenshteinDistance(nameFixed, oname);
-                if(n > 0) {
-                    if(n < closestN) { closestName = cont[i].str; closestN = n; }
-                    continue
-                }
-
-                updInfo({ msg: 'Достаём расписание из файла', progress: ns() })
-                const [schedule, dates, bigFields] = makeSchedule(cont, page.view, i, indices);
-                const warningText = makeWarningText(schedule, scheme, bigFields)
-                if(__debug_start && __debug_mode === 0) { __debug_schedule_parsing_results[name] = schedule; if(bigFields.length != 0) __debug_warningOn.push([name, warningText]); return }
-                destroyOrig()
-                updInfo({ msg: 'Создаём PDF файл расписания', progress: ns() })
-                const [width, doc] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
-                await destroyOrig() //https://github.com/mozilla/pdf.js/issues/16777
-                updInfo({ msg: 'Создаём предпросмотр', progress: ns() })
-                const outFilename = filename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
-                await createAndInitOutputElement(
-                    doc, dom.outputsEl, outFilename, width,
-                    { rowRatio, scheme, schedule, drawBorder, dowOnTop, borderFactor, dates },
-                    userdata
-                )
-
-                updInfo({ msg: 'Готово', warning: warningText, progress: ns() })
-                updateUserdataF('regDocumentCreated')(...userdata)
-                return
+        for(let i = 0; i < contLength; i++) try {
+            const oname = nameFixup(cont[i].str)
+            if(oname.length < minBound || oname.length > maxBound) continue;
+            const n = levenshteinDistance(nameFixed, oname);
+            if(n > 0) {
+                if(n < closestN) { closestName = cont[i].str; closestN = n; }
+                continue
             }
-            catch(e) {
-                const add = "[название группы] = " + i + '/' + contLength
-                if(Array.isArray(e)) { e.push(add); throw e }
-                else throw [e, add]
-            }
+
+            updInfo({ msg: 'Достаём расписание из файла', progress: 0.2 })
+            const [schedule, dates, bigFields] = makeSchedule(cont, page.view, i, indices);
+            const warningText = makeWarningText(schedule, scheme, bigFields)
+            if(__debug_start && __debug_mode === 0) { __debug_schedule_parsing_results[name] = schedule; if(bigFields.length != 0) __debug_warningOn.push([name, warningText]); return }
+            updInfo({ msg: 'Создаём PDF файл расписания', progress: 0.3 })
+            const [width, doc] = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
+            updInfo({ msg: 'Создаём предпросмотр', progress: 0.4 })
+            const outFilename = filename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
+            await createAndInitOutputElement(
+                doc, dom.outputsEl, outFilename, width,
+                { rowRatio, scheme, schedule, drawBorder, dowOnTop, borderFactor, dates },
+                userdata
+            )
+
+            updInfo({ msg: 'Готово', warning: warningText, progress: 1.0 })
+            updateUserdataF('regDocumentCreated')(...userdata)
+            return
         }
         catch(e) {
-            const add = "[страница] = " + j + '/' + orig.numPages
+            const add = "[название группы] = " + i + '/' + contLength
             if(Array.isArray(e)) { e.push(add); throw e }
             else throw [e, add]
-
         }
+    }
+    catch(e) {
+        const add = "[страница] = " + j + '/' + orig.numPages
+        if(Array.isArray(e)) { e.push(add); throw e }
+        else throw [e, add]
 
-        let cloS = ''
-        if(closestName != undefined) cloS = ", возможно вы имели в виду `" + closestName + "`"
-        throw ["имя `" + name + "` не найдено" + cloS, "количество страниц = " + orig.numPages];
-    } catch(e) {
-        updateUserdataF('regDocumentError')(...userdata, e)
-        throw e
-    } finally { await destroyOrig() }
+    }
+
+    let cloS = ''
+    if(closestName != undefined) cloS = ", возможно вы имели в виду `" + closestName + "`"
+    throw ["имя `" + name + "` не найдено" + cloS, "количество страниц = " + orig.numPages];
 }
 
 /*
