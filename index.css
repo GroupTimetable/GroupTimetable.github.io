@@ -40,21 +40,16 @@ body {
 }
 
 #file-info > .content {
-    transform: scaleY(0);
-    will-change: transform; /*chrome bug (some screen resolutions)*/
     opacity: 0;
-    transition: opacity 100ms, transform 0ms 100ms;
+    transition: opacity 100ms;
 }
 #file-info[data-visible=true] > .content {
     opacity: 1;
-    transform: scaleY(1);
-    transition: opacity 100ms, transform 0ms 0ms;
+    transition: opacity 100ms;
 }
 
-#file-type { color: var(--secondary-text-color);; }
-#filename {
-    color: var(--secondary-text-color);
-}
+#file-type { color: var(--secondary-text-color); }
+#filename { color: var(--link-color); }
 #delete-file {
     background: none;
     border: none;
