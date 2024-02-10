@@ -444,7 +444,7 @@ function nameFixup(name) {
         let a = name[i]
         if(alphanumeric.test(a)) newName += a.toLowerCase()
     }
-    if(newName.length === 0) return name
+    if(newName.length === 0) return name.trim()
     else return newName;
 }
 
@@ -737,9 +737,13 @@ async function processPDF(userdata) {
     try { orig = await docData.taskPromise }
     catch (e) { throw ["Документ не распознан как PDF", e] }
 
-    let closestName = undefined, closestN = Infinity;
-    const minBound = Math.min(nameFixed.length*0.5, nameFixed.length - 4)
-    const maxBound = Math.max(nameFixed.length*2, nameFixed.length + 4)
+    // если название группы контрактников, сохраняем место неконтрактной группы
+    const contractRegex = (/^(\p{L}+)к[2-9](\p{N}*)$/u)
+    const isContract = contractRegex.test(nameFixed)
+    const regularName = !isContract ? undefined : nameFixed.replace(contractRegex, '$11$2') // $1 1 $2 без к и первая цифра - 1
+    const minBound = Math.max(Math.min(nameFixed.length*0.5, nameFixed.length - 4), 1)
+    const maxBound = Math.max(nameFixed.length*2, nameFixed.length + 4, 1)
+    var closestName = undefined, closestN = Infinity, closestNamePage = undefined;
 
     for(let j = 0; j < orig.numPages; j++) try {
         var page, cont
@@ -761,7 +765,16 @@ async function processPDF(userdata) {
             if(oname.length < minBound || oname.length > maxBound) continue;
             const n = levenshteinDistance(nameFixed, oname);
             if(n > 0) {
-                if(n < closestN) { closestName = cont[i].str; closestN = n; }
+                if (oname == regularName) {
+                    closestName = cont[i].str
+                    closestNamePage = j;
+                    closestN = 0;
+                }
+                else if(n < closestN) {
+                    closestName = cont[i].str;
+                    closestNamePage = j;
+                    closestN = n;
+                }
                 continue
             }
 
@@ -797,7 +810,9 @@ async function processPDF(userdata) {
     }
 
     let cloS = ''
-    if(closestName != undefined) cloS = ", возможно вы имели в виду `" + closestName + "`"
+    if(closestName != undefined) {
+        cloS = ", возможно вы имели в виду `" + closestName + "` на странице " + (closestNamePage + 1)
+    }
     throw ["имя `" + name + "` не найдено" + cloS, "количество страниц = " + orig.numPages];
 }
 
