@@ -25,20 +25,20 @@
         const fontPromise = fetch('times_new_roman.ttf').then(res => res.arrayBuffer(), () => { throw 'не удалось загрузить шрифт'; });
     </script>
 
-    <script async onload="files[0][1]()" onerror="files[0][2]()" src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
-    <script async onload="files[1][1]()" onerror="files[1][2]()" src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
-    <script async onload="files[2][1]()" onerror="files[2][2]()" src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script async onload="files[0][1]()" onerror="files[0][2]('pdf-lib fontkit')" src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+    <script async onload="files[1][1]()" onerror="files[1][2]('pdf.js')" src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
+    <script async onload="files[2][1]()" onerror="files[2][2]('pdf-lib')" src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
-    <script async onload="files[3][1]()" onerror="files[3][2]()" src="./schedule.js"></script>
-    <script async onload="files[4][1]()" onerror="files[4][2]()" src="./common.js"></script>
-    <script async onload="files[5][1]()" onerror="files[5][2]()" src="./elements.js"></script>
-    <script async onload="files[6][1]()" onerror="files[6][2]()" src="./popups.js"></script>
+    <script async onload="files[3][1]()" onerror="files[3][2]('schedule.js')" src="./schedule.js"></script>
+    <script async onload="files[4][1]()" onerror="files[4][2]('common.js')" src="./common.js"></script>
+    <script async onload="files[5][1]()" onerror="files[5][2]('elements.js')" src="./elements.js"></script>
+    <script async onload="files[6][1]()" onerror="files[6][2]('popups.js')" src="./popups.js"></script>
 
     <script type="module" src="https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js"></script>
-    <script type="module" onload="files[7][1]()" onerror="files[7][2]()" src="./database.js"></script>
+    <script type="module" onload="files[7][1]()" onerror="files[7][2]('database.js')" src="./database.js"></script>
 
-    <script async onload="files[8][1]()" onerror="files[8][2]()" src="./index.js"></script>
+    <script async onload="files[8][1]()" onerror="files[8][2]('index.js')" src="./index.js"></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

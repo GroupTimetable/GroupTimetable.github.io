@@ -1,13 +1,16 @@
-const loadFontkit  = files[0][0];
-const loadPdfjs    = files[1][0];
-const loadPdflibJs = files[2][0];
-const loadSchedule = files[3][0];
-const loadCommon   = files[4][0];
-const loadElements = files[5][0];
-const loadPopups   = files[6][0];
-const loadDatabase = files[7][0];
-//const loadIndex    = files[8][0];
+const loadFontkit  = wrapDep(files[0][0]);
+const loadPdfjs    = wrapDep(files[1][0]);
+const loadPdflibJs = wrapDep(files[2][0]);
+const loadSchedule = wrapDep(files[3][0]);
+const loadCommon   = wrapDep(files[4][0]);
+const loadElements = wrapDep(files[5][0]);
+const loadPopups   = wrapDep(files[6][0]);
+const loadDatabase = wrapDep(files[7][0]);
 const loadDom = domPromise;
+
+function wrapDep(promise) {
+    return promise.catch((e) => { throw "не удалось загрузить зависомость `" + e + "`. Попробуйте перезагрузить страницу" })
+}
 
 loadPdfjs.then(arr => {
     pdfjsLib.GlobalWorkerOptions.workerPort = pdfjsWorker;
@@ -132,7 +135,7 @@ let prevProgress
 let curStatus = {};
 
 const genSettings = {}
-const createGenSettings = Promise.all([loadDom, loadCommon ]).then(_ => {
+const createGenSettings = wrapDep(Promise.all([loadDom, loadCommon ]).then(_ => {
     const genPopupHTML = htmlToElement(`
 <div>
     <div style="margin-bottom: 0.6rem;">Расположение дней:</div>
@@ -232,7 +235,7 @@ const createGenSettings = Promise.all([loadDom, loadCommon ]).then(_ => {
     addClick(genPopupHTML.querySelector('.gen-settings-next'), () => { updSettings(curSettings+1) })
 
     setFromSettings()
-})
+}).catch((e) => { throw 'настройки' }))
 
 Promise.all([loadDom, loadElements, loadPopups, createGenSettings]).then(_ => {
     const settingsEl = document.querySelector('#generation-settings')
@@ -313,6 +316,7 @@ loadDom.then(_ => {
 
     const inputCharRegex = /[\p{L}0-9\-]/u
     document.body.addEventListener('keydown', function(event) {
+        if (document.activeElement != document.body) return;
         if (
             event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey
             && inputCharRegex.test(event.key)
@@ -522,6 +526,8 @@ async function loadFromListFiles(list) {
             await (await prevDocumentData).task.destroy();
         } catch(e) { console.error(e) }
 
+        await loadPdfjs
+
         const origTask = pdfjsLib.getDocument({ data: copy(fileContent) });
         let orig
         try { orig = await origTask.promise }
@@ -710,12 +716,19 @@ function __start(mode, folder, ...args) {
     })
 }
 
+const loadDependencies = Promise.all([
+    loadSchedule, loadCommon, loadElements, loadPopups, createGenSettings,
+    loadPdfjs, loadPdflibJs, loadFontkit
+])
+
+loadDependencies.catch((e) => {
+    updateUserdataF('regDocumentError')('global', 'global', e)
+    printScheduleError(e)
+})
+
 async function processPDF(userdata) {
     updInfo({ msg: 'Ожидаем зависимости', progress: 0 })
-    await Promise.all([
-        loadSchedule, loadCommon, loadElements, loadPopups, createGenSettings,
-        loadPdfjs, loadPdflibJs, loadFontkit
-    ]).catch(e => { throw "не удалось загрузить зависомость " + e + ". Попробуйте перезагрузить страницу" })
+    await loadDependencies
 
     updInfo({ msg: 'Начинаем обработку', progress: 0.1 });
     const nameS = dom.groupInputEl.value.trim().split('$');
