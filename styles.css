@@ -10,7 +10,7 @@ body { font-family: "Open Sans", sans-serif; }
 
 .header {
     font-family: 'Open Sans', sans-serif;
-    color: var(--primary-contrast-color);
+    color: var(--secondary-text-color);
     text-align: right;
 
     padding: 0.5rem 1rem;

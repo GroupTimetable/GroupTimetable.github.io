@@ -19,7 +19,7 @@ body {
     --hint-color-0 : #ad44ff00;
 
     --link-color: #0095ff;
-    
+
     --error-color   : #f15642;
     --error-color-20: #f1564233;
     --error-color-0 : #f1564200;
@@ -33,7 +33,7 @@ body {
     --bg2-color-light: #f8f8f8;
     --outline-color-light: #ccc;
     --text-color-light: #202020;
-    --secondary-text-color-light: #a0a0a0;
+    --secondary-text-color-light: #606060;
 
     --button-color-light: #dcdcdc;
     --button-hover-light: #d0d0d0;
@@ -44,7 +44,7 @@ body {
     --bg2-color-dark: #232323;
     --outline-color-dark: #555;
     --text-color-dark: #f8f8f8;
-    --secondary-text-color-dark: #5f5f5f;
+    --secondary-text-color-dark: #a0a0a0;
 
     --bg-color: var(--bg-color-light);
     --bg2-color: var(--bg2-color-light);
