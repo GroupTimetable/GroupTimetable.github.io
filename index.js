@@ -334,7 +334,10 @@ loadDom.then(_ => {
 
 Promise.all([loadDom, loadCommon]).then(_ => {
     dom.groupInputEl.addEventListener('keyup', e => {
-        if (e.keyCode == 13) checkShouldProcess()
+        if (e.keyCode == 13) {
+          dom.groupInputEl.blur()
+          checkShouldProcess()
+        }
     })
     addClick(dom.startButtonEl, _ => {
         checkShouldProcess()
