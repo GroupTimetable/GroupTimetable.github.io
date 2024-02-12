@@ -445,37 +445,6 @@ function makeSchedule(cont, pageView, groupNameI, bigFieldsInclude) {
     return [schedule, dates, bigFields];
 }
 
-function heightAtSize(font, size) {
-    try { return font.heightAtSize(size) }
-    catch(e) { console.error(e); return NaN }
-}
-
-function sizeAtHeight(font, height) {
-    try { return font.sizeAtHeight(height) }
-    catch(e) { console.error(e); return NaN }
-}
-
-function descenderAtHeight(font, size) {
-    try { return font.embedder.__descenderAtHeight(size) }
-    catch(e) { console.error(e); return NaN }
-}
-
-function drawRectangle(page, params) {
-    try{ page.drawRectangle(params) } catch(e) { console.error(e) }
-}
-
-function drawText(page, text, params) {
-    try{ page.drawText(text, params) } catch(e) { console.error(e) }
-}
-
-function widthOfTextAtSize(font, text, size) {
-    if(size != undefined && checkValid(size)) return font.widthOfTextAtSize(text, size)
-    else {
-        console.error('invalid size: ', size)
-        return NaN
-    }
-}
-
 function checkValid(...params) {
     for(let i = 0; i < params.length; i++) {
         const p = params[i]
@@ -485,26 +454,26 @@ function checkValid(...params) {
 }
 
 
-function drawTextCentered(text, page, font, fontSize, center, precompWidths = undefined) {
-    const lineHeight = heightAtSize(font, fontSize);
+function drawTextCentered(text, renderer, fontSize, center, precompWidths = undefined) {
+    const lineHeight = renderer.heightAtSize(fontSize);
     let widths = precompWidths
     if(widths === undefined) {
         widths = Array(text.length)
         for(let i = 0; i < text.length; i++) {
-            const textWidth = widthOfTextAtSize(font, text[i], fontSize)
+            const textWidth = renderer.widthOfTextAtSize(text[i], fontSize)
             widths[i] = textWidth;
         }
     }
 
-    const d = descenderAtHeight(font, fontSize);
+    const d = renderer.descenderAtHeight(fontSize);
     const offY = center.y - d + lineHeight*text.length * 0.5;
 
     for(let i = 0; i < text.length; i++) {
-        drawText(page, text[i], {
+        renderer.drawText(text[i], {
             x: center.x - widths[i] * 0.5,
             y: offY - i*lineHeight - lineHeight,
             size: fontSize,
-            font: font,
+            font: renderer.font,
             color: PDFLib.rgb(0, 0, 0),
         });
     }
@@ -532,7 +501,7 @@ const textBreak = new (function() {
         }
     }
     this.haveTried = function (divs) { return tried.includes(divs) }
-    this.remeasure = function(strOrig, divs, font, bounds) {
+    this.remeasure = function(strOrig, divs, renderer, bounds) {
         let prevSpace = true //trimStart
         let str = ''
         for(let i = 0; i < strOrig.length; i++) {
@@ -587,12 +556,12 @@ const textBreak = new (function() {
             tmp.lineWidths.length = tmp.texts.length
             let maxWidth = 0
             for(let i = 0; i < tmp.texts.length; i++) {
-                const textWidth = widthOfTextAtSize(font, tmp.texts[i], fontSize)
+                const textWidth = renderer.widthOfTextAtSize(tmp.texts[i], fontSize)
                 tmp.lineWidths[i] = textWidth
                 maxWidth = Math.max(maxWidth, textWidth);
             }
-            const scaledHeight = Math.min(bounds.h / tmp.texts.length, heightAtSize(font, fontSize) * bounds.w / maxWidth);
-            tmp.fontSize = sizeAtHeight(font, scaledHeight);
+            const scaledHeight = Math.min(bounds.h / tmp.texts.length, renderer.heightAtSize(fontSize) * bounds.w / maxWidth);
+            tmp.fontSize = renderer.sizeAtHeight(scaledHeight);
 
             const coeff = tmp.fontSize / fontSize
             for(let i = 0; i < tmp.lineWidths.length; i++) tmp.lineWidths[i] *= coeff
@@ -608,28 +577,28 @@ const textBreak = new (function() {
     Object.defineProperty(this, 'last', { get: () => objs[+lastI] });
 })()
 
-function fitTextBreakLines(str, font, size) {
+function fitTextBreakLines(str, renderer, size) {
     textBreak.reset()
 
-    textBreak.remeasure(str, 1, font, size)
+    textBreak.remeasure(str, 1, renderer, size)
 
     for(let j = 0; j < 3; j++) {
         /*maximize text width*/ {
             const el = textBreak.last
             const scaledHeight = el.height * size.w / el.width;
-            const fontSize = sizeAtHeight(font, scaledHeight);
+            const fontSize = renderer.sizeAtHeight(scaledHeight);
             const divs = Math.max(1, Math.round(el.texts.length * Math.sqrt(size.h / scaledHeight)));
             if(textBreak.haveTried(divs)) break;
-            else textBreak.remeasure(str, divs, font, size)
+            else textBreak.remeasure(str, divs, renderer, size)
         }
 
         /*maximize text height*/ {
             const el = textBreak.last
             const scaledWidth = el.width * size.h / el.height;
             const divs = Math.max(1, Math.round(el.texts.length * Math.sqrt(scaledWidth / size.w)));
-            const fontSize = sizeAtHeight(font, size.h / divs);
+            const fontSize = renderer.sizeAtHeight(size.h / divs);
             if(textBreak.haveTried(divs)) break;
-            else textBreak.remeasure(str, divs, font, size)
+            else textBreak.remeasure(str, divs, renderer, size)
         }
     }
 
@@ -637,8 +606,8 @@ function fitTextBreakLines(str, font, size) {
     return [el.texts, el.fontSize, el.lineWidths]
 }
 
-function drawLessonText(lesson, secondWeek, page, font, coord, blockSize, borderWidth) {
-    if(secondWeek && lesson.trim() !== '') drawRectangle(page, {
+function drawLessonText(lesson, secondWeek, renderer, coord, blockSize, borderWidth) {
+    if(secondWeek && lesson.trim() !== '') renderer.drawRectangle({
         x: coord.x,
         y: coord.y,
         width: blockSize.w,
@@ -648,16 +617,16 @@ function drawLessonText(lesson, secondWeek, page, font, coord, blockSize, border
     if(lesson.trim() !== '') {
         const t = lesson;
         const innerSize = { w: blockSize.w * 0.95, h: blockSize.h * 0.9 }
-        const [text, fontSize, widths] = fitTextBreakLines(t, font, innerSize)
+        const [text, fontSize, widths] = fitTextBreakLines(t, renderer, innerSize)
 
         drawTextCentered(
-            text, page, font, fontSize,
+            text, renderer, fontSize,
             { x: coord.x + blockSize.w*0.5, y: coord.y - blockSize.h*0.5 },
             widths
         );
     }
 
-    drawRectangle(page, {
+    renderer.drawRectangle({
         x: coord.x,
         y: coord.y,
         width: blockSize.w,
@@ -671,7 +640,7 @@ function minuteOfDayToString(it) {
     return Math.floor(it/60) + ":" + (it%60).toString().padStart(2, '0')
 }
 
-function drawTime(lesson, page, font, coord, blockSize, borderWidth) {
+function drawTime(lesson, renderer, coord, blockSize, borderWidth) {
     const innerSize = { w: blockSize.w*0.8, h: blockSize.h*0.9 }
 
     const texts = [
@@ -680,28 +649,28 @@ function drawTime(lesson, page, font, coord, blockSize, borderWidth) {
         minuteOfDayToString(lesson.eTime)
     ];
     const textHeight = innerSize.w
-    let fontSize = sizeAtHeight(font, textHeight);
+    let fontSize = renderer.sizeAtHeight(textHeight);
     const widths = []
     let largestWidth = 0
     for(let i = 0; i < texts.length; i++) {
-        const textWidth = widthOfTextAtSize(font, texts[i], fontSize)
+        const textWidth = renderer.widthOfTextAtSize(texts[i], fontSize)
         widths.push(textWidth)
         if(textWidth > largestWidth) largestWidth = textWidth;
     }
 
     const scaledHeight = Math.min(textHeight * innerSize.w / largestWidth, innerSize.h / texts.length);
-    fontSize = sizeAtHeight(font, scaledHeight);
+    fontSize = renderer.sizeAtHeight(scaledHeight);
 
     const coeff = scaledHeight / textHeight;
     for(let i = 0; i < widths.length; i++) widths[i] *= coeff
 
     drawTextCentered(
-        texts, page, font, fontSize,
+        texts, renderer, fontSize,
         { x: coord.x + blockSize.w*0.5, y: coord.y - blockSize.h*0.5 },
         widths
     );
 
-    drawRectangle(page, {
+    renderer.drawRectangle({
         x: coord.x,
         y: coord.y,
         width: blockSize.w,
@@ -712,7 +681,7 @@ function drawTime(lesson, page, font, coord, blockSize, borderWidth) {
 }
 
 
-function drawLessons(lesson, page, font, coord, size, borderWidth) {
+function drawLessons(lesson, renderer, coord, size, borderWidth) {
     const eqh1 = lesson.lessons[0] === lesson.lessons[1];
     const eqh2 = lesson.lessons[2] === lesson.lessons[3];
     const eqv1 = lesson.lessons[0] === lesson.lessons[2];
@@ -733,35 +702,35 @@ function drawLessons(lesson, page, font, coord, size, borderWidth) {
     ];
 
     const drawLessons = Array(4)
-    if(eqh1 && eqh2 && eqv1 && eqv2) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[3], borderWidth)
+    if(eqh1 && eqh2 && eqv1 && eqv2) drawLessonText(lesson.lessons[0], false, renderer, points[0], sizes[3], borderWidth)
     else if(eqh1 || eqh2) {
-        if(eqh1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[1], borderWidth)
+        if(eqh1) drawLessonText(lesson.lessons[0], false, renderer, points[0], sizes[1], borderWidth)
         else drawLessons[0] = drawLessons[1] = true
 
-        if(eqh2) drawLessonText(lesson.lessons[2], true, page, font, points[2], sizes[1], borderWidth)
+        if(eqh2) drawLessonText(lesson.lessons[2], true, renderer, points[2], sizes[1], borderWidth)
         else drawLessons[2] = drawLessons[3] = true
     }
     else if(eqv1 || eqv2) {
-        if(eqv1) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[2], borderWidth)
+        if(eqv1) drawLessonText(lesson.lessons[0], false, renderer, points[0], sizes[2], borderWidth)
         else drawLessons[0] = drawLessons[2] = true
 
-        if(eqv2) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[2], borderWidth)
+        if(eqv2) drawLessonText(lesson.lessons[1], false, renderer, points[1], sizes[2], borderWidth)
         else drawLessons[1] = drawLessons[3] = true
     }
     else drawLessons.fill(true)
 
-    if(drawLessons[0]) drawLessonText(lesson.lessons[0], false, page, font, points[0], sizes[0], borderWidth)
-    if(drawLessons[1]) drawLessonText(lesson.lessons[1], false, page, font, points[1], sizes[0], borderWidth)
-    if(drawLessons[2]) drawLessonText(lesson.lessons[2], true, page, font, points[2], sizes[0], borderWidth)
-    if(drawLessons[3]) drawLessonText(lesson.lessons[3], true, page, font, points[3], sizes[0], borderWidth)
+    if(drawLessons[0]) drawLessonText(lesson.lessons[0], false, renderer, points[0], sizes[0], borderWidth)
+    if(drawLessons[1]) drawLessonText(lesson.lessons[1], false, renderer, points[1], sizes[0], borderWidth)
+    if(drawLessons[2]) drawLessonText(lesson.lessons[2], true, renderer, points[2], sizes[0], borderWidth)
+    if(drawLessons[3]) drawLessonText(lesson.lessons[3], true, renderer, points[3], sizes[0], borderWidth)
 }
 
-function drawLesson(lesson, page, font, coord, size, timeWidth, borderWidth) {
-    drawTime(lesson, page, font, coord, { w: timeWidth, h: size.h }, borderWidth)
-    drawLessons(lesson, page, font, { x: coord.x + timeWidth, y: coord.y }, { w: size.w - timeWidth, h: size.h }, borderWidth)
+function drawLesson(lesson, renderer, coord, size, timeWidth, borderWidth) {
+    drawTime(lesson, renderer, coord, { w: timeWidth, h: size.h }, borderWidth)
+    drawLessons(lesson, renderer, { x: coord.x + timeWidth, y: coord.y }, { w: size.w - timeWidth, h: size.h }, borderWidth)
 }
 
-function drawTextWidthinBounds(text, page, font, coord, size, params) {
+function drawTextWidthinBounds(text, renderer, coord, size, params) {
     params ??= {}
     const padding = params.padding ?? 0.05
     const innerFactor = 1 - 2*padding
@@ -769,12 +738,12 @@ function drawTextWidthinBounds(text, page, font, coord, size, params) {
     const calcParams = (maxWidth, maxHeight) => {
         const offWidth = maxWidth * innerFactor
         const offHeight = maxHeight * innerFactor
-        const fontSize = sizeAtHeight(font, offHeight);
-        const largestWidth = widthOfTextAtSize(font, text, fontSize);
-        const textHeight = heightAtSize(font, fontSize)
+        const fontSize = renderer.sizeAtHeight(offHeight);
+        const largestWidth = renderer.widthOfTextAtSize(text, fontSize);
+        const textHeight = renderer.heightAtSize(fontSize)
         const scaledHeight = Math.min(textHeight * offWidth / largestWidth, offHeight);
         const scaledWidth = largestWidth * scaledHeight / offHeight;
-        const newSize = sizeAtHeight(font, scaledHeight);
+        const newSize = renderer.sizeAtHeight(scaledHeight);
 
         const offsetHeight = (offHeight + maxHeight) * 0.5;
         if(params.alignLeft) {
@@ -791,28 +760,28 @@ function drawTextWidthinBounds(text, page, font, coord, size, params) {
         }
     };
     const [offsetWidth, offsetHeight, tw, th, fontSize] = params.rotated ? calcParams(size.h, size.w) : calcParams(size.w, size.h)
-    const d = descenderAtHeight(font, fontSize);
+    const d = renderer.descenderAtHeight(fontSize);
     const textOffsetX = params.rotated ? d : 0;
     const textOffsetY = params.rotated ? 0 : -d;
     const x = coord.x + (params.rotated ? offsetHeight : offsetWidth)
     const y = coord.y + (params.rotated ? -size.h + offsetWidth : -offsetHeight)
 
-    if(params.backgroundColor) drawRectangle(page, {
+    if(params.backgroundColor) renderer.drawRectangle({
         x, y,
         width: params.rotated ? -th : tw,
         height: params.rotated ? tw : th,
         color: params.backgroundColor
     })
 
-    drawText(page, text, {
+    renderer.drawText(text, {
         x: x + textOffsetX, y: y + textOffsetY,
         size: fontSize,
-        font: font,
+        font: renderer.font,
         color: PDFLib.rgb(0, 0, 0),
         rotate: PDFLib.degrees(params.rotated ? 90 : 0)
     });
 
-    if(!params.noBorder) drawRectangle(page, {
+    if(!params.noBorder) renderer.drawRectangle({
         x: coord.x,
         y: coord.y,
         width: size.w,
@@ -823,7 +792,7 @@ function drawTextWidthinBounds(text, page, font, coord, size, params) {
 }
 
 function drawDay(
-    page, font,
+    renderer,
     day, dayI,
     outerCoord, groupSize,
     borderWidth,  innerBorderWidth, drawBorder, dowOnTop
@@ -842,22 +811,22 @@ function drawDay(
     const text = daysOfWeek[dayI]
     if(dowOnTop) {
         const size = { w, h }
-        drawTextWidthinBounds(text, page, font, { x, y }, size, { borderWidth: innerBorderWidth })
+        drawTextWidthinBounds(text, renderer, { x, y }, size, { borderWidth: innerBorderWidth })
         y -= size.h
     }
     else {
         const size = { w: addColWidth, h : fullH }
-        drawTextWidthinBounds(text, page, font, { x, y }, size, { rotated: true, borderWidth: innerBorderWidth })
+        drawTextWidthinBounds(text, renderer, { x, y }, size, { rotated: true, borderWidth: innerBorderWidth })
         x += size.w
         w -= addColWidth
     }
 
     const size = { w, h }
     for(let i = 0; i < day.length; i++) {
-        drawLesson(day[i], page, font, { x: x, y: y - i*h }, size, addColWidth, innerBorderWidth);
+        drawLesson(day[i], renderer, { x: x, y: y - i*h }, size, addColWidth, innerBorderWidth);
     }
 
-    if(drawBorder) drawRectangle(page, {
+    if(drawBorder) renderer.drawRectangle({
         x: outerCoord.x,
         y: outerCoord.y,
         width: groupSize.w,
@@ -914,7 +883,7 @@ async function getDocument() {
 
 
 //border factor is used inaccurately, but the difference should not be that big
-async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, drawBorder, dowOnTop) {
+async function scheduleToPDF(renderer, schedule, origPattern, rowRatio, borderFactor, drawBorder, dowOnTop) {
     const colWidth = 500
     const renderPattern = []
 
@@ -960,13 +929,16 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
 
     const ch = (num) => !(num >= 1 && num < Infinity)
     if(!(maxRows > 0) || ch(pageSize[0]) || ch(pageSize[1])) {
-        const [pdfDoc, font] = await getDocument()
-        const page = pdfDoc.addPage([1, 1])
-        return { doc: await pdfDoc.save(), w: 1, h: 1 } //no signature
+        console.error('TODO')
+        return;
+        //const [pdfDoc, font] = await getDocument()
+        //const page = pdfDoc.addPage([1, 1])
+        //return { doc: await pdfDoc.save(), w: 1, h: 1 } //no signature
     }
 
-    const [pdfDoc, font] = await getDocument()
-    const page = pdfDoc.addPage(pageSize)
+    await renderer.init(pageSize)
+    //const [pdfDoc, font] = await getDocument()
+    //const page = pdfDoc.addPage(pageSize)
 
     for(let i = 0; i < renderPattern.length; i++) {
         let curY = pageSize[1];
@@ -975,7 +947,7 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
             const index = renderPattern[i][j];
             if(index == undefined || schedule[index] == undefined) continue;
             drawDay(
-                page, font,
+                renderer,
                 schedule[index], index,
                 { x: i*groupSize.w, y: curY }, groupSize,
                 borderWidth, innerBorderWidth, drawBorder, dowOnTop
@@ -989,13 +961,11 @@ async function scheduleToPDF(schedule, origPattern, rowRatio, borderFactor, draw
     const alignLeft = signFirst;
 
     drawTextWidthinBounds(
-        'vanaigr.github.io', page, font,
+        'vanaigr.github.io', renderer,
         { x: signX, y: signatureHeight + signaturePadding },
         { w: colWidth*0.8, h: signatureHeight },
         { alignRight, alignLeft, noBorder: true, padding: 0, backgroundColor: PDFLib.rgb(1, 1, 1) }
     )
-
-    return { doc: await pdfDoc.save(), w: pageSize[0], h: pageSize[1] }
 }
 
 function readScheduleScheme(str) {

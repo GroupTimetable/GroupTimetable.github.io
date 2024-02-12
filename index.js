@@ -829,7 +829,55 @@ async function processPDF(userdata, name, indices) {
             const warningText = makeWarningText(schedule, scheme, bigFields)
             if(__debug_start && __debug_mode === 0) { __debug_schedule_parsing_results[name] = schedule; if(bigFields.length != 0) __debug_warningOn.push([name, warningText]); return }
             updInfo({ msg: 'Создаём PDF файл расписания', progress: 0.3 })
-            const { doc, w, h } = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
+
+            var pdfDoc, font, page
+            var w, h
+
+            const renderer = {
+                init: async(pageSize) => {
+                    const data = await getDocument()
+                    pdfDoc = data[0]
+                    font = data[1]
+                    renderer.font = font
+                    page = pdfDoc.addPage(pageSize)
+                    w = pageSize[0]
+                    h = pageSize[1]
+                },
+                heightAtSize: function(size) {
+                    try { return font.heightAtSize(size) }
+                    catch(e) { console.error(e); return NaN }
+                },
+
+sizeAtHeight: function(height) {
+    try { return font.sizeAtHeight(height) }
+    catch(e) { console.error(e); return NaN }
+},
+
+descenderAtHeight: function(size) {
+    try { return font.embedder.__descenderAtHeight(size) }
+    catch(e) { console.error(e); return NaN }
+},
+
+drawRectangle: function(params) {
+    try{ page.drawRectangle(params) } catch(e) { console.error(e) }
+},
+
+drawText: function(text, params) {
+    try{ page.drawText(text, params) } catch(e) { console.error(e) }
+},
+
+    widthOfTextAtSize: function(text, size) {
+    if(size != undefined && checkValid(size)) return font.widthOfTextAtSize(text, size)
+    else {
+        console.error('invalid size: ', size)
+        return NaN
+    }
+},
+
+            }
+
+            await scheduleToPDF(renderer, schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
+            const doc = await pdfDoc.save()
             updInfo({ msg: 'Создаём предпросмотр', progress: 0.4 })
             const outFilename = filename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
             await createAndInitOutputElement(
@@ -884,10 +932,10 @@ function printScheduleError(e) {
     if(Array.isArray(e)) {
         console.error('ERROR')
         for(let i = 0; i < e.length; i++) {
+            console.error(e[i])
             if(i !== 0) str += ', '
             str += e[i]
         }
-        console.error(e)
         console.error('RORRE')
     }
     else {
