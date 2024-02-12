@@ -838,7 +838,7 @@ async function processPDF(userdata, name, indices) {
                 userdata
             )
 
-            updInfo({ msg: 'Готово', warning: warningText, progress: 1.0 })
+            updInfo({ msg: 'Готово. Пожалуйста, поделитесь сайтом с друзьями ❤️', warning: warningText, progress: 1.0 })
             updateUserdataF('regDocumentCreated')(...userdata)
             return
         }
