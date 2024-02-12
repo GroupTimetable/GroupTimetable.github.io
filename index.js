@@ -282,23 +282,50 @@ function showOverlay() {
 function checkShouldProcess() {
     if(processing) return;
 
-    if(currentDocumentData == undefined) {
-        updError({ msg: 'Для продолжения требуется файл расписания', progress: 1 })
-        return
+    let userdata = [];
+    try { try { userdata = ['' + currentFilename, '' + dom.groupInputEl.value.trim()] } catch(e) { console.error(e) } } catch(e) {}
+
+    var nameS
+    try { nameS = dom.groupInputEl.value.trim().split('$'); }
+    catch(e) {
+        updateUserdataF('regDocumentError')(...userdata, e)
+        printScheduleError(e)
+        return;
     }
-    const name = dom.groupInputEl.value.trim()
+
+    const name = nameS[0].trim();
     if(name == '') {
         updError({ msg: 'Для продолжения требуется имя группы', progress: 1 })
         return
     }
+
+    try { localStorage.setItem('index__last_group_name', name) }
+    catch(e) { console.error(e) }
+
+    var indices
+    var i = 0
+    try {
+        indices = Array(nameS.length - 1);
+        for(i = 1; i < nameS.length; i++) indices[i-1] = Number.parseInt(nameS[i]);
+    }
+    catch(e) {
+        if(i == 0) e = ['Не удалось создать массив индексов пропущенных уроков', e]
+        else e = ['Индекс пропущенного урока ' + i + ' не является числом', e]
+        updateUserdataF('regDocumentError')(...userdata, e)
+        printScheduleError(e)
+        return;
+    }
+
+    if(currentDocumentData == undefined) {
+        updError({ msg: 'Для продолжения требуется файл расписания', progress: 1 })
+        return
+    }
+
     dom.startButtonEl.setAttribute('data-pending'/*rename to data-processing, since this name is outdated*/, '')
     processing = true;
 
-    let userdata;
-    try { try { userdata = ['' + currentFilename, '' + dom.groupInputEl.value.trim()] } catch(e) { console.error(e) } } catch(e) {}
-
     const startTime = performance.now()
-    processPDF(userdata)
+    processPDF(userdata, name, indices)
         .catch(e => {
             updateUserdataF('regDocumentError')(...userdata, e)
             printScheduleError(e)
@@ -313,6 +340,13 @@ function checkShouldProcess() {
 
 loadDom.then(_ => {
     updInfo({ msg: 'Вы можете создать изображение или календарь занятий своей группы из общего расписания' })
+
+
+    try {
+        const lastName = localStorage.getItem('index__last_group_name')
+        if(lastName != undefined) dom.groupInputEl.value = lastName
+    }
+    catch(e) { console.error(e) }
 
     const inputCharRegex = /[\p{L}0-9\-]/u
     document.body.addEventListener('keydown', function(event) {
@@ -729,15 +763,11 @@ loadDependencies.catch((e) => {
     printScheduleError(e)
 })
 
-async function processPDF(userdata) {
+async function processPDF(userdata, name, indices) {
     updInfo({ msg: 'Ожидаем зависимости', progress: 0 })
     await loadDependencies
 
     updInfo({ msg: 'Начинаем обработку', progress: 0.1 });
-    const nameS = dom.groupInputEl.value.trim().split('$');
-    const name = nameS[0];
-    const indices = Array(nameS.length - 1);
-    for(let i = 1; i < nameS.length; i++) indices[i-1] = Number.parseInt(nameS[i]);
     const nameFixed = nameFixup(name);
     const rowRatio = Number(genSettings.heightEl.value) / 100;
     const borderFactor = Number(genSettings.borderSizeEl.value) / 1000;
