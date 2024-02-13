@@ -454,8 +454,8 @@ function checkValid(...params) {
 }
 
 
-function drawTextCentered(text, renderer, fontSize, center, precompWidths = undefined) {
-    const lineHeight = renderer.heightAtSize(fontSize);
+function drawTextCentered(text, renderer, fontHeight, center, precompWidths = undefined) {
+    const fontSize = fontHeight * renderer.sizeFac
     let widths = precompWidths
     if(widths === undefined) {
         widths = Array(text.length)
@@ -465,13 +465,12 @@ function drawTextCentered(text, renderer, fontSize, center, precompWidths = unde
         }
     }
 
-    const d = renderer.descenderAtHeight(fontSize);
-    const offY = center.y - d + lineHeight*text.length * 0.5;
+    const offY = center.y + fontHeight*text.length * 0.5;
 
     for(let i = 0; i < text.length; i++) {
         renderer.drawText(text[i], {
             x: center.x - widths[i] * 0.5,
-            y: offY - i*lineHeight - lineHeight,
+            y: offY - i*fontHeight - fontHeight,
             size: fontSize,
             font: renderer.font,
             color: PDFLib.rgb(0, 0, 0),
@@ -551,8 +550,10 @@ const textBreak = new (function() {
         }
 
         /*calc sizes*/ {
-            const fontSize = 10
+            const fontHeight = 10
+            const fontSize = fontHeight * renderer.sizeFac
 
+            // TODO: change font sizes to font heights
             tmp.lineWidths.length = tmp.texts.length
             let maxWidth = 0
             for(let i = 0; i < tmp.texts.length; i++) {
@@ -560,13 +561,13 @@ const textBreak = new (function() {
                 tmp.lineWidths[i] = textWidth
                 maxWidth = Math.max(maxWidth, textWidth);
             }
-            const scaledHeight = Math.min(bounds.h / tmp.texts.length, renderer.heightAtSize(fontSize) * bounds.w / maxWidth);
-            tmp.fontSize = renderer.sizeAtHeight(scaledHeight);
+            const scaledHeight = Math.min(bounds.h / tmp.texts.length, fontHeight * bounds.w / maxWidth);
 
-            const coeff = tmp.fontSize / fontSize
+            const coeff = scaledHeight / fontHeight
             for(let i = 0; i < tmp.lineWidths.length; i++) tmp.lineWidths[i] *= coeff
             tmp.width = maxWidth * coeff;
             tmp.height = tmp.texts.length * scaledHeight
+            tmp.fontSize = scaledHeight * renderer.sizeFac;
 
             lastI = tmpI
             if(tmp.fontSize > objs[+bestI].fontSize) bestI = tmpI
@@ -586,7 +587,6 @@ function fitTextBreakLines(str, renderer, size) {
         /*maximize text width*/ {
             const el = textBreak.last
             const scaledHeight = el.height * size.w / el.width;
-            const fontSize = renderer.sizeAtHeight(scaledHeight);
             const divs = Math.max(1, Math.round(el.texts.length * Math.sqrt(size.h / scaledHeight)));
             if(textBreak.haveTried(divs)) break;
             else textBreak.remeasure(str, divs, renderer, size)
@@ -596,7 +596,6 @@ function fitTextBreakLines(str, renderer, size) {
             const el = textBreak.last
             const scaledWidth = el.width * size.h / el.height;
             const divs = Math.max(1, Math.round(el.texts.length * Math.sqrt(scaledWidth / size.w)));
-            const fontSize = renderer.sizeAtHeight(size.h / divs);
             if(textBreak.haveTried(divs)) break;
             else textBreak.remeasure(str, divs, renderer, size)
         }
@@ -620,7 +619,7 @@ function drawLessonText(lesson, secondWeek, renderer, coord, blockSize, borderWi
         const [text, fontSize, widths] = fitTextBreakLines(t, renderer, innerSize)
 
         drawTextCentered(
-            text, renderer, fontSize,
+            text, renderer, fontSize / renderer.sizeFac,
             { x: coord.x + blockSize.w*0.5, y: coord.y - blockSize.h*0.5 },
             widths
         );
@@ -649,7 +648,7 @@ function drawTime(lesson, renderer, coord, blockSize, borderWidth) {
         minuteOfDayToString(lesson.eTime)
     ];
     const textHeight = innerSize.w
-    let fontSize = renderer.sizeAtHeight(textHeight);
+    const fontSize = textHeight * renderer.sizeFac
     const widths = []
     let largestWidth = 0
     for(let i = 0; i < texts.length; i++) {
@@ -659,13 +658,12 @@ function drawTime(lesson, renderer, coord, blockSize, borderWidth) {
     }
 
     const scaledHeight = Math.min(textHeight * innerSize.w / largestWidth, innerSize.h / texts.length);
-    fontSize = renderer.sizeAtHeight(scaledHeight);
 
     const coeff = scaledHeight / textHeight;
     for(let i = 0; i < widths.length; i++) widths[i] *= coeff
 
     drawTextCentered(
-        texts, renderer, fontSize,
+        texts, renderer, scaledHeight,
         { x: coord.x + blockSize.w*0.5, y: coord.y - blockSize.h*0.5 },
         widths
     );
@@ -730,6 +728,8 @@ function drawLesson(lesson, renderer, coord, size, timeWidth, borderWidth) {
     drawLessons(lesson, renderer, { x: coord.x + timeWidth, y: coord.y }, { w: size.w - timeWidth, h: size.h }, borderWidth)
 }
 
+var deg90; // filled out by whoever uses schedule.js
+
 function drawTextWidthinBounds(text, renderer, coord, size, params) {
     params ??= {}
     const padding = params.padding ?? 0.05
@@ -738,12 +738,11 @@ function drawTextWidthinBounds(text, renderer, coord, size, params) {
     const calcParams = (maxWidth, maxHeight) => {
         const offWidth = maxWidth * innerFactor
         const offHeight = maxHeight * innerFactor
-        const fontSize = renderer.sizeAtHeight(offHeight);
-        const largestWidth = renderer.widthOfTextAtSize(text, fontSize);
-        const textHeight = renderer.heightAtSize(fontSize)
+        const textHeight = offHeight;
+        const largestWidth = renderer.widthOfTextAtSize(text, textHeight * renderer.sizeFac);
         const scaledHeight = Math.min(textHeight * offWidth / largestWidth, offHeight);
         const scaledWidth = largestWidth * scaledHeight / offHeight;
-        const newSize = renderer.sizeAtHeight(scaledHeight);
+        const newSize = scaledHeight * renderer.sizeFac
 
         const offsetHeight = (offHeight + maxHeight) * 0.5;
         if(params.alignLeft) {
@@ -760,9 +759,6 @@ function drawTextWidthinBounds(text, renderer, coord, size, params) {
         }
     };
     const [offsetWidth, offsetHeight, tw, th, fontSize] = params.rotated ? calcParams(size.h, size.w) : calcParams(size.w, size.h)
-    const d = renderer.descenderAtHeight(fontSize);
-    const textOffsetX = params.rotated ? d : 0;
-    const textOffsetY = params.rotated ? 0 : -d;
     const x = coord.x + (params.rotated ? offsetHeight : offsetWidth)
     const y = coord.y + (params.rotated ? -size.h + offsetWidth : -offsetHeight)
 
@@ -774,11 +770,11 @@ function drawTextWidthinBounds(text, renderer, coord, size, params) {
     })
 
     renderer.drawText(text, {
-        x: x + textOffsetX, y: y + textOffsetY,
+        x, y,
         size: fontSize,
         font: renderer.font,
         color: PDFLib.rgb(0, 0, 0),
-        rotate: PDFLib.degrees(params.rotated ? 90 : 0)
+        rotate: params.rotated ? deg90 : undefined
     });
 
     if(!params.noBorder) renderer.drawRectangle({
@@ -863,21 +859,7 @@ async function getDocument() {
         library issue: https://github.com/Hopding/pdf-lib/issues/1492
     */
     pdfDoc.registerFontkit(window.fontkit)
-
     const font = await pdfDoc.embedFont(await fontPromise, {subset:true});
-
-    font.embedder.__descenderAtHeight = function(size, options) {
-        if (options === void 0) { options = {}; }
-        var _a = options.descender, descender = _a === void 0 ? true : _a;
-        var _b = this.font, ascent = _b.ascent, descent = _b.descent, bbox = _b.bbox;
-        var yTop = (ascent || bbox.maxY) * this.scale;
-        var yBottom = (descent || bbox.minY) * this.scale;
-        var height = yTop - yBottom;
-        if (!descender)
-            height -= Math.abs(descent) || 0;
-        return yBottom/1000 * size;
-    }
-
     return [pdfDoc, font]
 }
 

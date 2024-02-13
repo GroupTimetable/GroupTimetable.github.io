@@ -47,6 +47,8 @@ let orig/*
     }
 })()
 
+throw "deg90!"
+
 //pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
 pdfjsLib.GlobalWorkerOptions.workerPort = pdfjsWorker;
 

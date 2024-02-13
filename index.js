@@ -12,6 +12,10 @@ function wrapDep(promise) {
     return promise.catch((e) => { throw "не удалось загрузить зависомость `" + e + "`. Попробуйте перезагрузить страницу" })
 }
 
+loadPdflibJs.then(arr => {
+    deg90 = PDFLib.degrees(90)
+})
+
 loadPdfjs.then(arr => {
     pdfjsLib.GlobalWorkerOptions.workerPort = pdfjsWorker;
 });
@@ -842,38 +846,40 @@ async function processPDF(userdata, name, indices) {
                     page = pdfDoc.addPage(pageSize)
                     w = pageSize[0]
                     h = pageSize[1]
+                    renderer.sizeFac = font.sizeAtHeight(1)
+                    // pdf-lib js has a bug at
+                    // https://github.com/Hopding/pdf-lib/blob/93dd36e85aa659a3bca09867d2d8fac172501fbe/src/core/embedders/CustomFontEmbedder.ts#L95
+                    // descender should be multiplied by this.scale
+
+                    renderer.descenderFac = (1 / 1000) * font.embedder.scale
+                        * font.embedder.font.descent * renderer.sizeFac;
+                    console.log(renderer.descenderFac)
                 },
-                heightAtSize: function(size) {
-                    try { return font.heightAtSize(size) }
-                    catch(e) { console.error(e); return NaN }
+                sizeFac: undefined,
+                descenderFac: undefined, // of font size, not height
+
+                drawRectangle: function(params) {
+                    try{ page.drawRectangle(params) } catch(e) { console.error(e) }
                 },
 
-sizeAtHeight: function(height) {
-    try { return font.sizeAtHeight(height) }
-    catch(e) { console.error(e); return NaN }
-},
+                drawText: function(text, params) {
+                    if(params.rotate == deg90) {
+                        params.x += renderer.descenderFac * params.size
+                    }
+                    else if(params.rotate == undefined) {
+                        params.y -= renderer.descenderFac * params.size
+                    }
+                    else { throw "Unreachable"; }
+                    try{ page.drawText(text, params) } catch(e) { console.error(e) }
+                },
 
-descenderAtHeight: function(size) {
-    try { return font.embedder.__descenderAtHeight(size) }
-    catch(e) { console.error(e); return NaN }
-},
-
-drawRectangle: function(params) {
-    try{ page.drawRectangle(params) } catch(e) { console.error(e) }
-},
-
-drawText: function(text, params) {
-    try{ page.drawText(text, params) } catch(e) { console.error(e) }
-},
-
-    widthOfTextAtSize: function(text, size) {
-    if(size != undefined && checkValid(size)) return font.widthOfTextAtSize(text, size)
-    else {
-        console.error('invalid size: ', size)
-        return NaN
-    }
-},
-
+                widthOfTextAtSize: function(text, size) {
+                    if(size != undefined && checkValid(size)) return font.widthOfTextAtSize(text, size)
+                    else {
+                        console.error('invalid size: ', size)
+                        return NaN
+                    }
+                },
             }
 
             await scheduleToPDF(renderer, schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
