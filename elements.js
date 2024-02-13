@@ -140,7 +140,7 @@ function addClick_elements(el, name, func, usedFunc, useErrorFunc) {
 
 var lastTaskDestroy
 
-async function createAndInitOutputElement(doc, width, height, parentElement, name, editParams, userdata) {
+async function createAndInitOutputElement(doc, width, height, parentElement, name, editParams, userdata, canvas) {
     let hideName = false;
     try { if('hideName' in name) {
         hideName = true;
@@ -149,12 +149,14 @@ async function createAndInitOutputElement(doc, width, height, parentElement, nam
 
     // rendering preview in default resolution is faster overall since
     // otherwise we would need to render 2 images
-    const pdfTask = pdfjsLib.getDocument(copy(doc));
-    const pageP = (async(task) => await (await task.promise).getPage(1))(pdfTask)
+    //const pdfTask = pdfjsLib.getDocument(copy(doc));
+    //const pageP = (async(task) => await (await task.promise).getPage(1))(pdfTask)
+
+    const imagePromise = canvas[1]().then(it => URL.createObjectURL(it))
 
     const imagesForWidth = [];
-    const imagePromise = createImage(width, imagesForWidth, pageP, false);
-    const fileUrl = window.URL.createObjectURL(new Blob([doc], { type: 'application/pdf' }));
+    //const imagePromise = createImage(width, imagesForWidth, pageP, false);
+    //const fileUrl = window.URL.createObjectURL(new Blob([doc], { type: 'application/pdf' }));
     let settingsPopupId, calendarHintPopupId;
 
     const outputElement = createOutputElement();

@@ -424,7 +424,7 @@ let prevTime = performance.now()
 function updStatus() { try {
     assertDomLoaded()
     const s = curStatus
-    if(false) {
+    if(true) {
         const now = performance.now()
         console.log('time:', (now - prevTime).toFixed(3))
         prevTime = now;
@@ -767,6 +767,13 @@ loadDependencies.catch((e) => {
     printScheduleError(e)
 })
 
+const canvasFontP = fontPromise.then(async(font) => {
+    const cFont = new FontFace("TimesNewRoman", font)
+    await cFont.load()
+    document.fonts.add(cFont)
+    return cFont
+})
+
 async function processPDF(userdata, name, indices) {
     updInfo({ msg: 'Ожидаем зависимости', progress: 0 })
     await loadDependencies
@@ -837,44 +844,91 @@ async function processPDF(userdata, name, indices) {
             var pdfDoc, font, page
             var w, h
 
+            var cFont = await canvasFontP
+            var canvas, context
+
+            function canvasColor(color) {
+                // dumb api, as if colors are not
+                // programmatic 99% of the time
+                const r = color.red
+                const g = color.green
+                const b = color.blue
+                return `rgb(${r*255}, ${g*255}, ${b*255})`
+            }
+
             const renderer = {
                 init: async(pageSize) => {
-                    const data = await getDocument()
-                    pdfDoc = data[0]
-                    font = data[1]
-                    renderer.font = font
-                    page = pdfDoc.addPage(pageSize)
+                    //const data = await getDocument()
+                    //pdfDoc = data[0]
+                    //font = data[1]
+                    //renderer.font = font
+                    //page = pdfDoc.addPage(pageSize)
                     w = pageSize[0]
                     h = pageSize[1]
-                    renderer.sizeFac = font.sizeAtHeight(1)
+                    // browser can load the font but cant provide
+                    // even 1 bit of info anout it obviously...
+                    renderer.sizeFac = 0.8962800875273523
+                    //renderer.sizeFac = font.sizeAtHeight(1)
                     // pdf-lib js has a bug at
                     // https://github.com/Hopding/pdf-lib/blob/93dd36e85aa659a3bca09867d2d8fac172501fbe/src/core/embedders/CustomFontEmbedder.ts#L95
                     // descender should be multiplied by this.scale
 
-                    renderer.descenderFac = (1 / 1000) * font.embedder.scale
-                        * font.embedder.font.descent * renderer.sizeFac;
-                    console.log(renderer.descenderFac)
+                    //renderer.descenderFac = (1 / 1000) * font.embedder.scale
+                    //    * font.embedder.font.descent * renderer.sizeFac;
+
+                    canvas = createOffscreenCanvas(w, h)
+                    context = canvas[0].getContext("2d", { alpha: false, desynchronized: true });
+                    context.textBaseline = 'bottom';
+
+                    // as if this is not a common operation
+                    context.fillStyle = 'white';
+                    context.fillRect(0, 0, w, h);
                 },
                 sizeFac: undefined,
-                descenderFac: undefined, // of font size, not height
 
                 drawRectangle: function(params) {
-                    try{ page.drawRectangle(params) } catch(e) { console.error(e) }
+                    if(params.color) {
+                        context.fillStyle = canvasColor(params.color)
+                        context.fillRect(params.x, h - params.y, params.width, -params.height)
+                    }
+                    if(params.borderColor) {
+                        context.strokeStyle = canvasColor(params.borderColor)
+                        context.lineWidth = params.borderWidth
+                        context.strokeRect(params.x, h - params.y, params.width, -params.height)
+                    }
+
+                    //try{ page.drawRectangle(params) } catch(e) { console.error(e) }
                 },
 
                 drawText: function(text, params) {
+                    context.fillStyle = canvasColor(params.color)
+                    context.font = params.size + 'px TimesNewRoman'
                     if(params.rotate == deg90) {
-                        params.x += renderer.descenderFac * params.size
+                        // why is it in the other direction?
+                        context.setTransform(0, -1, 1, 0, params.x, h - params.y)
+                        context.fillText(text, 0, 0)
+                        context.resetTransform()
                     }
-                    else if(params.rotate == undefined) {
-                        params.y -= renderer.descenderFac * params.size
+                    else {
+                        context.fillText(text, params.x, h - params.y)
                     }
-                    else { throw "Unreachable"; }
-                    try{ page.drawText(text, params) } catch(e) { console.error(e) }
+
+                    //if(params.rotate == deg90) {
+                    //    params.x += renderer.descenderFac * params.size
+                    //}
+                    //else if(params.rotate == undefined) {
+                    //    params.y -= renderer.descenderFac * params.size
+                    //}
+                    //else { throw "Unreachable"; }
+                    //try{ page.drawText(text, params) } catch(e) { console.error(e) }
                 },
 
                 widthOfTextAtSize: function(text, size) {
-                    if(size != undefined && checkValid(size)) return font.widthOfTextAtSize(text, size)
+                    if(size != undefined && checkValid(size)) {
+                        context.font = size + 'px TimesNewRoman'
+                        const textSize = context.measureText(text)
+                        return textSize.width
+                    }
                     else {
                         console.error('invalid size: ', size)
                         return NaN
@@ -883,13 +937,14 @@ async function processPDF(userdata, name, indices) {
             }
 
             await scheduleToPDF(renderer, schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
-            const doc = await pdfDoc.save()
+            //const doc = await pdfDoc.save()
+            const doc = undefined
             updInfo({ msg: 'Создаём предпросмотр', progress: 0.4 })
             const outFilename = filename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
             await createAndInitOutputElement(
                 doc, w, h, dom.outputsEl, outFilename,
                 { rowRatio, scheme, schedule, drawBorder, dowOnTop, borderFactor, dates },
-                userdata
+                userdata, canvas
             )
 
             updInfo({ msg: 'Готово. Пожалуйста, поделитесь сайтом с друзьями ❤️', warning: warningText, progress: 1.0 })

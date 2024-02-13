@@ -501,6 +501,7 @@ const textBreak = new (function() {
     }
     this.haveTried = function (divs) { return tried.includes(divs) }
     this.remeasure = function(strOrig, divs, renderer, bounds) {
+        // ???
         let prevSpace = true //trimStart
         let str = ''
         for(let i = 0; i < strOrig.length; i++) {
@@ -549,14 +550,21 @@ const textBreak = new (function() {
             tmp.texts.push(str.substring(prev));
         }
 
+        // TODO: check for dublicates here (and before), not in fitTextBreakLines
+
         /*calc sizes*/ {
             const fontHeight = 10
             const fontSize = fontHeight * renderer.sizeFac
 
-            // TODO: change font sizes to font heights
             tmp.lineWidths.length = tmp.texts.length
             let maxWidth = 0
-            for(let i = 0; i < tmp.texts.length; i++) {
+            if (tmp.texts.length == 1) {
+                // using height instead of size to ignore line height spacing
+                const textWidth = renderer.widthOfTextAtSize(tmp.texts[0], fontHeight)
+                tmp.lineWidths[0] = textWidth
+                maxWidth = textWidth
+            }
+            else for(let i = 0; i < tmp.texts.length; i++) {
                 const textWidth = renderer.widthOfTextAtSize(tmp.texts[i], fontSize)
                 tmp.lineWidths[i] = textWidth
                 maxWidth = Math.max(maxWidth, textWidth);
@@ -578,26 +586,26 @@ const textBreak = new (function() {
     Object.defineProperty(this, 'last', { get: () => objs[+lastI] });
 })()
 
-function fitTextBreakLines(str, renderer, size) {
+function fitTextBreakLines(str, renderer, bounds) {
     textBreak.reset()
 
-    textBreak.remeasure(str, 1, renderer, size)
+    textBreak.remeasure(str, 1, renderer, bounds)
 
     for(let j = 0; j < 3; j++) {
         /*maximize text width*/ {
             const el = textBreak.last
-            const scaledHeight = el.height * size.w / el.width;
-            const divs = Math.max(1, Math.round(el.texts.length * Math.sqrt(size.h / scaledHeight)));
+            const scaledHeight = el.height * bounds.w / el.width;
+            const divs = Math.max(1, Math.round(el.texts.length * Math.sqrt(bounds.h / scaledHeight)));
             if(textBreak.haveTried(divs)) break;
-            else textBreak.remeasure(str, divs, renderer, size)
+            else textBreak.remeasure(str, divs, renderer, bounds)
         }
 
         /*maximize text height*/ {
             const el = textBreak.last
-            const scaledWidth = el.width * size.h / el.height;
-            const divs = Math.max(1, Math.round(el.texts.length * Math.sqrt(scaledWidth / size.w)));
+            const scaledWidth = el.width * bounds.h / el.height;
+            const divs = Math.max(1, Math.round(el.texts.length * Math.sqrt(scaledWidth / bounds.w)));
             if(textBreak.haveTried(divs)) break;
-            else textBreak.remeasure(str, divs, renderer, size)
+            else textBreak.remeasure(str, divs, renderer, bounds)
         }
     }
 
@@ -738,24 +746,24 @@ function drawTextWidthinBounds(text, renderer, coord, size, params) {
     const calcParams = (maxWidth, maxHeight) => {
         const offWidth = maxWidth * innerFactor
         const offHeight = maxHeight * innerFactor
+        // using textSize instead of text height, since text is a single line
         const textHeight = offHeight;
-        const largestWidth = renderer.widthOfTextAtSize(text, textHeight * renderer.sizeFac);
-        const scaledHeight = Math.min(textHeight * offWidth / largestWidth, offHeight);
-        const scaledWidth = largestWidth * scaledHeight / offHeight;
-        const newSize = scaledHeight * renderer.sizeFac
+        const largestWidth = renderer.widthOfTextAtSize(text, textHeight/*actually size*/);
+        const scaledHeight = Math.min(textHeight * offWidth / largestWidth, textHeight);
+        const scaledWidth = largestWidth * scaledHeight / textHeight;
 
         const offsetHeight = (offHeight + maxHeight) * 0.5;
         if(params.alignLeft) {
             const offsetWidth = 0;
-            return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, newSize]
+            return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, scaledHeight]
         }
         else if(params.alignRight) {
             const offsetWidth = maxWidth * (1 - padding) - scaledWidth
-            return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, newSize]
+            return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, scaledHeight]
         }
         else {
             const offsetWidth = (maxWidth - scaledWidth) * 0.5
-            return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, newSize]
+            return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, scaledHeight]
         }
     };
     const [offsetWidth, offsetHeight, tw, th, fontSize] = params.rotated ? calcParams(size.h, size.w) : calcParams(size.w, size.h)
