@@ -767,12 +767,55 @@ loadDependencies.catch((e) => {
     printScheduleError(e)
 })
 
+function createOffscreenCanvas(width, height) {
+    //this is certainly my job to check all of this
+    if (window.OffscreenCanvas !== undefined) {
+        const c = new window.OffscreenCanvas(width, height);
+        return [c, c.convertToBlob.bind(c)];
+    }
+    else {
+        const c = document.createElement('canvas');
+        c.width = width;
+        c.height = height;
+        return [c, (function(options) {
+            return new Promise((res, rej) => {
+                this.toBlob((blob) => {
+                    if(blob === null) rej('cannot create blob from canvas');
+                    else res(blob);
+                }, options?.type, options?.quality);
+            })
+        }).bind(c)];
+    }
+}
+
+async function getDocument() {
+    const pdfDoc = await PDFLib.PDFDocument.create() /*
+        we can't reuse the document and glyph cache because of
+        library issue: https://github.com/Hopding/pdf-lib/issues/1492
+    */
+    pdfDoc.registerFontkit(window.fontkit)
+    const font = await pdfDoc.embedFont(await fontPromise, {subset:true});
+    return [pdfDoc, font]
+}
+
+// browser can load the font but cant provide
+// even 1 bit of info about it obviously...
+const fontSizeFac = 0.8962800875273523
 const canvasFontP = fontPromise.then(async(font) => {
     const cFont = new FontFace("TimesNewRoman", font)
     await cFont.load()
     document.fonts.add(cFont)
     return cFont
 })
+const textContextP = (async() => {
+    // we need an entire canvas just to measure text...
+    const data = createOffscreenCanvas(1, 1)
+    const canvas = data[0]
+    const context = canvas.getContext('2d', { alpha: false, desynchronized: true })
+    const font = await canvasFontP
+    context.font = '1px TimesNewRoman'
+    return context
+})()
 
 async function processPDF(userdata, name, indices) {
     updInfo({ msg: 'Ожидаем зависимости', progress: 0 })
@@ -845,94 +888,70 @@ async function processPDF(userdata, name, indices) {
             var w, h
 
             var cFont = await canvasFontP
-            var canvas, context
-
-            function canvasColor(color) {
-                // dumb api, as if colors are not
-                // programmatic 99% of the time
-                const r = color.red
-                const g = color.green
-                const b = color.blue
-                return `rgb(${r*255}, ${g*255}, ${b*255})`
-            }
+            var canvas, context, textContext
 
             const renderer = {
-                init: async(pageSize) => {
-                    //const data = await getDocument()
-                    //pdfDoc = data[0]
-                    //font = data[1]
-                    //renderer.font = font
-                    //page = pdfDoc.addPage(pageSize)
-                    w = pageSize[0]
-                    h = pageSize[1]
-                    // browser can load the font but cant provide
-                    // even 1 bit of info anout it obviously...
-                    renderer.sizeFac = 0.8962800875273523
-                    //renderer.sizeFac = font.sizeAtHeight(1)
-                    // pdf-lib js has a bug at
-                    // https://github.com/Hopding/pdf-lib/blob/93dd36e85aa659a3bca09867d2d8fac172501fbe/src/core/embedders/CustomFontEmbedder.ts#L95
-                    // descender should be multiplied by this.scale
-
-                    //renderer.descenderFac = (1 / 1000) * font.embedder.scale
-                    //    * font.embedder.font.descent * renderer.sizeFac;
+                init: async(width, height) => {
+                    w = width
+                    h = height
 
                     canvas = createOffscreenCanvas(w, h)
                     context = canvas[0].getContext("2d", { alpha: false, desynchronized: true });
+
+                    context.strokeStyle = '#000';
                     context.textBaseline = 'bottom';
+                    renderer.fontSizeFac = fontSizeFac;
+                    renderer.fontHeightFac = 1 / fontSizeFac;
 
                     // as if this is not a common operation
                     context.fillStyle = 'white';
                     context.fillRect(0, 0, w, h);
+
+                    textContext = await textContextP
                 },
-                sizeFac: undefined,
+                fontSizeFac: undefined,
+                fontHeightFac: undefined,
 
-                drawRectangle: function(params) {
-                    if(params.color) {
-                        context.fillStyle = canvasColor(params.color)
-                        context.fillRect(params.x, h - params.y, params.width, -params.height)
-                    }
-                    if(params.borderColor) {
-                        context.strokeStyle = canvasColor(params.borderColor)
-                        context.lineWidth = params.borderWidth
-                        context.strokeRect(params.x, h - params.y, params.width, -params.height)
-                    }
+                rotated: undefined,
+                borderWidth: undefined,
+                fillRect: undefined,
 
-                    //try{ page.drawRectangle(params) } catch(e) { console.error(e) }
+                setupRect: (borderWidth, fillYellow, fillWhite) => {
+                    renderer.borderWidth = borderWidth
+                    renderer.fillRect = fillYellow || fillWhite
+
+                    if(fillYellow) context.fillStyle = '#ffff00'
+                    else if(fillWhite) context.fillStyle = '#fff'
+                    context.lineWidth = borderWidth
                 },
-
-                drawText: function(text, params) {
-                    context.fillStyle = canvasColor(params.color)
-                    context.font = params.size + 'px TimesNewRoman'
-                    if(params.rotate == deg90) {
-                        // why is it in the other direction?
-                        context.setTransform(0, -1, 1, 0, params.x, h - params.y)
-                        context.fillText(text, 0, 0)
-                        context.resetTransform()
-                    }
-                    else {
-                        context.fillText(text, params.x, h - params.y)
-                    }
-
-                    //if(params.rotate == deg90) {
-                    //    params.x += renderer.descenderFac * params.size
-                    //}
-                    //else if(params.rotate == undefined) {
-                    //    params.y -= renderer.descenderFac * params.size
-                    //}
-                    //else { throw "Unreachable"; }
-                    //try{ page.drawText(text, params) } catch(e) { console.error(e) }
+                drawRect: (x, y, width, height) => {
+                    context.rect(x, y, width, height)
                 },
-
-                widthOfTextAtSize: function(text, size) {
-                    if(size != undefined && checkValid(size)) {
-                        context.font = size + 'px TimesNewRoman'
-                        const textSize = context.measureText(text)
-                        return textSize.width
+                finalizeRects: () => {
+                    if(renderer.fillRect) context.fill();
+                    if(renderer.borderWidth > 0) context.stroke();
+                    context.beginPath()
+                },
+                setupText: (rotated) => {
+                    if(rotated) context.setTransform(0, -1, 1, 0, 0, 0);
+                    renderer.rotated = rotated;
+                    context.fillStyle = '#000';
+                },
+                setFontSize: (size) => {
+                    context.font = size + 'px TimesNewRoman';
+                },
+                drawText: (text, x, y) => {
+                    if(renderer.rotated) {
+                        context.fillText(text, -y, x);
+                    } else {
+                        context.fillText(text, x, y);
                     }
-                    else {
-                        console.error('invalid size: ', size)
-                        return NaN
-                    }
+                },
+                finalizeTexts: () => {
+                    if(renderer.rotated) context.resetTransform();
+                },
+                textWidth: (text) => { // at font size 1
+                    return textContext.measureText(text).width
                 },
             }
 

@@ -453,28 +453,13 @@ function checkValid(...params) {
     return true
 }
 
+function drawTextCentered(renderer, texts, fontSize, cx, cy, widths) {
+    const lineHeight = fontSize * renderer.fontHeightFac;
+    const offY = cy - lineHeight * texts.length * 0.5 + lineHeight;
 
-function drawTextCentered(text, renderer, fontHeight, center, precompWidths = undefined) {
-    const fontSize = fontHeight * renderer.sizeFac
-    let widths = precompWidths
-    if(widths === undefined) {
-        widths = Array(text.length)
-        for(let i = 0; i < text.length; i++) {
-            const textWidth = renderer.widthOfTextAtSize(text[i], fontSize)
-            widths[i] = textWidth;
-        }
-    }
-
-    const offY = center.y + fontHeight*text.length * 0.5;
-
-    for(let i = 0; i < text.length; i++) {
-        renderer.drawText(text[i], {
-            x: center.x - widths[i] * 0.5,
-            y: offY - i*fontHeight - fontHeight,
-            size: fontSize,
-            font: renderer.font,
-            color: PDFLib.rgb(0, 0, 0),
-        });
+    renderer.setFontSize(fontSize);
+    for(let i = 0; i < texts.length; i++) {
+        renderer.drawText(texts[i], cx - widths[i]*0.5, offY + i*lineHeight);
     }
 }
 
@@ -553,32 +538,41 @@ const textBreak = new (function() {
         // TODO: check for dublicates here (and before), not in fitTextBreakLines
 
         /*calc sizes*/ {
-            const fontHeight = 10
-            const fontSize = fontHeight * renderer.sizeFac
-
             tmp.lineWidths.length = tmp.texts.length
-            let maxWidth = 0
+
+            let maxWidth, scaledSize;
             if (tmp.texts.length == 1) {
                 // using height instead of size to ignore line height spacing
-                const textWidth = renderer.widthOfTextAtSize(tmp.texts[0], fontHeight)
-                tmp.lineWidths[0] = textWidth
-                maxWidth = textWidth
+                const textWidth = renderer.textWidth(tmp.texts[0]);
+                tmp.lineWidths[0] = textWidth;
+                maxWidth = textWidth;
+                scaledSize = Math.min(
+                    bounds.w / textWidth,
+                    bounds.h
+                );
             }
-            else for(let i = 0; i < tmp.texts.length; i++) {
-                const textWidth = renderer.widthOfTextAtSize(tmp.texts[i], fontSize)
-                tmp.lineWidths[i] = textWidth
-                maxWidth = Math.max(maxWidth, textWidth);
+            else {
+                maxWidth = 0;
+                for(let i = 0; i < tmp.texts.length; i++) {
+                    const textWidth = renderer.textWidth(tmp.texts[i]);
+                    tmp.lineWidths[i] = textWidth;
+                    maxWidth = Math.max(maxWidth, textWidth);
+                }
+                scaledSize = Math.min(
+                    bounds.w / maxWidth,
+                    bounds.h / tmp.texts.length * renderer.fontSizeFac,
+                );
             }
-            const scaledHeight = Math.min(bounds.h / tmp.texts.length, fontHeight * bounds.w / maxWidth);
 
-            const coeff = scaledHeight / fontHeight
-            for(let i = 0; i < tmp.lineWidths.length; i++) tmp.lineWidths[i] *= coeff
-            tmp.width = maxWidth * coeff;
-            tmp.height = tmp.texts.length * scaledHeight
-            tmp.fontSize = scaledHeight * renderer.sizeFac;
+            for(let i = 0; i < tmp.lineWidths.length; i++) {
+                tmp.lineWidths[i] *= scaledSize;
+            }
+            tmp.width = maxWidth * scaledSize;
+            tmp.height = tmp.texts.length * scaledSize * renderer.fontHeightFac;
+            tmp.fontSize = scaledSize;
 
-            lastI = tmpI
-            if(tmp.fontSize > objs[+bestI].fontSize) bestI = tmpI
+            lastI = tmpI;
+            if(tmp.fontSize > objs[+bestI].fontSize) bestI = tmpI;
         }
     }
 
@@ -613,264 +607,90 @@ function fitTextBreakLines(str, renderer, bounds) {
     return [el.texts, el.fontSize, el.lineWidths]
 }
 
-function drawLessonText(lesson, secondWeek, renderer, coord, blockSize, borderWidth) {
-    if(secondWeek && lesson.trim() !== '') renderer.drawRectangle({
-        x: coord.x,
-        y: coord.y,
-        width: blockSize.w,
-        height: -blockSize.h,
-        color: PDFLib.rgb(1, 1, 0),
-    })
-    if(lesson.trim() !== '') {
-        const t = lesson;
-        const innerSize = { w: blockSize.w * 0.95, h: blockSize.h * 0.9 }
-        const [text, fontSize, widths] = fitTextBreakLines(t, renderer, innerSize)
-
-        drawTextCentered(
-            text, renderer, fontSize / renderer.sizeFac,
-            { x: coord.x + blockSize.w*0.5, y: coord.y - blockSize.h*0.5 },
-            widths
-        );
-    }
-
-    renderer.drawRectangle({
-        x: coord.x,
-        y: coord.y,
-        width: blockSize.w,
-        height: -blockSize.h,
-        borderColor: PDFLib.rgb(0, 0, 0),
-        borderWidth: borderWidth,
-    })
-}
-
 function minuteOfDayToString(it) {
     return Math.floor(it/60) + ":" + (it%60).toString().padStart(2, '0')
 }
 
-function drawTime(lesson, renderer, coord, blockSize, borderWidth) {
-    const innerSize = { w: blockSize.w*0.8, h: blockSize.h*0.9 }
+function getLessonTimeTexts(lesson) {
+    return [minuteOfDayToString(lesson.sTime), "–", minuteOfDayToString(lesson.eTime)]
+}
 
-    const texts = [
-        minuteOfDayToString(lesson.sTime),
-        "–",
-        minuteOfDayToString(lesson.eTime)
-    ];
-    const textHeight = innerSize.w
-    const fontSize = textHeight * renderer.sizeFac
-    const widths = []
-    let largestWidth = 0
+function calcFontSizeForBoundsSingle(renderer, text, w, h, widths/*out*/) {
+    const textWidth = renderer.textWidth(text);
+    // note: line height is font size if only 1 line
+    const scaledSize = Math.min(w / textWidth, h);
+    widths.length = 0;
+    widths[0] = textWidth * scaledSize;
+    return scaledSize;
+}
+
+function calcFontSizeForBounds(renderer, texts, w, h, widths/*out*/) {
+    widths.length = 0;
+
+    let largestWidth = 0;
     for(let i = 0; i < texts.length; i++) {
-        const textWidth = renderer.widthOfTextAtSize(texts[i], fontSize)
-        widths.push(textWidth)
+        const textWidth = renderer.textWidth(texts[i]);
+        widths.push(textWidth);
         if(textWidth > largestWidth) largestWidth = textWidth;
     }
 
-    const scaledHeight = Math.min(textHeight * innerSize.w / largestWidth, innerSize.h / texts.length);
-
-    const coeff = scaledHeight / textHeight;
-    for(let i = 0; i < widths.length; i++) widths[i] *= coeff
-
-    drawTextCentered(
-        texts, renderer, scaledHeight,
-        { x: coord.x + blockSize.w*0.5, y: coord.y - blockSize.h*0.5 },
-        widths
+    const scaledSize = Math.min(
+        w / largestWidth,
+        h / texts.length * renderer.fontSizeFac
     );
+    for(let i = 0; i < widths.length; i++) widths[i] *= scaledSize;
 
-    renderer.drawRectangle({
-        x: coord.x,
-        y: coord.y,
-        width: blockSize.w,
-        height: -blockSize.h,
-        borderColor: PDFLib.rgb(0, 0, 0),
-        borderWidth: borderWidth,
-    })
+    return scaledSize;
 }
 
+function drawLesson(textArr, yellowArr, renderer, lesson, secondWeek, x, y, w, h) {
+    let drawYellow;
+    if (lesson.trim() !== '') {
+        drawYellow = secondWeek;
+        textArr.push({ text: lesson, x, y, w, h });
+    }
+    if(drawYellow) yellowArr.push({ x, y, w, h });
+    else renderer.drawRect(x, y, w, h);
+}
 
-function drawLessons(lesson, renderer, coord, size, borderWidth) {
-    const eqh1 = lesson.lessons[0] === lesson.lessons[1];
-    const eqh2 = lesson.lessons[2] === lesson.lessons[3];
-    const eqv1 = lesson.lessons[0] === lesson.lessons[2];
-    const eqv2 = lesson.lessons[1] === lesson.lessons[3];
+function drawLessons(textArr, yellowArr, renderer, lesson, x, y, w, h) {
+    const w2 = w*0.5;
+    const h2 = h*0.5;
+    const x2 = x + w2;
+    const y2 = y + h2;
 
-    const points = [
-        { x: coord.x             , y: coord.y              },
-        { x: coord.x + size.w*0.5, y: coord.y              },
-        { x: coord.x             , y: coord.y - size.h*0.5 },
-        { x: coord.x + size.w*0.5, y: coord.y - size.h*0.5 },
-    ];
+    const ll = lesson.lessons;
+    const eqh1 = ll[0] === ll[1];
+    const eqh2 = ll[2] === ll[3];
+    const eqv1 = ll[0] === ll[2];
+    const eqv2 = ll[1] === ll[3];
 
-    const sizes = [
-        { w: size.w*0.5, h: size.h*0.5 },
-        { w: size.w    , h: size.h*0.5 },
-        { w: size.w*0.5, h: size.h     },
-        { w: size.w    , h: size.h     }
-    ];
-
-    const drawLessons = Array(4)
-    if(eqh1 && eqh2 && eqv1 && eqv2) drawLessonText(lesson.lessons[0], false, renderer, points[0], sizes[3], borderWidth)
+    let drawIndividual;
+    if(eqh1 && eqh2 && eqv1 && eqv2) {
+        drawLesson(textArr, yellowArr, renderer, ll[0], false, x, y, w, h);
+        drawIndividual = 0;
+    }
     else if(eqh1 || eqh2) {
-        if(eqh1) drawLessonText(lesson.lessons[0], false, renderer, points[0], sizes[1], borderWidth)
-        else drawLessons[0] = drawLessons[1] = true
+        if(eqh1) drawLesson(textArr, yellowArr, renderer, ll[0], false, x, y, w, h2);
+        else drawIndividual = (1 | 2);
 
-        if(eqh2) drawLessonText(lesson.lessons[2], true, renderer, points[2], sizes[1], borderWidth)
-        else drawLessons[2] = drawLessons[3] = true
+        if(eqh2) drawLesson(textArr, yellowArr, renderer, ll[2], true, x, y + h2, w, h2);
+        else drawIndividual = (4 | 8);
     }
     else if(eqv1 || eqv2) {
-        if(eqv1) drawLessonText(lesson.lessons[0], false, renderer, points[0], sizes[2], borderWidth)
-        else drawLessons[0] = drawLessons[2] = true
+        if(eqv1) drawLesson(textArr, yellowArr, renderer, ll[0], false, x, y, w2, h);
+        else drawIndividual = (1 | 4);
 
-        if(eqv2) drawLessonText(lesson.lessons[1], false, renderer, points[1], sizes[2], borderWidth)
-        else drawLessons[1] = drawLessons[3] = true
+        if(eqv2) drawLesson(textArr, yellowArr, renderer, ll[1], false, x + w2, y, w2, h);
+        else drawIndividual = (2 | 8);
     }
-    else drawLessons.fill(true)
+    else drawIndividual = (1 | 2 | 4 | 8);
 
-    if(drawLessons[0]) drawLessonText(lesson.lessons[0], false, renderer, points[0], sizes[0], borderWidth)
-    if(drawLessons[1]) drawLessonText(lesson.lessons[1], false, renderer, points[1], sizes[0], borderWidth)
-    if(drawLessons[2]) drawLessonText(lesson.lessons[2], true, renderer, points[2], sizes[0], borderWidth)
-    if(drawLessons[3]) drawLessonText(lesson.lessons[3], true, renderer, points[3], sizes[0], borderWidth)
+    if((drawIndividual & 1) != 0) drawLesson(textArr, yellowArr, renderer, ll[0], false, x, y, w2, h2);
+    if((drawIndividual & 2) != 0) drawLesson(textArr, yellowArr, renderer, ll[1], false, x2, y, w2, h2);
+    if((drawIndividual & 4) != 0) drawLesson(textArr, yellowArr, renderer, ll[2], true, x, y2, w2, h2);
+    if((drawIndividual & 8) != 0) drawLesson(textArr, yellowArr, renderer, ll[3], true, x2, y2, w2, h2);
 }
-
-function drawLesson(lesson, renderer, coord, size, timeWidth, borderWidth) {
-    drawTime(lesson, renderer, coord, { w: timeWidth, h: size.h }, borderWidth)
-    drawLessons(lesson, renderer, { x: coord.x + timeWidth, y: coord.y }, { w: size.w - timeWidth, h: size.h }, borderWidth)
-}
-
-var deg90; // filled out by whoever uses schedule.js
-
-function drawTextWidthinBounds(text, renderer, coord, size, params) {
-    params ??= {}
-    const padding = params.padding ?? 0.05
-    const innerFactor = 1 - 2*padding
-
-    const calcParams = (maxWidth, maxHeight) => {
-        const offWidth = maxWidth * innerFactor
-        const offHeight = maxHeight * innerFactor
-        // using textSize instead of text height, since text is a single line
-        const textHeight = offHeight;
-        const largestWidth = renderer.widthOfTextAtSize(text, textHeight/*actually size*/);
-        const scaledHeight = Math.min(textHeight * offWidth / largestWidth, textHeight);
-        const scaledWidth = largestWidth * scaledHeight / textHeight;
-
-        const offsetHeight = (offHeight + maxHeight) * 0.5;
-        if(params.alignLeft) {
-            const offsetWidth = 0;
-            return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, scaledHeight]
-        }
-        else if(params.alignRight) {
-            const offsetWidth = maxWidth * (1 - padding) - scaledWidth
-            return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, scaledHeight]
-        }
-        else {
-            const offsetWidth = (maxWidth - scaledWidth) * 0.5
-            return [offsetWidth, offsetHeight, scaledWidth, scaledHeight, scaledHeight]
-        }
-    };
-    const [offsetWidth, offsetHeight, tw, th, fontSize] = params.rotated ? calcParams(size.h, size.w) : calcParams(size.w, size.h)
-    const x = coord.x + (params.rotated ? offsetHeight : offsetWidth)
-    const y = coord.y + (params.rotated ? -size.h + offsetWidth : -offsetHeight)
-
-    if(params.backgroundColor) renderer.drawRectangle({
-        x, y,
-        width: params.rotated ? -th : tw,
-        height: params.rotated ? tw : th,
-        color: params.backgroundColor
-    })
-
-    renderer.drawText(text, {
-        x, y,
-        size: fontSize,
-        font: renderer.font,
-        color: PDFLib.rgb(0, 0, 0),
-        rotate: params.rotated ? deg90 : undefined
-    });
-
-    if(!params.noBorder) renderer.drawRectangle({
-        x: coord.x,
-        y: coord.y,
-        width: size.w,
-        height: -size.h,
-        borderColor: PDFLib.rgb(0, 0, 0),
-        borderWidth: params.borderWidth ?? (() => { console.error('no border width!'); return 0 })(),
-    })
-}
-
-function drawDay(
-    renderer,
-    day, dayI,
-    outerCoord, groupSize,
-    borderWidth,  innerBorderWidth, drawBorder, dowOnTop
-) {
-    const borderOffset = (drawBorder
-        ? Math.max(0, borderWidth - innerBorderWidth)
-        : borderWidth + innerBorderWidth) -1/*? border is drawn 1px less than it should ?*/;
-    let x = outerCoord.x + borderOffset * 0.5;
-    let y = outerCoord.y - borderOffset * 0.5;
-    let w = groupSize.w - borderOffset;
-    const rowsCount = day.length + (dowOnTop ? 1 : 0);
-    const fullH = groupSize.h * rowsCount - borderOffset;
-    const h = groupSize.h - borderOffset / rowsCount;
-    const addColWidth = w*0.1
-
-    const text = daysOfWeek[dayI]
-    if(dowOnTop) {
-        const size = { w, h }
-        drawTextWidthinBounds(text, renderer, { x, y }, size, { borderWidth: innerBorderWidth })
-        y -= size.h
-    }
-    else {
-        const size = { w: addColWidth, h : fullH }
-        drawTextWidthinBounds(text, renderer, { x, y }, size, { rotated: true, borderWidth: innerBorderWidth })
-        x += size.w
-        w -= addColWidth
-    }
-
-    const size = { w, h }
-    for(let i = 0; i < day.length; i++) {
-        drawLesson(day[i], renderer, { x: x, y: y - i*h }, size, addColWidth, innerBorderWidth);
-    }
-
-    if(drawBorder) renderer.drawRectangle({
-        x: outerCoord.x,
-        y: outerCoord.y,
-        width: groupSize.w,
-        height: -groupSize.h * rowsCount,
-        borderColor: PDFLib.rgb(0, 0, 0),
-        borderWidth: borderWidth,
-    })
-}
-
-function createOffscreenCanvas(width, height) {
-    //this is certainly my job to check all of this
-    if (window.OffscreenCanvas !== undefined) {
-        const c = new window.OffscreenCanvas(width, height);
-        return [c, c.convertToBlob.bind(c)];
-    }
-    else {
-        const c = document.createElement('canvas');
-        c.width = width;
-        c.height = height;
-        return [c, (function(options) {
-            return new Promise((res, rej) => {
-                this.toBlob((blob) => {
-                    if(blob === null) rej('cannot create blob from canvas');
-                    else res(blob);
-                }, options?.type, options?.quality);
-            })
-        }).bind(c)];
-    }
-}
-
-async function getDocument() {
-    const pdfDoc = await PDFLib.PDFDocument.create() /*
-        we can't reuse the document and glyph cache because of
-        library issue: https://github.com/Hopding/pdf-lib/issues/1492
-    */
-    pdfDoc.registerFontkit(window.fontkit)
-    const font = await pdfDoc.embedFont(await fontPromise, {subset:true});
-    return [pdfDoc, font]
-}
-
 
 //border factor is used inaccurately, but the difference should not be that big
 async function scheduleToPDF(renderer, schedule, origPattern, rowRatio, borderFactor, drawBorder, dowOnTop) {
@@ -913,12 +733,12 @@ async function scheduleToPDF(renderer, schedule, origPattern, rowRatio, borderFa
     const heightIfSignLast  = Math.max(rowMaxHeight, lastRows  * rowHeight + signatureHeightFull);
 
     const pageHeight = Math.min(heightIfSignFirst, heightIfSignLast);
+    const pageWidth = colWidth * renderPattern.length;
     const signFirst  = heightIfSignFirst < heightIfSignLast;
-    const pageSize = [colWidth * renderPattern.length, pageHeight]
     const groupSize = { w: colWidth, h: colWidth * rowRatio };
 
     const ch = (num) => !(num >= 1 && num < Infinity)
-    if(!(maxRows > 0) || ch(pageSize[0]) || ch(pageSize[1])) {
+    if(!(maxRows > 0) || ch(pageWidth) || ch(pageHeight)) {
         console.error('TODO')
         return;
         //const [pdfDoc, font] = await getDocument()
@@ -926,36 +746,161 @@ async function scheduleToPDF(renderer, schedule, origPattern, rowRatio, borderFa
         //return { doc: await pdfDoc.save(), w: 1, h: 1 } //no signature
     }
 
-    await renderer.init(pageSize)
+    await renderer.init(pageWidth, pageHeight)
     //const [pdfDoc, font] = await getDocument()
     //const page = pdfDoc.addPage(pageSize)
 
+    if (drawBorder) {
+        renderer.setupRect(borderWidth, false)
+        for(let i = 0; i < renderPattern.length; i++) {
+            const x = i * groupSize.w;
+            let curY = 0;
+
+            for(let j = 0; j < renderPattern[i].length; j++) {
+                const index = renderPattern[i][j];
+                if(index == undefined || schedule[index] == undefined) continue;
+                const day = schedule[index];
+                const rowsCount = day.length + (dowOnTop ? 1 : 0);
+                const height = rowsCount * groupSize.h;
+                renderer.drawRect(x, curY, groupSize.w, height)
+                curY = curY + height;
+            }
+        }
+        renderer.finalizeRects()
+    }
+
+    const dowArray = []
+    const timeArr = []
+    const yellowArr = []
+    const lessonsArr = []
+    const innerBorderOffset = (drawBorder
+        ? Math.max(0, borderWidth - innerBorderWidth)
+        : borderWidth + innerBorderWidth) -1/*? border is drawn 1px less than it should ?*/;
+    const startW = groupSize.w - innerBorderOffset;
+    const dowColWidth = startW * 0.1;
+    const timeColWidth = dowColWidth;
+
+    renderer.setupRect(innerBorderWidth, false)
     for(let i = 0; i < renderPattern.length; i++) {
-        let curY = pageSize[1];
+        const startX = i * groupSize.w + innerBorderWidth * 0.5;
+        let startY = innerBorderWidth * 0.5;
 
         for(let j = 0; j < renderPattern[i].length; j++) {
             const index = renderPattern[i][j];
             if(index == undefined || schedule[index] == undefined) continue;
-            drawDay(
-                renderer,
-                schedule[index], index,
-                { x: i*groupSize.w, y: curY }, groupSize,
-                borderWidth, innerBorderWidth, drawBorder, dowOnTop
-            );
-            curY = curY - groupSize.h * (schedule[index].length + (dowOnTop ? 1 : 0));
+            const day = schedule[index];
+            const rowsCount = day.length + (dowOnTop ? 1 : 0);
+
+            let x = startX;
+            let y = startY;
+            let w = startW;
+            const h = groupSize.h - innerBorderOffset / rowsCount;
+            const dayH = rowsCount * groupSize.h;
+
+            const dowText = daysOfWeek[index]
+            if(dowOnTop) {
+                dowArray.push({ text: dowText, x, y, w, h })
+                renderer.drawRect(x, y, w, h)
+                y += h;
+            }
+            else {
+                const height = dayH - innerBorderOffset;
+                dowArray.push({ text: dowText, x, y, w: dowColWidth, h: height })
+                renderer.drawRect(x, y, dowColWidth, height)
+                x += dowColWidth;
+                w -= dowColWidth;
+            }
+
+            const lessonW = w - timeColWidth
+            for(let i = 0; i < day.length; i++) {
+                const lesson = day[i]
+                const ly = y + i*h;
+                renderer.drawRect(x, ly, timeColWidth, h)
+                const texts = getLessonTimeTexts(lesson)
+                timeArr.push({ texts, x, y: ly, w: timeColWidth, h })
+                drawLessons(lessonsArr, yellowArr, renderer, lesson, x + timeColWidth, ly, lessonW, h)
+            }
+
+            startY += dayH;
         }
     }
+    renderer.finalizeRects()
 
-    const signX = signFirst ? signaturePadding : pageSize[0] - colWidth*0.8 - signaturePadding;
-    const alignRight = !signFirst;
-    const alignLeft = signFirst;
+    renderer.setupRect(innerBorderWidth, true);
+    for(let i = 0; i < yellowArr.length; i++) {
+        const it = yellowArr[i];
+        renderer.drawRect(it.x, it.y, it.w, it.h);
+    }
+    renderer.finalizeRects();
 
-    drawTextWidthinBounds(
-        'vanaigr.github.io', renderer,
-        { x: signX, y: signatureHeight + signaturePadding },
-        { w: colWidth*0.8, h: signatureHeight },
-        { alignRight, alignLeft, noBorder: true, padding: 0, backgroundColor: PDFLib.rgb(1, 1, 1) }
-    )
+    const signText = 'vanaigr.github.io';
+    var signX, signY, signFontSize;
+    /*calc signature size*/ {
+        const maxWidth = colWidth*0.8;
+        const maxHeight = signatureHeight;
+
+        const width = renderer.textWidth(signText);
+        const scaledSize = Math.min(maxWidth / width, maxHeight);
+
+        const signWidth = width * scaledSize;
+        const signHeight = scaledSize;
+
+        const y = pageHeight - signaturePadding;
+        let x;
+        if(signFirst) x = signaturePadding;
+        else x = pageWidth - signWidth - signaturePadding;
+
+        renderer.setupRect(0, false, true);
+        renderer.drawRect(x, y, signWidth, -signHeight);
+        renderer.finalizeRects();
+
+        signX = x;
+        signY = y;
+        signFontSize = scaledSize;
+    }
+
+    const widths = [];
+
+    renderer.setupText(!dowOnTop);
+    for(let i = 0; i < dowArray.length; i ++) {
+        const it = dowArray[i];
+        const t = it.text;
+        const cx = it.x + it.w*0.5;
+        const cy = it.y + it.h*0.5;
+
+        let ww, hh;
+        if(dowOnTop) { ww = it.w; hh = it.h; }
+        else { ww = it.h; hh = it.w; }
+        const size = calcFontSizeForBoundsSingle(renderer, t, ww*0.95, hh*0.95, widths);
+
+        const lineHeight = size * renderer.fontHeightFac;
+        renderer.setFontSize(size);
+        if(dowOnTop) renderer.drawText(t, cx - widths[0]*0.5, cy + lineHeight*0.5);
+        else renderer.drawText(t, cx + lineHeight*0.5, cy + widths[0]*0.5);
+
+    }
+    renderer.finalizeTexts();
+
+    renderer.setupText(false);
+
+    for(let i = 0; i < timeArr.length; i++) {
+        const it = timeArr[i];
+        const t = it.texts;
+        const size = calcFontSizeForBounds(renderer, t, it.w*0.8, it.h*0.9, widths);
+        drawTextCentered(renderer, t, size, it.x + it.w*0.5, it.y + it.h*0.5, widths);
+    }
+
+    for(let i = 0; i < lessonsArr.length; i++) {
+        const { text, x, y, w, h } = lessonsArr[i];
+        const innerSize = { w: w * 0.95, h: h * 0.9 };
+        const [texts, fontSize, widths] = fitTextBreakLines(text, renderer, innerSize);
+        drawTextCentered(renderer, texts, fontSize, x + w*0.5, y + h*0.5, widths);
+    }
+
+    renderer.setFontSize(signFontSize);
+    renderer.drawText(signText, signX, signY);
+
+    renderer.finalizeTexts();
 }
 
 function readScheduleScheme(str) {
