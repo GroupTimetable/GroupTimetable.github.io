@@ -5,17 +5,18 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
         <link rel="icon" type="image/png" href="favicon.png">
         <title>Coзание и изменение текстового расписания</title>
-       
+
         <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
         <script defer src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
         <script defer src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
 
         <script src="https://unpkg.com/json5@2/dist/index.min.js"></script>
- 
+
         <script defer src="./popups.js"></script>
         <script defer src="./elements.js"></script>
         <script defer src="./common.js"></script>
         <script defer src="./schedule.js"></script>
+        <script defer src="./render.js"></script>
         <script src="./database.js" type="module"></script>
         <script defer src="fix.js"></script>
 
@@ -24,7 +25,7 @@
                 const workerString = `importScripts("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js")`;
                 return new Worker(URL.createObjectURL(new Blob([workerString], { type: 'text/javascript' })));
             })();
-            const fontPromise = fetch('times_new_roman.ttf').then(res => res.arrayBuffer(), () => { throw 'не удалось загрузить шрифт'; }); 
+            const fontPromise = fetch('times_new_roman.ttf').then(res => res.arrayBuffer(), () => { throw 'не удалось загрузить шрифт'; });
         </script>
 
         <link rel="stylesheet" href="colors.css">
@@ -49,7 +50,7 @@
                             Положение в расписании записывается как "<i>группа</i>-<i>неделя</i>", где <i>группа</i> - 1 или 2, а <i>неделя</i> - ч или з.
                             Если не написать неделю или группу, то пара будет использоваться для обеих недель/групп.
                             <span style="color: var(--hint-color)">Все значения должны быть записаны в кавычках.</span>
-                            "Окна" (незанятые уроки) можно добавить так: "<i>время от</i>-<i>время до</i>": {} 
+                            "Окна" (незанятые уроки) можно добавить так: "<i>время от</i>-<i>время до</i>": {}
                         </div>
                     </div>
                     <div class="text-area"><textarea id="edit-input"></textarea></div>

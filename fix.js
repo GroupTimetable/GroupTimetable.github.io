@@ -47,8 +47,6 @@ let orig/*
     }
 })()
 
-throw "deg90!"
-
 //pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
 pdfjsLib.GlobalWorkerOptions.workerPort = pdfjsWorker;
 
@@ -319,10 +317,19 @@ async function processEdit() {
     if(startDate != undefined) params.dates[0] = startDate
     if(endDate != undefined) params.dates[1] = endDate
 
-    const { doc, w, h } = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
+    const renderer = createRecorderRenderer(createCanvasRenderer());
+    await renderSchedule(renderer, schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
+    const commands = renderer.commands;
+    const defaultImgP = renderer.innerRenderer.canvas[1]();
+
     try { updateUserdataF('regDocumentEdited')(...params.userdata) } catch(e) {}
     const outs = document.getElementById('outputs')
-    // TODO: check edit params userdata and filename are correct
-    await createAndInitOutputElement(doc, w, h, outs, { hideName: 1, nameS: orig.filename }, params, params.userdata)
+
+    await createAndInitOutputElement(
+        renderer.width, renderer.height,
+        defaultImgP, commands,
+        outs, { hideName: 1, nameS: orig.filename },
+        params, params.userdata,
+    );
 }
 
