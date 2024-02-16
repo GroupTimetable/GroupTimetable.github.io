@@ -21,11 +21,13 @@ body { font-family: "Open Sans", sans-serif; }
 }
 
 #footer {
-    padding: 1rem;
-    column-gap: 1.5rem;
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
+}
+
+#footer > * {
+    padding: 1rem 0.75rem;
 }
 
 .link {
