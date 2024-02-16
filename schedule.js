@@ -455,7 +455,8 @@ function checkValid(...params) {
 
 function drawTextCentered(renderer, texts, fontSize, cx, cy, widths) {
     const lineHeight = fontSize * renderer.fontHeightFac;
-    const offY = cy - lineHeight * texts.length * 0.5 + lineHeight;
+    const height = fontSize + lineHeight * (texts.length-1);
+    const offY = cy - height*0.5 + fontSize;
 
     renderer.setFontSize(fontSize);
     for(let i = 0; i < texts.length; i++) {
@@ -554,7 +555,6 @@ const textBreak = new (function() {
         /*calc sizes*/ {
             tmp.lineWidths.length = actualLines;
 
-            // 1 line is already tried
             let maxWidth = 0;
             for(let i = 0; i < actualLines; i++) {
                 tmp.lineWidths[i] = renderer.textWidth(tmp.texts[i]);
@@ -562,14 +562,14 @@ const textBreak = new (function() {
             }
             const scaledSize = Math.min(
                 width / maxWidth,
-                height / actualLines * renderer.fontSizeFac,
+                height / ((actualLines-1) * renderer.fontHeightFac + 1)
             );
 
             for(let i = 0; i < tmp.lineWidths.length; i++) {
                 tmp.lineWidths[i] *= scaledSize;
             }
             tmp.width = maxWidth * scaledSize;
-            tmp.height = actualLines * scaledSize * renderer.fontHeightFac;
+            tmp.height = (actualLines-1) * renderer.fontHeightFac * scaledSize + scaledSize;
             tmp.fontSize = scaledSize;
 
             lastI = tmpI;
@@ -612,7 +612,7 @@ function calcFontSizeForBounds(renderer, texts, w, h, widths/*out*/) {
 
     const scaledSize = Math.min(
         w / largestWidth,
-        h / texts.length * renderer.fontSizeFac
+        h / ((texts.length-1) * renderer.fontHeightFac + 1)
     );
     for(let i = 0; i < widths.length; i++) widths[i] *= scaledSize;
 
@@ -727,7 +727,7 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
     const lessonsArr = []
     const innerBorderOffset = (drawBorder
         ? Math.max(0, borderWidth - innerBorderWidth)
-        : borderWidth + innerBorderWidth) -1/*? border is drawn 1px less than it should ?*/;
+        : borderWidth + innerBorderWidth); // for both sides
     const startW = groupSize.w - innerBorderOffset;
     const dowColWidth = startW * 0.1;
     const timeColWidth = dowColWidth;
@@ -839,12 +839,12 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
         const cy = it.y + it.h*0.5;
 
         let ww, hh;
-        if(dowOnTop) { ww = it.w; hh = it.h; }
-        else { ww = it.h; hh = it.w; }
+        if(dowOnTop) { ww = it.w * 0.95; hh = it.h * 0.975; }
+        else { ww = it.h * 0.975; hh = it.w * 0.95; }
         const size = calcFontSizeForBoundsSingle(
             renderer, t,
-            (ww - innerBorderWidth) * 0.95,
-            (hh - innerBorderWidth) * 0.95,
+            ww - innerBorderWidth,
+            hh - innerBorderWidth,
             widths
         );
 
@@ -864,7 +864,7 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
             renderer,
             t,
             (it.w - innerBorderWidth) * 0.9,
-            (it.h - innerBorderWidth) * 0.9,
+            (it.h - innerBorderWidth) * 0.95,
             widths
         );
         drawTextCentered(renderer, t, size, it.x + it.w*0.5, it.y + it.h*0.5, widths);
@@ -873,7 +873,7 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
     for(let i = 0; i < lessonsArr.length; i++) {
         const { text, x, y, w, h } = lessonsArr[i];
 
-        const width = (w - innerBorderWidth) * 0.95, height = (h - innerBorderWidth) * 0.95;
+        const width = (w - innerBorderWidth) * 0.95, height = (h - innerBorderWidth) * 0.975;
         textBreak.init(text, renderer, width, height)
 
         for(let j = 0; j < 3; j++) {
