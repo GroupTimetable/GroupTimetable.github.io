@@ -9,8 +9,8 @@
     <style> @import url('https://fonts.googleapis.com/css2?family=Open+Sans&display=swap'); </style>
 
     <script>
-        const files = new Array(9);
-        for(let i = 0; i < 9; i++) {
+        const files = new Array(10);
+        for(let i = 0; i < files.length; i++) {
             const file = files[i] = new Array(3);
             file[0] = new Promise((g, b) => {
                 file[1] = g;
@@ -33,6 +33,7 @@
     <script async onload="files[4][1]()" onerror="files[4][2]('common.js')" src="./common.js"></script>
     <script async onload="files[5][1]()" onerror="files[5][2]('elements.js')" src="./elements.js"></script>
     <script async onload="files[6][1]()" onerror="files[6][2]('popups.js')" src="./popups.js"></script>
+    <script async onload="files[9][1]()" onerror="files[9][2]('render.js')" src="./render.js"></script>
 
     <script type="module" src="https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js"></script>

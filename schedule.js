@@ -669,7 +669,7 @@ function drawLessons(textArr, yellowArr, renderer, lesson, x, y, w, h) {
 }
 
 //border factor is used inaccurately, but the difference should not be that big
-async function scheduleToPdf(renderer, schedule, origPattern, rowRatio, borderFactor, drawBorder, dowOnTop) {
+async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderFactor, drawBorder, dowOnTop) {
     const colWidth = 500
     const renderPattern = []
 

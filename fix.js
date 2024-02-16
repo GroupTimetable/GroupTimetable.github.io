@@ -322,6 +322,7 @@ async function processEdit() {
     const { doc, w, h } = await scheduleToPDF(schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
     try { updateUserdataF('regDocumentEdited')(...params.userdata) } catch(e) {}
     const outs = document.getElementById('outputs')
+    // TODO: check edit params userdata and filename are correct
     await createAndInitOutputElement(doc, w, h, outs, { hideName: 1, nameS: orig.filename }, params, params.userdata)
 }
 

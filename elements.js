@@ -104,14 +104,33 @@ async function renderPDF(pageP, width) {
     return await getBlob({ type: 'image/png', quality: 1 });
 }
 
-async function createImage(width, ifw, pageP, retOrig) {
-    for(let i = 0; i < ifw.length; i++) if(ifw[i].width === width) return retOrig ? ifw[i].img : ifw[i].url;
+async function createImage(width, ifw, retOrig, renderCommands) {
+    for(let i = 0; i < ifw.length; i++) {
+        if(ifw[i].width === width) {
+            try {
+                const res = await ifw[i].promise;
+                return retOrig ? res.img : res.url;
+            } catch(e) {}
+        }
+    }
 
-    if(ifw.length > 4) URL.revokeObjectURL(ifw.pop().img);
-    const img = await renderPDF(pageP, width);
-    const url = URL.createObjectURL(img);
-    ifw.unshift({ width, img, url });
-    return retOrig ? img : url;
+    if(ifw.length > 4) {
+        const it = ifw.pop()
+        it.promise.then(res => { URL.revokeObjectURL(res.url) })
+    }
+
+    const promise = (async() => {
+        const c = createCanvasRenderer();
+        const r = createScalingRenderer(width, c);
+        await playbackRenderRecording(renderCommands, r);
+        const img = await c.canvas[1]();
+        const url = URL.createObjectURL(img);
+        return { img, url };
+    })();
+    ifw.unshift({ width, promise });
+
+    const result = await promise;
+    return retOrig ? result.img : result.url;
 }
 
 function updateUserdataF_elements(userdata, ...params) { try { try {
@@ -140,23 +159,21 @@ function addClick_elements(el, name, func, usedFunc, useErrorFunc) {
 
 var lastTaskDestroy
 
-async function createAndInitOutputElement(doc, width, height, parentElement, name, editParams, userdata, canvas) {
+async function createAndInitOutputElement(
+    width, height,
+    defaultImageP, renderCommands,
+    parentElement,
+    name, editParams, userdata,
+) {
     let hideName = false;
     try { if('hideName' in name) {
         hideName = true;
         name = name.nameS
     } } catch(e) { /*I don't care that name is string*/ }
 
-    // rendering preview in default resolution is faster overall since
-    // otherwise we would need to render 2 images
-    //const pdfTask = pdfjsLib.getDocument(copy(doc));
-    //const pageP = (async(task) => await (await task.promise).getPage(1))(pdfTask)
-
-    const imagePromise = canvas[1]().then(it => URL.createObjectURL(it))
-
-    const imagesForWidth = [];
-    //const imagePromise = createImage(width, imagesForWidth, pageP, false);
-    //const fileUrl = window.URL.createObjectURL(new Blob([doc], { type: 'application/pdf' }));
+    const imageP = defaultImageP.then(it => ({ img: it, url: URL.createObjectURL(it) }));
+    const imagesForWidth = [{ width, promise: imageP }];
+    var fileUrl;
     let settingsPopupId, calendarHintPopupId;
 
     const outputElement = createOutputElement();
@@ -190,22 +207,25 @@ async function createAndInitOutputElement(doc, width, height, parentElement, nam
         return popupEl.element.querySelector('input');
     })();
 
-    const getImage = (retOrig) => createImage(Number.parseInt(widthInputEl.value), imagesForWidth, pageP, retOrig);
+    const getImage = (retOrig) => createImage(Number.parseInt(widthInputEl.value), imagesForWidth, retOrig, renderCommands);
     const usedFunc = updateUserdataF_elements(userdata, 'regDocumentUsed');
     const useErrorFunc = updateUserdataF_elements(userdata, 'regDocumentUseError');
     const addClick2 = (el, name, func) => addClick_elements(el, name, func, usedFunc, useErrorFunc);
 
-    editParams.userdata = userdata;
-    editParams.filename = name;
     const storageId = "parms" + String(Date.now());
     sessionStorage.setItem(storageId, JSON.stringify(editParams));
-
 
     if(!hideName) nameEl.textContent = name;
     widthInputEl.value = width;
 
     addClick2(viewPdfEl, 'vpdf', async() => {
         const tab = window.open();
+        if(fileUrl == undefined) {
+            const r = new PDFRenderer();
+            await playbackRenderRecording(renderCommands, r);
+            const doc = await r.pdfDoc.save()
+            fileUrl = URL.createObjectURL(new Blob([doc], { type: 'application/pdf' }));
+        }
         if(tab == null) {
             downloadUrl(fileUrl, name + '.pdf');
             return;
@@ -264,7 +284,7 @@ async function createAndInitOutputElement(doc, width, height, parentElement, nam
         window.open("./calendar.html" + "?sid=" + storageId);
     })
 
-    imageEl.src = await imagePromise;
+    imageEl.src = (await imageP).url;
 
     parentElement.appendChild(outputElement);
 }
