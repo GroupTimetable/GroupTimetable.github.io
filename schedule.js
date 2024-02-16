@@ -466,64 +466,73 @@ function drawTextCentered(renderer, texts, fontSize, cx, cy, widths) {
 const textBreak = new (function() {
     function arr(len) { const a = new Array(len); a.length = 0; return a }
 
-    const count = 6
-    const tried = arr(count)
+    const tried = [];
     const objs = [
         { width: 0, height: 0, fontSize: 0, texts: arr(4), lineWidths: arr(4) },
         { width: 0, height: 0, fontSize: 0, texts: arr(4), lineWidths: arr(4) },
-    ]
+    ];
 
-    let bestI, lastI
+    let str, renderer, width, height;
+    let bestI, lastI;
 
-    this.reset = function() {
-        tried.length = 0
-        bestI = true
-        lastI = !bestI
-        for(let i = 0; i < objs.length; i++) {
-            const o = objs[i]
-            o.lineWidths.length = o.texts.length = o.width = o.height = o.fontSize = 0
-        }
+    this.init = function(string, rend, w, h) {
+        str = string.trim();
+        renderer = rend;
+        width = w;
+        height = h;
+
+        // using height instead of size to ignore line height spacing
+        const textWidth = renderer.textWidth(str);
+        const scaledSize = Math.min(width / textWidth, h);
+
+        const tmp = objs[0];
+        tmp.texts.length = 0;
+        tmp.texts[0] = str;
+        tmp.lineWidths.length = 1;
+        tmp.lineWidths[0] = textWidth * scaledSize;
+        tmp.width = textWidth * scaledSize;
+        tmp.height = scaledSize * renderer.fontHeightFac;
+        tmp.fontSize = scaledSize;
+
+        lastI = bestI = 0;
+
+        tried.length = 0;
+        tried.push(1);
     }
-    this.haveTried = function (divs) { return tried.includes(divs) }
-    this.remeasure = function(strOrig, divs, renderer, bounds) {
-        // ???
-        let prevSpace = true //trimStart
-        let str = ''
-        for(let i = 0; i < strOrig.length; i++) {
-            if(prevSpace & (prevSpace = strOrig[i] === ' ')) continue;
-            else str += strOrig[i]
-        }
-        str = str.trimEnd()
 
-        tried.push(divs)
+    this.remeasure = function(targetLines) {
+        if(tried.includes(targetLines)) return true;
 
-
-        const tmpI = !bestI
-        const tmp = objs[+tmpI]
-        tmp.lineWidths.length = tmp.texts.length = tmp.width = tmp.height = tmp.fontSize = 0
+        const tmpI = 1 - bestI;
+        const tmp = objs[tmpI];
         /*break text*/ {
-            const maxOffset = Math.max(1, Math.log(str.length+1)) * Math.sqrt(str.length)
-            const lineLen =  Math.floor(str.length / divs)
+            tmp.texts.length = 0;
+            const maxOffset = Math.max(1, Math.log(str.length+1)) * Math.sqrt(str.length);
+            const lineLen =  Math.floor(str.length / targetLines);
 
-            let prev = 0, startFrom = 0
-            for(let i = 0; i < divs-1; i++) {
-                const base = lineLen * (i+1)
+            let prev = 0, startFrom = 0;
+            for(let i = 0; i < targetLines-1; i++) {
+                const base = lineLen * (i+1);
 
-                startFrom = Math.max(startFrom, base - maxOffset)
+                startFrom = Math.max(startFrom, base - maxOffset);
 
-                let foundPos
-                for(let cur = base; cur >= startFrom; cur--) if(str[cur] === ' ') {
-                    foundPos = cur;
-                    break;
+                let foundPos;
+                for(let cur = base; cur >= startFrom; cur--) {
+                    if(str[cur] === ' ') {
+                        foundPos = cur;
+                        break;
+                    }
                 }
 
                 for(startFrom = Math.max(startFrom, base+1);
                     startFrom <= Math.min(str.length-1, base + maxOffset)
                         && !(startFrom - base >= base - foundPos);
                     startFrom++
-                ) if(str[startFrom] === ' ') {
-                    foundPos = startFrom++;
-                    break;
+                ) {
+                    if(str[startFrom] === ' ') {
+                        foundPos = startFrom++;
+                        break;
+                    }
                 }
 
                 if(foundPos) {
@@ -535,76 +544,67 @@ const textBreak = new (function() {
             tmp.texts.push(str.substring(prev));
         }
 
-        // TODO: check for dublicates here (and before), not in fitTextBreakLines
+        const actualLines = tmp.texts.length;
+        if(actualLines != targetLines) {
+            if(tried.includes(actualLines)) return true;
+            tried.push(actualLines);
+        }
+        tried.push(targetLines);
 
         /*calc sizes*/ {
-            tmp.lineWidths.length = tmp.texts.length
+            tmp.lineWidths.length = actualLines;
 
-            let maxWidth, scaledSize;
-            if (tmp.texts.length == 1) {
-                // using height instead of size to ignore line height spacing
-                const textWidth = renderer.textWidth(tmp.texts[0]);
-                tmp.lineWidths[0] = textWidth;
-                maxWidth = textWidth;
-                scaledSize = Math.min(
-                    bounds.w / textWidth,
-                    bounds.h
-                );
+            // 1 line is already tried
+            let maxWidth = 0;
+            for(let i = 0; i < actualLines; i++) {
+                tmp.lineWidths[i] = renderer.textWidth(tmp.texts[i]);
+                maxWidth = Math.max(maxWidth, tmp.lineWidths[i]);
             }
-            else {
-                maxWidth = 0;
-                for(let i = 0; i < tmp.texts.length; i++) {
-                    const textWidth = renderer.textWidth(tmp.texts[i]);
-                    tmp.lineWidths[i] = textWidth;
-                    maxWidth = Math.max(maxWidth, textWidth);
-                }
-                scaledSize = Math.min(
-                    bounds.w / maxWidth,
-                    bounds.h / tmp.texts.length * renderer.fontSizeFac,
-                );
-            }
+            const scaledSize = Math.min(
+                width / maxWidth,
+                height / actualLines * renderer.fontSizeFac,
+            );
 
             for(let i = 0; i < tmp.lineWidths.length; i++) {
                 tmp.lineWidths[i] *= scaledSize;
             }
             tmp.width = maxWidth * scaledSize;
-            tmp.height = tmp.texts.length * scaledSize * renderer.fontHeightFac;
+            tmp.height = actualLines * scaledSize * renderer.fontHeightFac;
             tmp.fontSize = scaledSize;
 
             lastI = tmpI;
-            if(tmp.fontSize > objs[+bestI].fontSize) bestI = tmpI;
+            if(tmp.fontSize > objs[bestI].fontSize) bestI = tmpI;
         }
+
+        return false;
     }
 
     Object.defineProperty(this, 'best', { get: () => objs[+bestI] });
     Object.defineProperty(this, 'last', { get: () => objs[+lastI] });
 })()
 
-function fitTextBreakLines(str, renderer, bounds) {
-    textBreak.reset()
-
-    textBreak.remeasure(str, 1, renderer, bounds)
+// only one at a time! Use return value from first one before
+// calling on another one
+function fitTextBreakLines(str, renderer, w, h) {
+    textBreak.init(str, renderer, w, h)
 
     for(let j = 0; j < 3; j++) {
         /*maximize text width*/ {
-            const el = textBreak.last
-            const scaledHeight = el.height * bounds.w / el.width;
-            const divs = Math.max(1, Math.round(el.texts.length * Math.sqrt(bounds.h / scaledHeight)));
-            if(textBreak.haveTried(divs)) break;
-            else textBreak.remeasure(str, divs, renderer, bounds)
+            const el = textBreak.last;
+            const scaledHeight = el.height * w / el.width;
+            const lines = Math.max(1, Math.round(el.texts.length * Math.sqrt(h / scaledHeight)));
+            if(textBreak.remeasure(lines)) break;
         }
 
         /*maximize text height*/ {
-            const el = textBreak.last
-            const scaledWidth = el.width * bounds.h / el.height;
-            const divs = Math.max(1, Math.round(el.texts.length * Math.sqrt(scaledWidth / bounds.w)));
-            if(textBreak.haveTried(divs)) break;
-            else textBreak.remeasure(str, divs, renderer, bounds)
+            const el = textBreak.last;
+            const scaledWidth = el.width * h / el.height;
+            const lines = Math.max(1, Math.round(el.texts.length * Math.sqrt(scaledWidth / w)));
+            if(textBreak.remeasure(lines)) break;
         }
     }
 
-    const el = textBreak.best
-    return [el.texts, el.fontSize, el.lineWidths]
+    return textBreak.best
 }
 
 function minuteOfDayToString(it) {
@@ -892,9 +892,8 @@ async function scheduleToPDF(renderer, schedule, origPattern, rowRatio, borderFa
 
     for(let i = 0; i < lessonsArr.length; i++) {
         const { text, x, y, w, h } = lessonsArr[i];
-        const innerSize = { w: w * 0.95, h: h * 0.9 };
-        const [texts, fontSize, widths] = fitTextBreakLines(text, renderer, innerSize);
-        drawTextCentered(renderer, texts, fontSize, x + w*0.5, y + h*0.5, widths);
+        const res = fitTextBreakLines(text, renderer, w * 0.95, h * 0.9);
+        drawTextCentered(renderer, res.texts, res.fontSize, x + w*0.5, y + h*0.5, res.lineWidths);
     }
 
     renderer.setFontSize(signFontSize);
