@@ -720,27 +720,6 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
     }
 
     await renderer.init(pageWidth, pageHeight)
-    //const [pdfDoc, font] = await getDocument()
-    //const page = pdfDoc.addPage(pageSize)
-
-    if (drawBorder) {
-        renderer.setupRect(borderWidth, false)
-        for(let i = 0; i < renderPattern.length; i++) {
-            const x = i * groupSize.w;
-            let curY = 0;
-
-            for(let j = 0; j < renderPattern[i].length; j++) {
-                const index = renderPattern[i][j];
-                if(index == undefined || schedule[index] == undefined) continue;
-                const day = schedule[index];
-                const rowsCount = day.length + (dowOnTop ? 1 : 0);
-                const height = rowsCount * groupSize.h;
-                renderer.drawRect(x, curY, groupSize.w, height)
-                curY = curY + height;
-            }
-        }
-        renderer.finalizeRects()
-    }
 
     const dowArray = []
     const timeArr = []
@@ -755,8 +734,8 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
 
     renderer.setupRect(innerBorderWidth, false)
     for(let i = 0; i < renderPattern.length; i++) {
-        const startX = i * groupSize.w + innerBorderWidth * 0.5;
-        let startY = innerBorderWidth * 0.5;
+        const startX = i * groupSize.w + innerBorderOffset*0.5;
+        let startY = innerBorderOffset*0.5;
 
         for(let j = 0; j < renderPattern[i].length; j++) {
             const index = renderPattern[i][j];
@@ -777,14 +756,13 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
                 y += h;
             }
             else {
-                const height = dayH - innerBorderOffset;
-                dowArray.push({ text: dowText, x, y, w: dowColWidth, h: height })
-                renderer.drawRect(x, y, dowColWidth, height)
+                dowArray.push({ text: dowText, x, y, w: dowColWidth, h: dayH - innerBorderOffset })
+                renderer.drawRect(x, y, dowColWidth, dayH)
                 x += dowColWidth;
                 w -= dowColWidth;
             }
 
-            const lessonW = w - timeColWidth
+            const lessonW = w - timeColWidth;
             for(let i = 0; i < day.length; i++) {
                 const lesson = day[i]
                 const ly = y + i*h;
@@ -805,6 +783,25 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
         renderer.drawRect(it.x, it.y, it.w, it.h);
     }
     renderer.finalizeRects();
+
+    if (drawBorder) {
+        renderer.setupRect(borderWidth, false)
+        for(let i = 0; i < renderPattern.length; i++) {
+            const x = i * groupSize.w;
+            let curY = 0;
+
+            for(let j = 0; j < renderPattern[i].length; j++) {
+                const index = renderPattern[i][j];
+                if(index == undefined || schedule[index] == undefined) continue;
+                const day = schedule[index];
+                const rowsCount = day.length + (dowOnTop ? 1 : 0);
+                const height = rowsCount * groupSize.h;
+                renderer.drawRect(x, curY, groupSize.w, height)
+                curY = curY + height;
+            }
+        }
+        renderer.finalizeRects()
+    }
 
     const signText = 'vanaigr.github.io';
     var signX, signY, signFontSize;
@@ -844,12 +841,16 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
         let ww, hh;
         if(dowOnTop) { ww = it.w; hh = it.h; }
         else { ww = it.h; hh = it.w; }
-        const size = calcFontSizeForBoundsSingle(renderer, t, ww*0.95, hh*0.95, widths);
+        const size = calcFontSizeForBoundsSingle(
+            renderer, t,
+            (ww - innerBorderWidth) * 0.95,
+            (hh - innerBorderWidth) * 0.95,
+            widths
+        );
 
-        const lineHeight = size * renderer.fontHeightFac;
         renderer.setFontSize(size);
-        if(dowOnTop) renderer.drawText(t, cx - widths[0]*0.5, cy + lineHeight*0.5);
-        else renderer.drawText(t, cx + lineHeight*0.5, cy + widths[0]*0.5);
+        if(dowOnTop) renderer.drawText(t, cx - widths[0]*0.5, cy + size*0.5);
+        else renderer.drawText(t, cx + size*0.5, cy + widths[0]*0.5);
 
     }
     renderer.finalizeTexts();
@@ -859,14 +860,20 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
     for(let i = 0; i < timeArr.length; i++) {
         const it = timeArr[i];
         const t = it.texts;
-        const size = calcFontSizeForBounds(renderer, t, it.w*0.8, it.h*0.9, widths);
+        const size = calcFontSizeForBounds(
+            renderer,
+            t,
+            (it.w - innerBorderWidth) * 0.9,
+            (it.h - innerBorderWidth) * 0.9,
+            widths
+        );
         drawTextCentered(renderer, t, size, it.x + it.w*0.5, it.y + it.h*0.5, widths);
     }
 
     for(let i = 0; i < lessonsArr.length; i++) {
         const { text, x, y, w, h } = lessonsArr[i];
 
-        const width = w * 0.95, height = h * 0.9;
+        const width = (w - innerBorderWidth) * 0.95, height = (h - innerBorderWidth) * 0.95;
         textBreak.init(text, renderer, width, height)
 
         for(let j = 0; j < 3; j++) {

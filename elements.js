@@ -157,8 +157,6 @@ function addClick_elements(el, name, func, usedFunc, useErrorFunc) {
     }));
 }
 
-var lastTaskDestroy
-
 async function createAndInitOutputElement(
     width, height,
     defaultImageP, renderCommands,
@@ -174,7 +172,7 @@ async function createAndInitOutputElement(
     const imageP = defaultImageP.then(it => ({ img: it, url: URL.createObjectURL(it) }));
     const imagesForWidth = [{ width, promise: imageP }];
     var fileUrl;
-    let settingsPopupId, calendarHintPopupId;
+    let settingsPopupId;
 
     const outputElement = createOutputElement();
     const settingsEl = outputElement.querySelector('.settings');
@@ -268,14 +266,10 @@ async function createAndInitOutputElement(
         el.style.animationDirection = 'reverse';
         el.style.animationDuration = '125ms';
         el.addEventListener('animationend', _ => {
-            // https://github.com/mozilla/pdf.js/issues/16777
-            if (lastTaskDestroy == undefined) lastTaskDestroy = pdfTask.destroy();
-            else lastTaskDestroy.then(() => lastTaskDestroy = pdfTask.destroy());
             parentElement.removeChild(el);
             unregisterPopup(settingsPopupId);
-            if(calendarHintPopupId) unregisterPopup(calendarHintPopupId);
             sessionStorage.removeItem(storageId);
-            window.URL.revokeObjectURL(fileUrl);
+            if(fileUrl != undefined) URL.revokeObjectURL(fileUrl);
             const ifw = imagesForWidth;
             for(let i = 0; i < ifw.length; i++) URL.revokeObjectURL(ifw[i].img);
         })

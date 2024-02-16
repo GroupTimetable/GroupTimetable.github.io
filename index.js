@@ -914,12 +914,17 @@ function printScheduleError(e) {
     updError({ msg: str, progress: curStatus.progress })
 }
 
+const valuesRow = new Array();
 function levenshteinDistance(str1, str2) {
-    const [s1, s2] = str1.length < str2.length ? [str1, str2] : [str2, str1];
+    var s1, s2;
+    if(str1.length < str2.length) { s1 = str1; s2 = str2; }
+    else { s1 = str2; s2 = str1; }
     if(s1.length === 0) return s2.length;
 
     const len = s1.length;
-    const row = Array(len);
+    const row = valuesRow;
+    row.length = 0;
+    row.length = len;
     {
         const c2 = s2[0];
         let lef = 1;
