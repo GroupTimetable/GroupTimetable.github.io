@@ -1,5 +1,5 @@
 .content {
-    flex: 1 0 auto; 
+    flex: 1 0 auto;
     font-size: 1.2em;
     padding: 1em;
 }
@@ -22,12 +22,18 @@
 
 #file1, #file2 {
     white-space: nowrap;
-    margin-right: 0.3em;
 }
 
 #google-cal, #yandex-cal {
     white-space: nowrap;
-    margin-right: 0.3em;
+}
+
+#first-week {
+    color-scheme: light dark;
+    vertical-align: bottom;
+    cursor: pointer;
+    width: 1rem;
+    height: 1rem;
 }
 
 #google-cal::before {

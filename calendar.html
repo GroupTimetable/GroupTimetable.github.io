@@ -18,28 +18,27 @@
         <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: stretch">
             <div class="header">Экспорт расписания в календарь</div>
             <div class="content">
-                <div style="margin-bottom: 0.5em; color: var(--hint-color)">Эксперементальная функция! Создайте дополнительный календарь при импорте,
-                который, в случае ошибки в расписании, можно удалить.
-                <a href="https://support.google.com/calendar/answer/37095?hl=ru" target="blank" class="link" style="white-space: nowrap;">Создание календаря в Google</a>
-                (Яндекс.Календарь уже требует создания нового календаря при импорте)
-                </div>
                 <div>
                     1. Заполните данные о периоде обучения:
-                    <div style="padding-left: 2ch; line-height: 1.1lh">
-                        <br>начало <input type="text" maxlength="10" id="start-date">, знаменатель <input type="checkbox" id="first-week">;
+                    <div style="padding-left: 2ch; padding-top: 0.1rem; line-height: 1.1lh">
+                        начало <input type="text" maxlength="10" id="start-date">, знаменатель<input type="checkbox" id="first-week">;
                         <br>конец <input type="text" maxlength="10" id="end-date">.
                     </div>
                 </div>
                 <p>
-                    2. Скачайте файл расписания для своей группы:
-                    <a href="javascript:;" id="file1" class="link">1 группа</a>
-                    <a href="javascript:;" id="file2" class="link">2 группа</a>
+                    2. Скачайте файл расписания своей подгруппы:
+                    <a href="javascript:;" id="file1" class="link">1 подгруппа</a>,
+                    <a href="javascript:;" id="file2" class="link">2 подгруппа</a>
                 </p>
                 <p class="warning-text" style="display: none">
                 </p>
                 <p>
-                    3. Импортируйте расписание в календарь.
-                    <a class="link" href="https://calendar.google.com/calendar/u/0/r/settings/export" target="_blank" id="google-cal">Google Календарь</a>
+                3. Создайте календарь для импорта: <a href="https://support.google.com/calendar/answer/37095?hl=ru" target="blank" class="link" style="white-space: nowrap;">Создание календаря в Google</a>,
+                (Яндекс.Календарь создаёт автоматически)
+                </p>
+                <p>
+                    4. Импортируйте расписание в календарь:
+                    <a class="link" href="https://calendar.google.com/calendar/u/0/r/settings/export" target="_blank" id="google-cal">Google Календарь</a>,
                     <a class="link" href="https://yandex.ru/support/calendar/common/create.html#import" target="_blank" id="yandex-cal">Яндекс.Календарь</a>
                 </p>
             </div>
