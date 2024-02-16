@@ -583,30 +583,6 @@ const textBreak = new (function() {
     Object.defineProperty(this, 'last', { get: () => objs[+lastI] });
 })()
 
-// only one at a time! Use return value from first one before
-// calling on another one
-function fitTextBreakLines(str, renderer, w, h) {
-    textBreak.init(str, renderer, w, h)
-
-    for(let j = 0; j < 3; j++) {
-        /*maximize text width*/ {
-            const el = textBreak.last;
-            const scaledHeight = el.height * w / el.width;
-            const lines = Math.max(1, Math.round(el.texts.length * Math.sqrt(h / scaledHeight)));
-            if(textBreak.remeasure(lines)) break;
-        }
-
-        /*maximize text height*/ {
-            const el = textBreak.last;
-            const scaledWidth = el.width * h / el.height;
-            const lines = Math.max(1, Math.round(el.texts.length * Math.sqrt(scaledWidth / w)));
-            if(textBreak.remeasure(lines)) break;
-        }
-    }
-
-    return textBreak.best
-}
-
 function minuteOfDayToString(it) {
     return Math.floor(it/60) + ":" + (it%60).toString().padStart(2, '0')
 }
@@ -693,7 +669,7 @@ function drawLessons(textArr, yellowArr, renderer, lesson, x, y, w, h) {
 }
 
 //border factor is used inaccurately, but the difference should not be that big
-async function scheduleToPDF(renderer, schedule, origPattern, rowRatio, borderFactor, drawBorder, dowOnTop) {
+async function scheduleToPdf(renderer, schedule, origPattern, rowRatio, borderFactor, drawBorder, dowOnTop) {
     const colWidth = 500
     const renderPattern = []
 
@@ -739,11 +715,8 @@ async function scheduleToPDF(renderer, schedule, origPattern, rowRatio, borderFa
 
     const ch = (num) => !(num >= 1 && num < Infinity)
     if(!(maxRows > 0) || ch(pageWidth) || ch(pageHeight)) {
-        console.error('TODO')
+        await renderer.emptyInit();
         return;
-        //const [pdfDoc, font] = await getDocument()
-        //const page = pdfDoc.addPage([1, 1])
-        //return { doc: await pdfDoc.save(), w: 1, h: 1 } //no signature
     }
 
     await renderer.init(pageWidth, pageHeight)
@@ -892,7 +865,27 @@ async function scheduleToPDF(renderer, schedule, origPattern, rowRatio, borderFa
 
     for(let i = 0; i < lessonsArr.length; i++) {
         const { text, x, y, w, h } = lessonsArr[i];
-        const res = fitTextBreakLines(text, renderer, w * 0.95, h * 0.9);
+
+        const width = w * 0.95, height = h * 0.9;
+        textBreak.init(text, renderer, width, height)
+
+        for(let j = 0; j < 3; j++) {
+            /*maximize text width*/ {
+                const el = textBreak.last;
+                const scaledHeight = el.height * width / el.width;
+                const lines = Math.max(1, Math.round(el.texts.length * Math.sqrt(height / scaledHeight)));
+                if(textBreak.remeasure(lines)) break;
+            }
+
+            /*maximize text height*/ {
+                const el = textBreak.last;
+                const scaledWidth = el.width * height / el.height;
+                const lines = Math.max(1, Math.round(el.texts.length * Math.sqrt(scaledWidth / width)));
+                if(textBreak.remeasure(lines)) break;
+            }
+        }
+
+        const res = textBreak.best;
         drawTextCentered(renderer, res.texts, res.fontSize, x + w*0.5, y + h*0.5, res.lineWidths);
     }
 
