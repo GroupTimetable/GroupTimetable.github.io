@@ -425,7 +425,7 @@ let prevTime = performance.now()
 function updStatus() { try {
     assertDomLoaded()
     const s = curStatus
-    if(true) {
+    if(false) {
         const now = performance.now()
         console.log('time:', (now - prevTime).toFixed(3))
         prevTime = now;
@@ -557,11 +557,6 @@ async function loadFromListFiles(list) {
     }
 
     // first update interface, only then decode some pages ahead of time
-    async function getDocumentPage(orig, pageI) {
-        const page = await orig.getPage(1 + pageI)
-        return { page, text: (await page.getTextContent()).items }
-    }
-
     const prevDocumentData = currentDocumentData
     const thisDocumentData = (async(fileContent) => {
         if (prevDocumentData) try {
@@ -579,8 +574,35 @@ async function loadFromListFiles(list) {
         const pages = new Array(pageCount)
         const result = { task: origTask, taskPromise: orig, pages }
 
-        for(let i = 0; i < pageCount; i++) {
-            pages[i] = getDocumentPage(orig, i)
+        // process pages in this order:
+        // get1, items1,  get3, items3 ...
+        //    get2,  items2, get4,  items4 ...
+        var fp = Promise.resolve();
+        var sp = Promise.resolve();
+
+        let i = 0;
+        while(true) {
+            const pageI = i + 1;
+
+            if(!(i < pageCount)) break;
+            fp = Promise.allSettled([fp]).then(async() => await orig.getPage(pageI));
+
+            const second = i+1 < pageCount;
+            if(second) sp = Promise.allSettled([sp]).then(async() => await orig.getPage(pageI+1));
+
+            pages[i] = fp = fp.then(async(page) => {
+                const r = { page, text: (await page.getTextContent()).items };
+                return r;
+            });
+            if(!second) break;
+
+            pages[i+1] = sp = sp.then(async(page) => {
+                const r = { page, text: (await page.getTextContent()).items };
+                return r;
+            });
+            if(!(i + 2 < pageCount)) break;
+
+            i += 2;
         }
 
         return result
