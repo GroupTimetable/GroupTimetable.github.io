@@ -487,14 +487,9 @@ function updInfo(statusParams) {
     updStatus()
 }
 
+const nonAlphaNumeric = /[^\p{L})\p{N}]/gu
 function nameFixup(name) {
-    const alphanumeric = /[\p{L})\p{N}]/u
-
-    let newName = ''
-    for(let i = 0; i < name.length; i++) {
-        let a = name[i]
-        if(alphanumeric.test(a)) newName += a.toLowerCase()
-    }
+    var newName = name.replace(nonAlphaNumeric, '').toLowerCase();
     if(newName.length === 0) return name.trim()
     else return newName;
 }
@@ -816,6 +811,67 @@ async function processPDF(userdata, name, indices) {
     try { orig = await docData.taskPromise }
     catch (e) { throw ["Документ не распознан как PDF", e] }
 
+    var page, cont, pageI, contI, found, errorCount = 0;
+    for(pageI = 0; pageI < orig.numPages; pageI++) try {
+        const pageDataP = docData.pages[pageI];
+        if (pageDataP != undefined) {
+            const pageData = await pageDataP;
+            page = pageData.page;
+            cont = pageData.text;
+        }
+        else {
+            page = await orig.getPage(pageI+1);
+            cont = (await page.getTextContent()).items;
+        }
+
+        const contLength = cont.length;
+        for(contI = 0; contI < contLength; contI++) try {
+            if(nameFixed == nameFixup(cont[contI].str)) {
+                found = true;
+                break;
+            }
+        } catch(e) { errorCount++; console.error(e); }
+
+        if(found) break;
+    } catch(e) { errorCount++; console.error(e); }
+
+    if(found) try {
+        updInfo({ msg: 'Достаём расписание из файла', progress: 0.2 })
+        const [schedule, dates, bigFields] = makeSchedule(cont, page.view, contI, indices);
+        const warningText = makeWarningText(schedule, scheme, bigFields);
+        if(__debug_start && __debug_mode === 0) { __debug_schedule_parsing_results[name] = schedule; if(bigFields.length != 0) __debug_warningOn.push([name, warningText]); return }
+        updInfo({ msg: 'Создаём изображение расписания', progress: 0.3 })
+
+        const renderer = createRecorderRenderer(createCanvasRenderer());
+        await renderSchedule(renderer, schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop);
+        const commands = renderer.commands;
+        const defaultImgP = renderer.innerRenderer.canvas[1]();
+
+        updInfo({ msg: 'Создаём предпросмотр', progress: 0.4 });
+        const outFilename = filename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
+        const editParams = {
+            rowRatio, scheme, schedule, drawBorder, dowOnTop,
+            borderFactor, dates, userdata, filename: outFilename
+        };
+        await createAndInitOutputElement(
+            renderer.width, renderer.height,
+            defaultImgP, commands,
+            dom.outputsEl, outFilename,
+            editParams, userdata,
+        );
+
+        updInfo({ msg: 'Готово. Пожалуйста, поделитесь сайтом с друзьями ❤️', warning: warningText, progress: 1.0 });
+        updateUserdataF('regDocumentCreated')(...userdata);
+        return;
+    }
+    catch(e) {
+        if(!Array.isArray(e)) e = [e];
+        e.push("номер страницы: " + (pageI+1) + '/' + orig.numPages);
+        e.push("[название группы] = " + contI + '/' + contLength);
+        throw e;
+    }
+    // If no name found, seach closest one
+
     // если название группы контрактников, сохраняем место неконтрактной группы
     const contractRegex = (/^(\p{L}+)к[2-9](\p{N}*)$/u)
     const isContract = contractRegex.test(nameFixed)
@@ -825,84 +881,37 @@ async function processPDF(userdata, name, indices) {
     var closestName = undefined, closestN = Infinity, closestNamePage = undefined;
 
     for(let j = 0; j < orig.numPages; j++) try {
-        var page, cont
-        const pageDataP = docData.pages[j]
-        if (pageDataP != undefined) {
-            const pageData = await pageDataP
-            page = pageData.page
-            cont = pageData.text
-        }
-        else {
-            page = await orig.getPage(j+1);
-            cont = (await page.getTextContent()).items;
-        }
+        const pageData = await docData.pages[j];
+        const page = pageData.page;
+        const cont = pageData.text;
 
-        const contLength = cont.length
-
+        const contLength = cont.length;
         for(let i = 0; i < contLength; i++) try {
             const oname = nameFixup(cont[i].str)
             if(oname.length < minBound || oname.length > maxBound) continue;
             const n = levenshteinDistance(nameFixed, oname);
-            if(n > 0) {
-                if (oname == regularName) {
-                    closestName = cont[i].str
-                    closestNamePage = j;
-                    closestN = 0;
-                }
-                else if(n < closestN) {
-                    closestName = cont[i].str;
-                    closestNamePage = j;
-                    closestN = n;
-                }
-                continue
+            if (oname == regularName) {
+                closestName = cont[i].str;
+                closestNamePage = j;
+                closestN = 0;
             }
+            else if(n < closestN) {
+                closestName = cont[i].str;
+                closestNamePage = j;
+                closestN = n;
+            }
+            continue;
+        } catch(e) {}
+    } catch(e) {}
 
-            updInfo({ msg: 'Достаём расписание из файла', progress: 0.2 })
-            const [schedule, dates, bigFields] = makeSchedule(cont, page.view, i, indices);
-            const warningText = makeWarningText(schedule, scheme, bigFields)
-            if(__debug_start && __debug_mode === 0) { __debug_schedule_parsing_results[name] = schedule; if(bigFields.length != 0) __debug_warningOn.push([name, warningText]); return }
-            updInfo({ msg: 'Создаём PDF файл расписания', progress: 0.3 })
-
-            const renderer = createRecorderRenderer(createCanvasRenderer());
-            await renderSchedule(renderer, schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
-            const commands = renderer.commands;
-            const defaultImgP = renderer.innerRenderer.canvas[1]();
-
-            updInfo({ msg: 'Создаём предпросмотр', progress: 0.4 })
-            const outFilename = filename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
-            const editParams = {
-                rowRatio, scheme, schedule, drawBorder, dowOnTop,
-                borderFactor, dates, userdata, filename: outFilename
-            };
-            await createAndInitOutputElement(
-                renderer.width, renderer.height,
-                defaultImgP, commands,
-                dom.outputsEl, outFilename,
-                editParams, userdata,
-            );
-
-            updInfo({ msg: 'Готово. Пожалуйста, поделитесь сайтом с друзьями ❤️', warning: warningText, progress: 1.0 })
-            updateUserdataF('regDocumentCreated')(...userdata)
-            return
-        }
-        catch(e) {
-            const add = "[название группы] = " + i + '/' + contLength
-            if(Array.isArray(e)) { e.push(add); throw e }
-            else throw [e, add]
-        }
-    }
-    catch(e) {
-        const add = "[страница] = " + j + '/' + orig.numPages
-        if(Array.isArray(e)) { e.push(add); throw e }
-        else throw [e, add]
-
-    }
-
-    let cloS = ''
+    let cloS = '';
     if(closestName != undefined) {
-        cloS = ", возможно вы имели в виду `" + closestName + "` на странице " + (closestNamePage + 1)
+        cloS = ", возможно вы имели в виду `" + closestName + "` на странице " + (closestNamePage + 1);
     }
-    throw ["имя `" + name + "` не найдено" + cloS, "количество страниц = " + orig.numPages];
+    if(errorCount != 0) {
+        cloS = ", ошибок при работе: " + errorCount;
+    }
+    throw ["имя `" + name + "` не найдено" + cloS, "количество страниц: " + orig.numPages];
 }
 
 /*
