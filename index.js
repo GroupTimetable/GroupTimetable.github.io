@@ -1,5 +1,5 @@
-const loadFontkit  = wrapDep(files[0][0]);
-const loadPdfjs    = wrapDep(files[1][0]);
+const loadPdfjs    = wrapDep(files[0][0]);
+const loadFontkit  = wrapDep(files[1][0]);
 const loadPdflibJs = wrapDep(files[2][0]);
 const loadSchedule = wrapDep(files[3][0]);
 const loadCommon   = wrapDep(files[4][0]);
@@ -140,7 +140,7 @@ let prevProgress
 let curStatus = {};
 
 const genSettings = {}
-const createGenSettings = wrapDep(Promise.all([loadDom, loadCommon ]).then(_ => {
+const createGenSettings = wrapDep(Promise.all([loadDom, loadCommon]).then(_ => {
     const genPopupHTML = htmlToElement(`
 <div>
     <div style="margin-bottom: 0.6rem;">Расположение дней:</div>
@@ -352,6 +352,8 @@ loadDom.then(_ => {
         занятий своей группы из общего расписания
     `})
 
+    new ResizeObserver(() => resizeProgressBar(curStatus.progress, true)).observe(dom.groupBarEl)
+
     try {
         const lastName = localStorage.getItem('index__last_group_name')
         if(lastName != undefined) dom.groupInputEl.value = lastName
@@ -386,8 +388,6 @@ Promise.all([loadDom, loadCommon]).then(_ => {
     addClick(dom.startButtonEl, _ => {
         checkShouldProcess()
     })
-
-    new ResizeObserver(() => resizeProgressBar(curStatus.progress, true)).observe(dom.groupBarEl)
 
     addClick(document.querySelector('#file-picker'), function() {
         const f = document.createElement('input');

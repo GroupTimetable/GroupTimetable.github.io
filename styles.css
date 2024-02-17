@@ -4,7 +4,7 @@
 }
 *[data-custom-button]:focus-visible { outline: -webkit-focus-ring-color auto 1px; }
 
-body { font-family: "Open Sans", sans-serif; }
+body { font-family: sans-serif; }
 
 .no-select { user-select: none; }
 
@@ -21,6 +21,7 @@ body { font-family: "Open Sans", sans-serif; }
 }
 
 #footer {
+    font-family: 'Open Sans', sans-serif;
     display: flex;
     justify-content: center;
     flex-wrap: wrap;

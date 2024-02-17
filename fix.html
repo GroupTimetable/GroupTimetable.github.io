@@ -6,6 +6,10 @@
         <link rel="icon" type="image/png" href="favicon.png">
         <title>Coзание и изменение текстового расписания</title>
 
+        <link rel="preload" href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" as="style">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap">
+
         <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
         <script defer src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
         <script defer src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
@@ -21,10 +25,10 @@
         <script defer src="fix.js"></script>
 
         <script>
-            const pdfjsWorker = (() => {
-                const workerString = `importScripts("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js")`;
-                return new Worker(URL.createObjectURL(new Blob([workerString], { type: 'text/javascript' })));
-            })();
+            var pdfjsWorker = new Worker(URL.createObjectURL(new Blob(
+              [`importScripts("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js")`],
+              { type: 'text/javascript' }
+            )));
             const fontPromise = fetch('times_new_roman.ttf').then(res => res.arrayBuffer(), () => { throw 'не удалось загрузить шрифт'; });
         </script>
 
@@ -34,7 +38,7 @@
     </head>
     <body style="margin: 0; background: var(--bg-color); color: var(--text-color)">
         <div style="display: flex; flex-direction: column; width: 100vw; min-height: 100vh;">
-            <div class="header">Coзание и изменение текстового расписания</div>
+            <div class="header">Coздание и изменение текстового расписания</div>
             <div class="main-flex" style="flex: 1 0 auto; align-items: stretch">
                 <div class="edit-area">
                     <div style="margin-bottom: 1rem">
