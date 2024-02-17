@@ -29,7 +29,7 @@
               [`importScripts("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js")`],
               { type: 'text/javascript' }
             )));
-            const fontPromise = fetch('times_new_roman.ttf').then(res => res.arrayBuffer(), () => { throw 'не удалось загрузить шрифт'; });
+            var fontPromise = fetch('font/CharisSIL.ttf').then(res => res.arrayBuffer(), () => { throw 'не удалось загрузить шрифт'; });
         </script>
 
         <link rel="stylesheet" href="colors.css">

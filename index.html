@@ -27,7 +27,7 @@
             [`importScripts("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js")`],
             { type: 'text/javascript' }
         )));
-        var fontPromise = fetch('times_new_roman.ttf').then(res => res.arrayBuffer(), () => { throw 'не удалось загрузить шрифт'; });
+        var fontPromise = fetch('font/CharisSIL.ttf').then(res => res.arrayBuffer(), () => { throw 'не удалось загрузить шрифт'; });
     </script>
 
     <script async onload="files[8][1]()" onerror="files[8][2]('index.js')" src="index.js"></script>

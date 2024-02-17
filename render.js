@@ -31,11 +31,20 @@ function createOffscreenCanvas(width, height) {
     }
 }
 
-// browser can load the font but cant provide
-// even 1 bit of info about it obviously...
-const fontSizeFac = 0.8962800875273523
+// Magic numbers. Ouput looks best with these values.
+// Both should've beed derived from PDFLib embedFont():
+//   fontSizeFac is font.sizeAtHeight(1);
+//   fontDescenderFac is (1 / 1000) * font.embedder.scale * font.embedder.font.descent;
+// But the result looks completely wrong.
+const fontSizeFac = 0.9;
+const fontDescenderFac = -0.27; // of font size
+// Also, pdf-lib js has a bug at
+// https://github.com/Hopding/pdf-lib/blob/93dd36e85aa659a3bca09867d2d8fac172501fbe/src/core/embedders/CustomFontEmbedder.ts#L95
+// descender should be multiplied by this.scale
+
+
 const canvasFontP = fontPromise.then(async(font) => {
-    const cFont = new FontFace("TimesNewRoman", font)
+    const cFont = new FontFace("RenderFont", font)
     await cFont.load()
     document.fonts.add(cFont)
     return cFont
@@ -46,7 +55,7 @@ const textContextP = (async() => {
     const canvas = data[0]
     const context = canvas.getContext('2d', { alpha: false, desynchronized: true })
     await canvasFontP
-    context.font = '1px TimesNewRoman'
+    context.font = '1px RenderFont'
     return context
 })()
 
@@ -113,7 +122,7 @@ function createCanvasRenderer() { return {
         this.context.fillStyle = '#000';
     },
     setFontSize(size) {
-        this.context.font = size + 'px TimesNewRoman';
+        this.context.font = size + 'px RenderFont';
     },
     drawText(text, x, y) {
         if(this.rotated) {
@@ -141,7 +150,6 @@ class PDFRenderer {
         this.pdfDoc = undefined;
         this.font = undefined;
         this.page = undefined;
-        this.descenderFac = undefined;
 
         this.tmpParams = {};
     }
@@ -161,12 +169,6 @@ class PDFRenderer {
 
         this.fontSizeFac = fontSizeFac;
         this.fontHeightFac = 1 / fontSizeFac;
-
-        // pdf-lib js has a bug at
-        // https://github.com/Hopding/pdf-lib/blob/93dd36e85aa659a3bca09867d2d8fac172501fbe/src/core/embedders/CustomFontEmbedder.ts#L95
-        // descender should be multiplied by this.scale
-        this.descenderFac = (1 / 1000) * font.embedder.scale
-            * font.embedder.font.descent;
     }
 
     setupRect(borderWidth, fillYellow, fillWhite) {
@@ -216,8 +218,8 @@ class PDFRenderer {
 
         p.x = x;
         p.y = ph - y;
-        if(p.rotate != undefined) { p.x += this.descenderFac * p.size; }
-        else { p.y -= this.descenderFac * p.size; }
+        if(p.rotate != undefined) { p.x += fontDescenderFac * p.size; }
+        else { p.y -= fontDescenderFac * p.size; }
 
         try { this.page.drawText(text, p); }
         catch(e) { console.error(e); }
