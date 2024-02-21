@@ -904,14 +904,15 @@ async function processPDF(userdata, name, indices) {
         } catch(e) {}
     } catch(e) {}
 
-    let cloS = '';
+    let msg = "имя `" + name + "` не найдено";
     if(closestName != undefined) {
-        cloS = ", возможно вы имели в виду `" + closestName + "` на странице " + (closestNamePage + 1);
+        msg += ", возможно вы имели в виду `" + closestName + "` на странице " + (closestNamePage + 1);
     }
+    msg += ", страниц: " + orig.numPages;
     if(errorCount != 0) {
-        cloS = ", ошибок при работе: " + errorCount;
+        msg += ", ошибок при работе: " + errorCount;
     }
-    throw ["имя `" + name + "` не найдено" + cloS, "количество страниц: " + orig.numPages];
+    throw msg;
 }
 
 /*
