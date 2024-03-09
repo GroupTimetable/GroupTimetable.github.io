@@ -803,7 +803,7 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
         renderer.finalizeRects()
     }
 
-    const signText = 'vanaigr.github.io';
+    const signText = 'groupTimeTable.github.io';
     var signX, signY, signFontSize;
     /*calc signature size*/ {
         const maxWidth = colWidth*0.8;

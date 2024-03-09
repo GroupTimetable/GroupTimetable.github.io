@@ -1,6 +1,6 @@
 const warningText = document.querySelector('.warning-text');
 
-const params = (_ => { 
+const params = (_ => {
     try {
         const prmstr = window.location.search.split("=");
         const sid = prmstr[1];
@@ -91,7 +91,7 @@ function scheduleToICS(schedule, dates, scheme, firstWeekIsFirst/*first calendar
 
     line('BEGIN:VCALENDAR')
     line('VERSION:2.0')
-    line('PRODID:-//Bob//vanaigr.github.io//EN')
+    line('PRODID:-//Bob//grouptimetable.github.io//EN')
     line('CALSCALE:GREGORIAN')
     line('METHOD:PUBLISH')
     //some of these will hopefully work
@@ -107,12 +107,12 @@ function scheduleToICS(schedule, dates, scheme, firstWeekIsFirst/*first calendar
     until0.setSeconds(59)
     const until = dateToICS(until0)
 
-    const dow0 = 'MOTUWETHFRSASU' 
+    const dow0 = 'MOTUWETHFRSASU'
     const startDOW = new Date(dates[0]).getUTCDay()
 
     function addLesson(startMins, endMins, dayOfWeek, interval, firstWeek, uid, summary) {
         if(!warn && summary.match(warnRegex)) warn = true;
-        const start = new Date(dates[0]) 
+        const start = new Date(dates[0])
         const currentDay = start.getUTCDay();
         const distance = (dayOfWeek+1 + 7 - currentDay) % 7;
         start.setUTCDate(start.getUTCDate() + distance);
@@ -134,7 +134,7 @@ function scheduleToICS(schedule, dates, scheme, firstWeekIsFirst/*first calendar
         line(`RRULE:FREQ=WEEKLY;WKST=SU;UNTIL=${until};INTERVAL=${interval};BYDAY=${dow}`)
         line('CREATED:' + now)
         line('DTSTAMP:' + now)
-        line('UID:' + uid + '@vanaigr.github.io') 
+        line('UID:' + uid + '@grouptimetable.github.io')
         line('SEQUENCE:0')
         line('STATUS:CONFIRMED')
         line('SUMMARY:' + summary)
@@ -155,18 +155,18 @@ function scheduleToICS(schedule, dates, scheme, firstWeekIsFirst/*first calendar
             const l1 = lesson.lessons[lessonOff]
             const l2 = lesson.lessons[lessonOff + 2]
             if(l1 === l2 && l1.trim() !== '') addLesson(
-                lesson.sTime, lesson.eTime, 
+                lesson.sTime, lesson.eTime,
                 dayI, 1, undefined, 'D'+dayI+'L'+j+'G'+(isFirstGroup ? 1 : 2)+'T'+0,
                 l1
             )
             else {
                 if(l1.trim() !== '') addLesson(
-                    lesson.sTime, lesson.eTime, 
+                    lesson.sTime, lesson.eTime,
                     dayI, 2, true, 'D'+dayI+'L'+j+'G'+(isFirstGroup ? 1 : 2)+'T'+1,
                     l1
                 )
                 if(l2.trim() !== '') addLesson(
-                    lesson.sTime, lesson.eTime, 
+                    lesson.sTime, lesson.eTime,
                     dayI, 2, false, 'D'+dayI+'L'+j+'G'+(isFirstGroup ? 1 : 2)+'T'+2,
                     l2
                 )
