@@ -839,8 +839,8 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
         const cy = it.y + it.h*0.5;
 
         let ww, hh;
-        if(dowOnTop) { ww = it.w * 0.95; hh = it.h * 0.975; }
-        else { ww = it.h * 0.975; hh = it.w * 0.95; }
+        if(dowOnTop) { ww = it.w * 0.95; hh = it.h * 0.95; }
+        else { ww = it.h * 0.95; hh = it.w * 0.95; }
         const size = calcFontSizeForBoundsSingle(
             renderer, t,
             ww - innerBorderWidth,
@@ -864,7 +864,7 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
             renderer,
             t,
             (it.w - innerBorderWidth) * 0.9,
-            (it.h - innerBorderWidth) * 0.95,
+            (it.h - innerBorderWidth) * 0.9,
             widths
         );
         drawTextCentered(renderer, t, size, it.x + it.w*0.5, it.y + it.h*0.5, widths);
@@ -873,7 +873,7 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
     for(let i = 0; i < lessonsArr.length; i++) {
         const { text, x, y, w, h } = lessonsArr[i];
 
-        const width = (w - innerBorderWidth) * 0.95, height = (h - innerBorderWidth) * 0.975;
+        const width = (w - innerBorderWidth) * 0.95, height = (h - innerBorderWidth) * 0.95;
         textBreak.init(text, renderer, width, height)
 
         for(let j = 0; j < 3; j++) {
