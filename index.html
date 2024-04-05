@@ -105,7 +105,16 @@
             </div>
             <div class="after" style="display: flex; flex-direction: column; gap: 1rem;">
                 <div class="group-bar-formatting">
-                    <div id="status" class="move-with-border">&ZeroWidthSpace;</div>
+                    <noscript>
+                        <div id="status"
+                            style="color: var(--text-color); opacity: 1;"
+                            class="move-with-border">
+                            Для работы вебсайта требуется JavaScript!
+                        </div>
+                    </noscript>
+                    <script>
+                        document.write(`<div id="status" class="move-with-border">&ZeroWidthSpace;</div>`)
+                    </script>
                 </div>
                 <div id="warning"></div>
                 <div id="outputs" style="flex: 1 0 auto;"></div>

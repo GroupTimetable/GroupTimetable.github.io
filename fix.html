@@ -57,7 +57,12 @@
                             "Окна" (незанятые уроки) можно добавить так: "<i>время от</i>-<i>время до</i>": {}
                         </div>
                     </div>
-                    <div class="text-area"><textarea id="edit-input"></textarea></div>
+                    <noscript>
+                        <div class="text-area"><textarea id="edit-input">Для работы вебсайта требуется JavaScript!</textarea></div>
+                    </noscript>
+                    <script>
+                    document.write(`<div class="text-area"><textarea id="edit-input"></textarea></div>`)
+                    </script>
                 </div>
                 <!-- apparently we can't have overflow-x: visible; overflow-y: scroll so the parent would be scrollable now -->
                 <div id="outputs">
