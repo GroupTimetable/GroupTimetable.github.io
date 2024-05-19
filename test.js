@@ -135,12 +135,14 @@ async function getTestData(folder, groupNames) {
 }
 M.getTestData = getTestData
 
-// test given groups agains what's expected
-async function performTest(folder, expected) {
+/// test given groups agains what's expected
+/// ignore = { big: bool? }?
+async function performTest(folder, ignore, expected) {
     await loadSchedule
     await updateFile(folder)
 
     expected ??= await readJson(folder, 'expected.txt')
+    ignore ??= {}
 
     var orig
     const docData = await currentDocumentData
@@ -150,6 +152,7 @@ async function performTest(folder, expected) {
     const result = []
     M.lastTestResult = result
 
+    var errors = 0
     for(name in expected) {
         const exp = expected[name]
         console.log("Group", name)
@@ -171,12 +174,30 @@ async function performTest(folder, expected) {
 
         result.push(it)
 
-        if(JSON.stringify(it) !== JSON.stringify(exp)) {
-            console.error("Doesn't match!")
+        let what
+        if(JSON.stringify(it[0]) !== JSON.stringify(exp[0])) {
+            what = (what ? what + ', ' : '') + 'schedule'
+        }
+        if(JSON.stringify(it[1]) !== JSON.stringify(exp[1])) {
+            what = (what ? what + ', ' : '') + 'dates'
+        }
+        if(!ignore.big && JSON.stringify(it[2]) !== JSON.stringify(exp[2])) {
+            what = (what ? what + ', ' : '') + 'big fields'
+            what = what
+                + ':\n  expected: ' + warningNames(exp[2])
+                + '\n  actual: ' + warningNames(it[2])
+                + '\n'
+        }
+
+        if(what) {
+            errors++;
+            console.error("Doesn't match!", what);
         }
     }
 
-    console.log("Done!")
+    if(errors > 0) console.log("Done!", errors, "errors");
+    else console.log("Done!");
+
     return result
 }
 M.performTest = performTest

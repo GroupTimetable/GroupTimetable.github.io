@@ -652,22 +652,27 @@ function readElementText(element) {
     return innerTextHack.innerText
 }
 
+function warningNames(bigFields, days) {
+    let prevDay
+    let warningText = ''
+    for(let i = 0; i < bigFields.length; i++) {
+        const f = bigFields[i]
+        const day = f[0], hour = f[1], ch = f[2], z = f[3], index = f[4];
+        if(days && !days.has(day)) continue
+        warningText += '; ' + daysOfWeekShortened[day] + '-' + minuteOfDayToString(hour)
+            + '-' + (ch ? 'ч' : '') + (z ? 'з' : '') + ' ($' + index + ')';
+        prevDay = day;
+    }
+    return warningText
+}
+
 function makeWarningText(schedule, scheme, bigFields) {
     if(!bigFields.length) return ''
 
     const days = new Set()
     for(let i = 0; i < scheme.length; i++) for(let j = 0; j < scheme[i].length; j++) days.add(scheme[i][j])
 
-    let prevDay
-    let warningText = ''
-    for(let i = 0; i < bigFields.length; i++) {
-        const f = bigFields[i]
-        const day = f[0], hour = f[1], ch = f[2], z = f[3], index = f[4];
-        if(!days.has(day)) continue
-        warningText += '; ' + daysOfWeekShortened[day] + '-' + minuteOfDayToString(hour)
-            + '-' + (ch ? 'ч' : '') + (z ? 'з' : '') + ' ($' + index + ')';
-        prevDay = day;
-    }
+    const warningText = warningNames(bigFields, days)
 
     if(warningText === '') return ''
     else return "Возможно пропущены уроки: " + warningText.substring(2)
