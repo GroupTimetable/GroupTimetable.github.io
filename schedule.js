@@ -279,6 +279,39 @@ function findDates(cont, bounds, colBounds) {
     }
 }
 
+function bigCheckEmpty(curCol, otherCol, leftSide, f, yOff, table) {
+    var minCol, maxCol
+    if(leftSide) {
+        minCol = otherCol
+        maxCol = curCol - 1
+    }
+    else {
+        minCol = curCol + 1
+        maxCol = otherCol
+    }
+
+    for(let x = minCol; x <= maxCol; x++) {
+        const cell = table[yOff + x];
+        // Bug: big fields currently don't check each other
+        for(let i = 0; f.t && i < 2; i++) if(cell[i] !== undefined) return false
+        for(let i = 2; f.b && i < 4; i++) if(cell[i] !== undefined) return false
+    }
+
+    {
+        const cell = table[yOff + curCol];
+        if(leftSide) {
+            if(f.t) if(cell[0] !== undefined) return false
+            if(f.b) if(cell[2] !== undefined) return false
+        }
+        else {
+            if(f.t) if(cell[1] !== undefined) return false
+            if(f.b) if(cell[3] !== undefined) return false
+        }
+    }
+
+    return true
+}
+
 function makeSchedule(cont, pageView, groupNameI, bigFieldsInclude) {
     if(cont.length < 1) throw 'Unreachable'
 
@@ -293,7 +326,7 @@ function makeSchedule(cont, pageView, groupNameI, bigFieldsInclude) {
 
     const errX = colWidth * 0.02;
     const curColI = Math.max(0, Math.floor((colBounds.l - hoursR + errX) / colWidth));
-    const colC = curColI + 1 + Math.max(0, Math.floor((pageR - colBounds.r + errX) / colWidth));
+    const colC = Math.max(0, Math.floor((pageR - hoursR + errX) / colWidth));
     const tableL = colBounds.l - curColI * colWidth, tableR = tableL + colC * colWidth;
     const tableT = hoursT, tableB = tableT - hoursC * hoursHeight;
     const colFactor = 1 / colWidth, rowFactor = 1 / hoursHeight;
@@ -401,20 +434,30 @@ function makeSchedule(cont, pageView, groupNameI, bigFieldsInclude) {
         }
         else {
             const leftSide = curColI > f.x;
-            const dir = leftSide ? 1 : -1;
-            let empty = true;
-            let __i = 0;
-            for(let x = f.x + dir; (curColI - x)*dir > 0; x += dir) {
-                if(__i++ > 100) { //I don't trust this code to terminate in every case
-                    console.error('error in loop!')
-                    break
-                }
-                const cell = table[f.y*colC + x];
-                for(let i = 0; f.t && empty && i < 2; i++) empty = cell[i] == undefined;
-                for(let i = 2; f.b && empty && i < 4; i++) empty = cell[i] == undefined;
-                if(!empty) break
+
+            const fieldCenter = (f.l + f.r) * 0.5;
+            // inclusive opposite column
+            const otherBound = 2*fieldCenter - colBounds.r;
+            const otherColF = (otherBound - hoursR) / colWidth;
+            const otherCol = Math.round(otherColF);
+            const otherBoundValid = Math.abs(otherCol - otherColF) <= errX
+                && otherCol >= 0 && otherCol < colC;
+
+            if(otherBoundValid) {
+                const empty = bigCheckEmpty(
+                    curColI, otherCol, leftSide,
+                    f, f.y*colC, table,
+                );
+                // Note: table cell may be occupied later by other big fields
+                if(empty) bigFieldsCands.push(i);
             }
-            if(empty) bigFieldsCands.push(i); //table cell may be occupied later by other big fields
+
+            //console.log(
+            //    "where:", f.y,
+            //    ",other bound:", otherCol, otherBoundValid,
+            //    ",empty:", empty
+            //);
+
         }
     }
 

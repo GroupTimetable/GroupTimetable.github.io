@@ -665,13 +665,13 @@ function makeWarningText(schedule, scheme, bigFields) {
         const day = f[0], hour = f[1], ch = f[2], z = f[3], index = f[4];
         if(!days.has(day)) continue
         warningText += '; ' + daysOfWeekShortened[day] + '-' + minuteOfDayToString(hour)
-            + '-' + (ch ? 'ч' : '') + (z ? 'з' : '') + '(' + index + ')';
+            + '-' + (ch ? 'ч' : '') + (z ? 'з' : '') + ' ($' + index + ')';
         prevDay = day;
     }
 
     if(warningText === '') return ''
     else return "Возможно пропущены уроки: " + warningText.substring(2)
-        + ". Чтобы добавить их в расписание, допишите $<i>индекс_из_скобок</i> к имени группы, напр. ИМгр-123 $0 $2 $39."
+        + ". Чтобы добавить их в расписание, допишите текст в скобках к имени группы, напр. ИМгр-123 $0 $2 $39."
         + " Также вы можете отредактировать расписание вручную, нажав на кнопку с карандашом на изображении"
         + " или <a href='./help-page.html' target='blank' class='link'>написать сюда</a>.";
 }
