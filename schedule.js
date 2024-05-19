@@ -13,23 +13,22 @@ const daysOfWeekShortened = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'В
 const daysOfWeekShortenedLower = daysOfWeekShortened.map(it => it.toLowerCase())
 const mergeLeading = 0.2, mergeSpace = 0.1;
 
-function findColumnBounds(cont, itemBs, itemI) {
-    const item = cont[itemI];
-    const bs = itemBs[itemI];
-    const itemCenter = 0.5 * (bs.l + bs.r)
 
-    const items = new Set();
+function findGroupNames(items, itemBounds, startItemI) {
+    const bs = itemBounds[startItemI];
+
+    const namesSet = new Set();
     const is = { l: bs.l, r: bs.r, t: bs.t, b: bs.b };
 
-    let totalHeight = item.height;
+    let totalHeight = bs.t - bs.b;
     let totalCount = 0;
     let curAdded;
 
     const addItems = (nI) => {
-        const nItem = cont[nI];
+        const nItem = items[nI];
         if(nItem.str.trim() == '') return;
-        if(items.has(nI)) return;
-        const ns = itemBs[nI];
+        if(namesSet.has(nI)) return;
+        const ns = itemBounds[nI];
 
         const h = (totalHeight + nItem.height) / (totalCount+1);
         const lea = h * mergeLeading;
@@ -38,32 +37,40 @@ function findColumnBounds(cont, itemBs, itemI) {
         curAdded++;
         totalHeight = totalHeight + nItem.height;
         totalCount++;
-        items.add(nI)
+        namesSet.add(nI)
         is.l = Math.min(is.l, ns.l)
         is.b = Math.min(is.b, ns.b)
         is.r = Math.max(is.r, ns.r)
         is.t = Math.max(is.t, ns.t)
     };
 
-    let curI = itemI;
+    let curI = startItemI;
     do { //add all items in row
         curAdded = 0;
         curI--;
         for(; curI >= 0; curI--) if(addItems(curI)) break;
         curI++;
-        for(; curI < cont.length; curI++) if(addItems(curI)) break;
+        for(; curI < items.length; curI++) if(addItems(curI)) break;
     } while(curAdded !== 0);
 
-    const itemsArr = Array.from(items);
+    const itemsArr = Array.from(namesSet);
     itemsArr.sort((a, b) => {
-        const ba = itemBs[a];
-        const bb = itemBs[b];
-        const ac = (ba.l + ba.r) * 0.5;
-        const bc = (bb.l + bb.r) * 0.5;
-        return ac - bc;
+        const aBs = itemBounds[a];
+        const bBs = itemBounds[b];
+        const aCenter = (aBs.l + aBs.r) * 0.5;
+        const bCenter = (bBs.l + bBs.r) * 0.5;
+        return aCenter - bCenter;
     })
 
-    if(typeof __schedule_debug_names != 'undefined' && __schedule_debug_names) console.log(itemsArr.map(it => '"' + cont[it].str + '"') + ',')
+    return itemsArr
+}
+
+function findColumnBounds(cont, itemBs, itemI) {
+    const item = cont[itemI];
+    const bs = itemBs[itemI];
+    const itemCenter = 0.5 * (bs.l + bs.r)
+
+    const itemsArr = findGroupNames(cont, itemBs, itemI)
 
     const spaces = []
     {
@@ -669,7 +676,9 @@ function drawLessons(textArr, yellowArr, renderer, lesson, x, y, w, h) {
 }
 
 //border factor is used inaccurately, but the difference should not be that big
-async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderFactor, drawBorder, dowOnTop) {
+async function renderSchedule(renderer, schedule, origPattern, editParams) {
+    const { rowRatio, borderFactor, drawBorder, dowOnTop } = editParams
+
     const colWidth = 500
     const renderPattern = []
 
@@ -900,32 +909,4 @@ async function renderSchedule(renderer, schedule, origPattern, rowRatio, borderF
     renderer.drawText(signText, signX, signY);
 
     renderer.finalizeTexts();
-}
-
-function readScheduleScheme(str) {
-    const texts = str.split('\n')
-
-    const scheme = []
-
-    for(let i = 0; i < texts.length; i++) {
-        const line = texts[i].trimEnd();
-        if(line.length === 0) continue;
-        const count = Math.floor((line.length+1)/3);
-        if(count*3-1 !== line.length) throw ['Неправильная строка расположения дней: `' + line + '`', '[строка] = ' + i + '/' + texts.length];
-
-        for(let j = 0; j < count; j++) {
-            const sp = j*3;
-            const p = line.substring(sp, sp+2).toLowerCase();
-            if(p.trim() === '') continue;
-
-            const k = daysOfWeekShortenedLower.indexOf(p);
-            if(k === -1) throw ['Неправильный день недели `' + p + '`  в строке: `' + line + '` на ' + (sp+1) + ':' +  i];
-            else {
-                while(scheme.length <= j) scheme.push([])
-                scheme[j].push(k)
-            }
-        }
-    }
-
-    return scheme;
 }

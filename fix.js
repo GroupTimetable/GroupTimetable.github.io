@@ -318,7 +318,8 @@ async function processEdit() {
     if(endDate != undefined) params.dates[1] = endDate
 
     const renderer = createRecorderRenderer(createCanvasRenderer());
-    await renderSchedule(renderer, schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop)
+    const editParams = { rowRatio, borderFactor, drawBorder, dowOnTop }
+    await renderSchedule(renderer, schedule, scheme, editParams)
     const commands = renderer.commands;
     const defaultImgP = renderer.innerRenderer.canvas[1]();
 

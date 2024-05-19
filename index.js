@@ -510,6 +510,82 @@ function isPDF(arrayBuffer) {
     }
 }
 
+async function updateCurrentDocument(fileContent, filename) {
+    // first update interface, only then decode some pages ahead of time
+    const prevDocumentData = currentDocumentData
+    const thisDocumentData = (async() => {
+        if (prevDocumentData) try {
+            await (await prevDocumentData).task.destroy();
+        } catch(e) { console.error(e) }
+
+        await loadPdfjs
+
+        const origTask = pdfjsLib.getDocument({ data: copy(fileContent) });
+        let orig
+        try { orig = await origTask.promise }
+        catch (e) { throw ["Документ не распознан как PDF", e] }
+
+        const pageCount = Math.min(orig.numPages, 20)
+        const pages = new Array(pageCount)
+
+        // process pages in this order:
+        // get1, items1,  get3, items3 ...
+        //    get2,  items2, get4,  items4 ...
+        var fp = Promise.resolve();
+        var sp = Promise.resolve();
+
+        let i = 0;
+        while(true) {
+            const pageI = i + 1;
+
+            if(!(i < pageCount)) break;
+            fp = Promise.allSettled([fp]).then(async() => await orig.getPage(pageI));
+
+            const second = i+1 < pageCount;
+            if(second) sp = Promise.allSettled([sp]).then(async() => await orig.getPage(pageI+1));
+
+            pages[i] = fp = fp.then(async(page) => {
+                const r = { page, text: (await page.getTextContent()).items };
+                return r;
+            });
+            if(!second) break;
+
+            pages[i+1] = sp = sp.then(async(page) => {
+                const r = { page, text: (await page.getTextContent()).items };
+                return r;
+            });
+            if(!(i + 2 < pageCount)) break;
+
+            i += 2;
+        }
+
+        const pagesObj = {
+            get: async(i) => {
+                const pageDataP = pages[i];
+                if (pageDataP != undefined) return await pageDataP;
+
+                const page = await orig.getPage(i + 1);
+                const text = (await page.getTextContent()).items;
+                const pageData = { page, text }
+                pages[i] = pageData
+                return pageData
+            },
+        }
+        const result = { task: origTask, taskPromise: orig, pages: pagesObj }
+        return result
+    })()
+
+    currentDocumentData = thisDocumentData;
+    currentFilename = filename;
+
+    thisDocumentData.catch((err) => {
+        if (currentDocumentData != thisDocumentData) return;
+        if (processing) return; // if processing, then the error would be updated by the processing function
+        updateUserdataF('regDocumentError')(filename, 'no group', err)
+        printScheduleError(err)
+    })
+}
+
 async function loadFromListFiles(list) {
     if(list.length === 0) { //if you drop files fast enough sometimes files list would be empty
         if(!processing) updError({ msg: 'Не удалось получить файлы. Попробуйте ещё раз', progress: 1 });
@@ -556,67 +632,7 @@ async function loadFromListFiles(list) {
         else updInfo({ msg: 'Файл загружен' })
     }
 
-    // first update interface, only then decode some pages ahead of time
-    const prevDocumentData = currentDocumentData
-    const thisDocumentData = (async(fileContent) => {
-        if (prevDocumentData) try {
-            await (await prevDocumentData).task.destroy();
-        } catch(e) { console.error(e) }
-
-        await loadPdfjs
-
-        const origTask = pdfjsLib.getDocument({ data: copy(fileContent) });
-        let orig
-        try { orig = await origTask.promise }
-        catch (e) { throw ["Документ не распознан как PDF", e] }
-
-        const pageCount = Math.min(orig.numPages, 20)
-        const pages = new Array(pageCount)
-        const result = { task: origTask, taskPromise: orig, pages }
-
-        // process pages in this order:
-        // get1, items1,  get3, items3 ...
-        //    get2,  items2, get4,  items4 ...
-        var fp = Promise.resolve();
-        var sp = Promise.resolve();
-
-        let i = 0;
-        while(true) {
-            const pageI = i + 1;
-
-            if(!(i < pageCount)) break;
-            fp = Promise.allSettled([fp]).then(async() => await orig.getPage(pageI));
-
-            const second = i+1 < pageCount;
-            if(second) sp = Promise.allSettled([sp]).then(async() => await orig.getPage(pageI+1));
-
-            pages[i] = fp = fp.then(async(page) => {
-                const r = { page, text: (await page.getTextContent()).items };
-                return r;
-            });
-            if(!second) break;
-
-            pages[i+1] = sp = sp.then(async(page) => {
-                const r = { page, text: (await page.getTextContent()).items };
-                return r;
-            });
-            if(!(i + 2 < pageCount)) break;
-
-            i += 2;
-        }
-
-        return result
-    })(fileContent)
-
-    currentDocumentData = thisDocumentData;
-    currentFilename = filename;
-
-    thisDocumentData.catch((err) => {
-        if (currentDocumentData != thisDocumentData) return;
-        if (processing) return; // if processing, then the error would be updated by the processing function
-        updateUserdataF('regDocumentError')(filename, 'no group', err)
-        printScheduleError(err)
-    })
+    updateCurrentDocument(fileContent, filename)
 }
 
 function updateFilenameDisplay(fileType, filename, href) {
@@ -662,123 +678,7 @@ function makeWarningText(schedule, scheme, bigFields) {
 
 window.updateUserdataF ??= () => () => { console.error('No function defined') }
 
-function __stop() {
-    __debug_start = false;
-    __debug_mode = undefined;
-}
-
-let __debug_start, __debug_mode;
-let __debug_schedule_parsing_results, __last_expected; //console.log(JSON.stringify());
-Object.defineProperty(window, '__schedule_debug_names', { get() { return __debug_mode === 2; } });
-let __debug_warningOn = [];
-
-function __start(mode, folder, ...args) {
-    if(__debug_start) {
-        console.error('Cannot run more than one test at a time! (call __stop())')
-        return
-    }
-    const modes = { 'groups': 1, 'schedule_names': 2 };
-
-    __stop();
-    __debug_start = true;
-    __debug_mode = modes[mode] ?? 0;
-    const testFolder = (folder == undefined || folder.trim() == '') ? undefined : 'test' + folder + '/'
-
-    let goupNames, checkExpected;
-    if(__debug_mode === 1) {
-        groupNames = args[0]
-    }
-    else if(__debug_mode === 2) return Promise.resolve();
-    else {
-        checkExpected = (args[0] == undefined || !!args[0])
-        groupNames = args[1]
-    }
-
-    return loadDom.then(async () => {
-        async function readFile0(filename) {
-            if(testFolder == undefined) return Promise.reject('test folder not given');
-            const result = await fetch(testFolder + filename)
-            if(!result.ok) throw '(custom error meaasge) File ' + filename + ' not loaded';
-            return await result.arrayBuffer()
-        };
-        const readJson0 = (filename) => readFile0(filename).then(it => JSON.parse(new TextDecoder('utf-8').decode(it)))
-        const wrap = (func) => func.catch(err => { console.error('file not loaded:', err); return undefined })
-        const readFile = (filename) => wrap(readFile0(filename))
-        const readJson = (filename) => wrap(readJson0(filename))
-
-        if(__debug_mode === 0) {
-            const contP = readFile('file.pdf')
-            const expectedP = readJson('expected.txt')
-
-            groupNames ??= await readJson('names.txt')
-            await contP.then(it => { if(it != undefined) {
-                currentFileContent = it
-                updateFilenameDisplay('Test folder: ', testFolder);
-            } })
-            let expected = checkExpected ? await expectedP : undefined;
-            if(expected != undefined) __last_expected = expected
-
-            const differences = []
-
-            if(groupNames == undefined) throw 'No group names provided'
-            if(currentFileContent == undefined) throw 'No pdf provided'
-
-            __debug_schedule_parsing_results = {};
-
-            console.log('started' + (expected != undefined ? ' with expected/actual checks' : ''))
-            for(let i = 0; i < groupNames.length; i++) {
-                if(!__debug_start) break;
-                dom.groupInputEl.value = groupNames[i]
-                try { await processPDF(); } catch(e) { printScheduleError(e); break; }
-                if(!__debug_start) break;
-                if(expected != undefined) {
-                    const ex = expected[groupNames[i]]
-                    if(!ex) console.warn('Name', ex, 'not found in expected!')
-                    else if(JSON.stringify(__debug_schedule_parsing_results[groupNames[i]]) !== JSON.stringify(ex)) {
-                        differences.push(groupNames[i])
-                        console.error('!')
-                    }
-                }
-            }
-
-            console.log('warning on:', '[' + __debug_warningOn.map(it => '"'+it[0]+'"') + ']', structuredClone(__debug_warningOn));
-            __debug_warningOn.length = 0;
-
-            if(differences.length !== 0) {
-                console.error('results differ for: ')
-                console.error('[' + differences.map(it => '"'+it+'"') + ']')
-            }
-            else if(expected != undefined) console.log('expected results matched')
-        }
-        else if(__debug_mode === 1) {
-            const contP = readFile('file.pdf')
-            await contP.then(it => { if(it != undefined) {
-                currentFileContent = it
-                updateFilenameDisplay('Test folder: ', testFolder);
-            } })
-
-            if(groupNames == undefined) throw 'No group names provided'
-            if(currentFileContent == undefined) throw 'No pdf provided'
-
-            for(let i = 0; i < groupNames.length; i++) {
-                if(!__debug_start) break;
-                dom.groupInputEl.value = groupNames[i]
-                try { await processPDF(); } catch(e) { printScheduleError(e); break; }
-            }
-        }
-    }).finally(() => {
-        const n2 = testFolder == undefined ? '' : ' for ' + testFolder;
-        if(__debug_start) {
-            updInfo({ msg: 'Everything done' + n2, progress: 1 })
-            console.log('done' + n2)
-        }
-        else {
-            updInfo({ msg: 'Stopped' + n2, progress: 1 })
-            console.log('done, stopped' + n2)
-        }
-        __stop();
-    })
-}
+function __load_test() { import('./test.js'); }
 
 const loadDependencies = Promise.all([
     loadRender, loadSchedule, loadCommon, loadElements,
@@ -791,12 +691,7 @@ loadDependencies.catch((e) => {
     printScheduleError(e)
 })
 
-async function processPDF(userdata, name, indices) {
-    updInfo({ msg: 'Ожидаем зависимости', progress: 0 })
-    await loadDependencies
-
-    updInfo({ msg: 'Начинаем обработку', progress: 0.1 });
-    const nameFixed = nameFixup(name);
+function getEditParams() {
     const rowRatio = Number(genSettings.heightEl.value) / 100;
     const borderFactor = Number(genSettings.borderSizeEl.value) / 1000;
     if(!(rowRatio < 1000 && rowRatio > 0.001)) throw ['неправильное значение высоты строки', genSettings.heightEl.value];
@@ -805,54 +700,66 @@ async function processPDF(userdata, name, indices) {
     const dowOnTop = genSettings.dowOnTop;
     const scheme = readScheduleScheme(readElementText(genSettings.scheduleLayoutEl));
 
+    return { rowRatio, scheme, drawBorder, dowOnTop, borderFactor };
+}
+
+async function findName(docData, pageCount, nameFixed) {
+    var errorCount = 0
+    for(pageI = 0; pageI < pageCount; pageI++) try {
+        const pageData = await docData.pages.get(pageI);
+        const cont = pageData.text;
+
+        const contLength = cont.length;
+        for(contI = 0; contI < contLength; contI++) try {
+            if(nameFixed == nameFixup(cont[contI].str)) {
+                return { pageData, pageI, itemI: contI, errorCount }
+            }
+        } catch(e) { errorCount++; console.error(e); }
+    } catch(e) { errorCount++; console.error(e); }
+}
+
+async function processPDF(userdata, name, indices) {
+    updInfo({ msg: 'Ожидаем зависимости', progress: 0 })
+
     const filename = currentFilename;
+    const outFilename = filename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
+    const editParams = getEditParams();
+    editParams.filename = outFilename;
+
+    await loadDependencies
+
+    updInfo({ msg: 'Начинаем обработку', progress: 0.1 });
+
+    const nameFixed = nameFixup(name);
 
     const docData = await currentDocumentData
     try { orig = await docData.taskPromise }
     catch (e) { throw ["Документ не распознан как PDF", e] }
 
-    var page, cont, pageI, contI, found, errorCount = 0;
-    for(pageI = 0; pageI < orig.numPages; pageI++) try {
-        const pageDataP = docData.pages[pageI];
-        if (pageDataP != undefined) {
-            const pageData = await pageDataP;
-            page = pageData.page;
-            cont = pageData.text;
-        }
-        else {
-            page = await orig.getPage(pageI+1);
-            cont = (await page.getTextContent()).items;
-        }
+    const itemInfo = await findName(docData, orig.numPages, nameFixed);
 
-        const contLength = cont.length;
-        for(contI = 0; contI < contLength; contI++) try {
-            if(nameFixed == nameFixup(cont[contI].str)) {
-                found = true;
-                break;
-            }
-        } catch(e) { errorCount++; console.error(e); }
+    var errorCount = 0
+    if(itemInfo) try {
+        const page = itemInfo.pageData.page
+        const cont = itemInfo.pageData.text
+        const contI = itemInfo.itemI
+        errorCount += itemInfo.errorCount
 
-        if(found) break;
-    } catch(e) { errorCount++; console.error(e); }
-
-    if(found) try {
         updInfo({ msg: 'Достаём расписание из файла', progress: 0.2 })
         const [schedule, dates, bigFields] = makeSchedule(cont, page.view, contI, indices);
-        const warningText = makeWarningText(schedule, scheme, bigFields);
-        if(__debug_start && __debug_mode === 0) { __debug_schedule_parsing_results[name] = schedule; if(bigFields.length != 0) __debug_warningOn.push([name, warningText]); return }
+        const warningText = makeWarningText(schedule, editParams.scheme, bigFields);
         updInfo({ msg: 'Создаём изображение расписания', progress: 0.3 })
 
         const renderer = createRecorderRenderer(createCanvasRenderer());
-        await renderSchedule(renderer, schedule, scheme, rowRatio, borderFactor, drawBorder, dowOnTop);
+        await renderSchedule(renderer, schedule, editParams.scheme, editParams);
         const commands = renderer.commands;
         const defaultImgP = renderer.innerRenderer.canvas[1]();
 
         updInfo({ msg: 'Создаём предпросмотр', progress: 0.4 });
-        const outFilename = filename + '_' + name; //I hope the browser will fix the name if it contains chars unsuitable for file name
-        const editParams = {
-            rowRatio, scheme, schedule, drawBorder, dowOnTop,
-            borderFactor, dates, userdata, filename: outFilename
-        };
+        editParams.schedule = schedule
+        editParams.dates = dates
+        editParams.userdata = userdata
+
         await createAndInitOutputElement(
             renderer.width, renderer.height,
             defaultImgP, commands,
@@ -865,9 +772,13 @@ async function processPDF(userdata, name, indices) {
         return;
     }
     catch(e) {
+        const cont = itemInfo.pageData.text
+        const pageI = itemInfo.pageI
+        const contI = itemInfo.itemI
+
         if(!Array.isArray(e)) e = [e];
         e.push("номер страницы: " + (pageI+1) + '/' + orig.numPages);
-        e.push("[название группы] = " + contI + '/' + contLength);
+        e.push("[название группы] = " + contI + '/' + cont.length);
         throw e;
     }
     // If no name found, seach closest one
@@ -992,4 +903,32 @@ function levenshteinDistance(str1, str2) {
         }
         return lef;
     }
+}
+
+function readScheduleScheme(str) {
+    const texts = str.split('\n')
+
+    const scheme = []
+
+    for(let i = 0; i < texts.length; i++) {
+        const line = texts[i].trimEnd();
+        if(line.length === 0) continue;
+        const count = Math.floor((line.length+1)/3);
+        if(count*3-1 !== line.length) throw ['Неправильная строка расположения дней: `' + line + '`', '[строка] = ' + i + '/' + texts.length];
+
+        for(let j = 0; j < count; j++) {
+            const sp = j*3;
+            const p = line.substring(sp, sp+2).toLowerCase();
+            if(p.trim() === '') continue;
+
+            const k = daysOfWeekShortenedLower.indexOf(p);
+            if(k === -1) throw ['Неправильный день недели `' + p + '`  в строке: `' + line + '` на ' + (sp+1) + ':' +  i];
+            else {
+                while(scheme.length <= j) scheme.push([])
+                scheme[j].push(k)
+            }
+        }
+    }
+
+    return scheme;
 }

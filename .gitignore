@@ -3,6 +3,5 @@
 *.swn
 *.swm
 test*.html
-test.js
 test*/
 *.sh
