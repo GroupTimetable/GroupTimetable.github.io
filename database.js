@@ -179,7 +179,7 @@ function updateUserdata() {
     } catch(e) { console.error(e) }
 }
 
-const userData = (_ => {
+function calculateUserData() {
     const result = updateUserdata()
     const userData = result?.[0] ?? {}
     let updated = result?.[1] ?? true
@@ -199,8 +199,23 @@ const userData = (_ => {
     } catch(e) { console.error(e) }
 
     return userData
-})()
+}
 
+const cbs = []
+
+let userData = calculateUserData();
+try {
+    window.onstorage = (e) => {
+        userData = calculateUserData()
+        cbs.forEach(cb => {
+            try { cb() }
+            catch(err) { console.log(err) }
+        })
+    }
+}
+catch(e) { console.error(e) }
+
+window.onUserDataUpdated = (cb) => { cbs.push(cb); }
 
 window.setUserdataAllowed = (isAllowed) => {
     userData.noUserdata = !isAllowed

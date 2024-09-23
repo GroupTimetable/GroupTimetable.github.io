@@ -56,7 +56,10 @@ Promise.all([loadDom, loadDatabase]).then(_ => {
         try { localStorage.setItem('index__userdata_interacted', true) } catch(e) { console.error(e) }
     }
 
+    let currentOpen = !messageInteracted;
+
     function updateVisibility(open, accepted) {
+        currentOpen = open;
         dataAccept.setAttribute('data-visible', open && accepted)
         dataDecline.setAttribute('data-visible', open && !accepted)
         dataUsageOpen.setAttribute('data-visible', !open)
@@ -70,6 +73,9 @@ Promise.all([loadDom, loadDatabase]).then(_ => {
         updateVisibility(open, accepted)
     }
 
+    onUserDataUpdated(() => {
+        updateUserdataElements(currentOpen, getUserdataAllowed())
+    })
 
     const { dataAccept, dataDecline, dataUsageOpen } = dom
 
@@ -98,8 +104,7 @@ Promise.all([loadDom, loadDatabase]).then(_ => {
         updateInteracted()
     })
 
-    if(!messageInteracted) updateVisibility(true, getUserdataAllowed())
-    else updateVisibility(false, getUserdataAllowed())
+    updateVisibility(currentOpen, getUserdataAllowed())
 })
 
 /*HTML does not have any way to make resizable multiline prompt
