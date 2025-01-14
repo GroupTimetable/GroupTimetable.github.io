@@ -142,7 +142,7 @@ let currentFilename, currentDocumentData;
 let processing;
 
 let prevProgress
-let curStatus = {};
+let curStatus = {}
 
 const genSettings = {}
 const createGenSettings = wrapDep(Promise.all([loadDom, loadCommon]).then(_ => {
@@ -349,7 +349,8 @@ function checkShouldProcess() {
 }
 
 loadDom.then(_ => {
-    updSpecial({ msg: `
+    if(curStatus.level == null) {
+        updSpecial({ msg: `
 <p>
         Вы можете создать
         <span style="color: var(--primary-color);">изображение</span>,
@@ -362,7 +363,8 @@ loadDom.then(_ => {
         теперь можно создать расписание экзаменационной сессии:
         <a class="link" href="/exams/">grouptimetable.github.io/exams/</a>
 </p>
-    `})
+        `})
+    }
 
     new ResizeObserver(() => resizeProgressBar(curStatus.progress, true)).observe(dom.groupBarEl)
 
@@ -464,6 +466,7 @@ function updStatus() { try {
         const specc = document.createElement('div')
         specc.setAttribute('id', 'very-special')
         specc.innerHTML = s.msg
+        specc.style.color = 'var(--text-color)'
         specc.style.opacity = 1
 
         statusEl.insertAdjacentElement('afterend', specc)
@@ -728,7 +731,8 @@ const loadDependencies = Promise.all([
     loadPdfjs, loadPdflibJs, loadFontkit,
 ])
 
-loadDependencies.catch((e) => {
+loadDependencies.catch(async(e) => {
+    await loadDom
     updateUserdataF('regDocumentError')('global', 'global', e)
     printScheduleError(e)
 })

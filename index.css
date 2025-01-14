@@ -1,3 +1,20 @@
+:root {
+    min-width: 100%;
+    min-height: 100%;
+    display: flex;
+    align-items: stretch;
+}
+
+body {
+    flex-grow: 1;
+    display: flex;
+    align-items: stretch;
+}
+
+.root {
+    flex-grow: 1;
+}
+
 body {
     font-family: "Open Sans", sans-serif;
     background-color: var(--bg-color);
