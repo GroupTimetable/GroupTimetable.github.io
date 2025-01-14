@@ -534,6 +534,18 @@ function nameFixup(name) {
     else return newName;
 }
 
+const english = /[abcehkmoptxy]/g
+const original = 'abcehkmoptxy'
+const replaced = 'абсенкмортху'
+
+function nameFixupEvenMore(name) {
+    var newName = name.replace(nonAlphaNumeric, '')
+        .toLowerCase()
+        .replace(english, (m) => replaced[original.indexOf(m)])
+
+    return newName;
+}
+
 const pdfMagicNumbers = [0x25, 0x50, 0x44, 0x46]; // %PDF
 function isPDF(arrayBuffer) {
     try {
@@ -832,38 +844,53 @@ async function processPDF(userdata, name, indices) {
     // если название группы контрактников, сохраняем место неконтрактной группы
     const contractRegex = (/^(\p{L}+)к[2-9](\p{N}*)$/u)
     const isContract = contractRegex.test(nameFixed)
-    const regularName = !isContract ? undefined : nameFixed.replace(contractRegex, '$11$2') // $1 1 $2 без к и первая цифра - 1
-    const minBound = Math.max(Math.min(nameFixed.length*0.5, nameFixed.length - 4), 1)
-    const maxBound = Math.max(nameFixed.length*2, nameFixed.length + 4, 1)
+    const nameFixed2 = nameFixupEvenMore(name)
+    const regularName = !isContract ? undefined : nameFixed2.replace(contractRegex, '$11$2') // $1 1 $2 без к и первая цифра - 1
+    const minBound = Math.max(Math.min(nameFixed2.length*0.5, nameFixed2.length - 4), 1)
+    const maxBound = Math.max(nameFixed2.length*2, nameFixed2.length + 4, 1)
     var closestName = undefined, closestN = Infinity, closestNamePage = undefined;
+    var lettersIssue = false
+
 
     for(let j = 0; j < orig.numPages; j++) try {
-        const pageData = await docData.pages[j];
-        const page = pageData.page;
+        const pageData = await docData.pages.get(j);
         const cont = pageData.text;
 
         const contLength = cont.length;
         for(let i = 0; i < contLength; i++) try {
-            const oname = nameFixup(cont[i].str)
-            if(oname.length < minBound || oname.length > maxBound) continue;
-            const n = levenshteinDistance(nameFixed, oname);
+            const oname = nameFixupEvenMore(cont[i].str)
+            if(oname == nameFixed2) {
+                lettersIssue = true
+                closestName = cont[i].str
+                closestNamePage = j
+                closestN = 0
+                break
+            }
             if (oname == regularName) {
                 closestName = cont[i].str;
                 closestNamePage = j;
                 closestN = 0;
+                break
             }
-            else if(n < closestN) {
+
+            if(oname.length < minBound || oname.length > maxBound) continue;
+            const n = levenshteinDistance(nameFixed2, oname);
+            if(n < closestN) {
                 closestName = cont[i].str;
                 closestNamePage = j;
                 closestN = n;
             }
-            continue;
-        } catch(e) {}
-    } catch(e) {}
+        } catch(e) { console.error(e) }
+
+        if(closestN == 0) break
+    } catch(e) { console.error(e) }
 
     let msg = "имя `" + name + "` не найдено";
     if(closestName != undefined) {
-        msg += ", возможно вы имели в виду `" + closestName + "` на странице " + (closestNamePage + 1);
+        msg += ", возможно вы имели в виду `" + closestName
+            + "`"
+            + (lettersIssue ? " (другая кириллица/латиница)" : "")
+            + " на странице " + (closestNamePage + 1);
     }
     msg += ", страниц: " + orig.numPages;
     if(errorCount != 0) {
