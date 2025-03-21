@@ -30,23 +30,23 @@ function readJson(folder, filename) { return wrap(readJson0, folder, filename) }
 
 const groupNameRegex = (/^(\p{L}{1,8})-(\p{N}{1,4})$/u)
 
-async function updateFile(folder) {
-    const cont = await readFile(folder, 'file.pdf')
+async function updateFile(folder, filename) {
+    const cont = await readFile(folder, filename)
     if(cont != undefined) {
         updateFilenameDisplay('Test folder: ', folder);
         updateCurrentDocument(cont, 'test file')
     }
     else {
-        throw 'could not load file'
+        throw 'could not load file `' + filename + '`'
     }
 }
 
 /// get all group names in the file.
 /// if folder is null, uses current loaded file
-async function getGroupNames(folder) {
+async function getGroupNames(folder, filename) {
     await loadSchedule
 
-    if(folder) await updateFile(folder)
+    if(folder) await updateFile(folder, filename)
 
     var orig
     const docData = await currentDocumentData
@@ -93,12 +93,13 @@ function dateStr(date) {
 
 // calculate test data for file and group names.
 // if groupNames is null, computes the names
-async function getTestData(folder, groupNames) {
+async function getTestData(folder, groupNames, filename) {
+    filename ??= 'file.pdf'
     await loadSchedule
-    await updateFile(folder)
+    await updateFile(folder, filename)
 
     //groupNames ??= await readJson(folder, 'names.txt')
-    groupNames ??= await getGroupNames(folder)
+    groupNames ??= await getGroupNames(folder, filename)
 
     var orig
     const docData = await currentDocumentData
@@ -139,7 +140,7 @@ M.getTestData = getTestData
 /// ignore = { big: bool? }?
 async function performTest(folder, ignore, expected) {
     await loadSchedule
-    await updateFile(folder)
+    await updateFile(folder, 'file.pdf')
 
     expected ??= await readJson(folder, 'expected.txt')
     ignore ??= {}
