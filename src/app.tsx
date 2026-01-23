@@ -4,6 +4,8 @@ import * as Z from 'zustand'
 import * as pdfjs from 'pdfjs-dist'
 import * as Process from './process.ts'
 import * as U from './util.ts'
+import * as Renderer from './renderer.ts'
+import * as Renderschedule from './renderSchedule.ts'
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('./worker.js', import.meta.url).toString()
 
@@ -35,16 +37,30 @@ const store = Z.create<State>(() => {
 
 export default function Root() {
     const content = new Uint8Array(JSON.parse(localStorage.getItem('file')!)).buffer
+    const [blob, setBlob] = R.useState<Blob | undefined>()
+
     ;(async() => {
-        const a = await Process.process(
+        if(blob !== undefined) return
+        const groupSchedule = await Process.process(
             await U.makePageParser(content),
             'ИПсп-125',
             new AbortController
         )
-        console.log(a)
+
+        const renderer = new Renderer.CanvasRenderer()
+        await Renderschedule.renderSchedule(renderer, groupSchedule, [[0, 1, 2], [3, 4]], {
+            rowRatio: 1/5.2,
+            borderFactor: 0.01,
+            drawBorder: true,
+            dowOnTop: false,
+        })
+        setBlob(await renderer.canvas[1]())
+        console.log('done')
     })()
 
-    return <div/>
+    return <div>
+        {blob && <img src={URL.createObjectURL(blob)} width={600}/>}
+    </div>
 
     const {
         fileInfo,

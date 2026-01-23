@@ -13,6 +13,7 @@
     "isolatedModules": true,
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
-  }
+  },
+  "exclude": ["legacy"],
 }
 

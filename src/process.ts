@@ -9,13 +9,13 @@ type Item = {
     bounds: Bounds
 }
 
-type Table = {
-    dayName: Item
-    timeSlots: Item[]
-    rows: number
-    columns: number
-    items: (Item[] | undefined)[][] // [top-left, top-right, bot-left, bot,right][]
-}
+export type GroupSchedule = {
+    day: string
+    rows: {
+        timeSlot: string
+        names: string[]
+    }[]
+}[]
 
 export async function process(
     pageParser: U.PageParser,
@@ -28,7 +28,7 @@ export async function process(
     const normalizedGroupName = normalizeName(groupName)
 
     if(pageParser.error) {
-        return { error: pageParser.error }
+        throw pageParser.error
     }
 
     let pageI = 0
@@ -47,7 +47,7 @@ export async function process(
     }
 
     if(pageI === pageParser.pages) {
-        return { error: 'Имя группы не найдено в документе' }
+        throw 'Имя группы не найдено в документе'
     }
 
     const page = await pageParser.getPage(pageI)
@@ -57,13 +57,16 @@ export async function process(
     const groupNameItem = items[itemI]
 
     const groupNames = items.filter(it => {
-        return it.text.str.trim()
-            && it.bounds.t > groupNameItem.bounds.b
-            && it.bounds.b < groupNameItem.bounds.t
+        return (
+                it.text.str.trim()
+                    && it.bounds.t > groupNameItem.bounds.b
+                    && it.bounds.b < groupNameItem.bounds.t
+            )
+                || it === groupNameItem
     })
     groupNames.sort((a, b) => a.bounds.l - b.bounds.l)
     if(groupNames.length < 2) {
-        return { error: 'Недостаточно названий групп для определения таблицы' }
+        throw 'Недостаточно названий групп для определения таблицы'
     }
 
     const columnWidth = (() => {
@@ -89,7 +92,7 @@ export async function process(
         .sort((a, b) => -(a.bounds.t - b.bounds.t))
 
     if(timeSlotNames.length < 2) {
-        return { error: 'Недостаточно названий пар для определения таблицы' }
+        throw 'Недостаточно названий пар для определения таблицы'
     }
 
     const rowHeight = (() => {
@@ -186,40 +189,59 @@ export async function process(
         }
     }
 
-    for(let colI = 0; colI < columns; colI++) {
-        for(let rowI = 0; rowI < rows; rowI++) {
-            table[colI * columns + rowI] =
-                table[colI * columns + rowI].map(it => isBlocker(it) ? [] : it)
-        }
+    for(let i = 0; i < table.length; i++) {
+        table[i] = table[i].map(it => isBlocker(it) ? [] : it)
     }
 
-    //console.log(items.map(it => ({ a: it.text.str, ...it.bounds, other: it })))
-    tableToStrings(table, rows, columns)
+    //tableToStrings(table, rows, columns)
 
-    /*
-    let timeSlotI = 0
-    const tableByDay: Table[] = []
-    for(const dayItem of dayOfWeekItems) {
-        const timeSlots: (typeof timeSlotNames[number])[] = []
-        for(; timeSlotI < timeSlotNames.length; timeSlotI++) {
-            const timeSlot = timeSlotNames[timeSlotI]
-            const prev = timeSlots.at(-1)
-            if(prev && prev.number >= timeSlot.number) break
-            timeSlots.push(timeSlot)
+    const dayBounds: number[] = [0]
+    {
+        let timeSlotI = 0
+        for(let i = 0; i < dayOfWeekItems.length - 1; i++) {
+            for(timeSlotI++; timeSlotI < timeSlotNames.length; timeSlotI++) {
+                if(
+                    parseInt(timeSlotNames[timeSlotI].text.str)
+                        <= parseInt(timeSlotNames[timeSlotI - 1].text.str)
+                ) {
+                    break
+                }
+            }
+            dayBounds.push(timeSlotI)
         }
-        if(timeSlots.length === 0) continue
+        dayBounds.push(timeSlotNames.length)
+    }
 
-        const columns = groupNames.length
-        const rows = timeSlots.length
-        tableByDay.push({
-            dayName: dayItem,
-            timeSlots,
-            rows,
-            columns,
-            items: Array(rows * columns).fill(undefined).map(() => [undefined, undefined, undefined, undefined])
+    const columnI = groupNames.indexOf(groupNameItem)
+
+    const groupSchedule: GroupSchedule = []
+    for(let dayI = 0; dayI < dayOfWeekItems.length; dayI++) {
+        const begin = dayBounds[dayI]
+        const end = dayBounds[dayI + 1]
+        groupSchedule.push({
+            day: dayOfWeekItems[dayI].text.str.trim(),
+            rows: timeSlotNames.slice(begin, end).map((it, off) => {
+                return {
+                    timeSlot: it.text.str.trim(),
+                    names: cellAt(begin + off, columnI)
+                        .map(it => {
+                            return it.map(it => it.text.str.trim()).join(' ')
+                        }),
+                }
+            }),
         })
+        groupSchedule.at(-1)!.rows = groupSchedule.at(-1)!.rows.slice(
+            0,
+            Math.max(
+                0,
+                groupSchedule.at(-1)!.rows.findLastIndex(it => it.names.some(it => it !== ''))
+            )
+        )
     }
-    */
+    while(groupSchedule.length < 7) groupSchedule.push({ day: '', rows: [] })
+
+    console.log(groupSchedule)
+    return groupSchedule
 }
 
 function isBlocker(lines: Item[]) {
