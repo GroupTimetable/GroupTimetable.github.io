@@ -1,8 +1,6 @@
 import R from 'react'
 import * as RD from 'react-dom/client'
+import App from './app'
 
-RD.createRoot(document.getElementById('root')!).render(<Root/>)
+RD.createRoot(document.getElementById('root')!).render(<App/>)
 
-function Root() {
-    return <div>helo</div>
-}
