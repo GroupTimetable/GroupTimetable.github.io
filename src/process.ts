@@ -110,7 +110,7 @@ export async function process(
 
     const tableTop = timeSlotNames[0].bounds.cy + rowHeight * 0.5
     const tableLeft = groupNames[0].bounds.cx - columnWidth * 0.5
-    const columns = groupNames.length
+    const columns = Math.ceil((groupNames.at(-1)!.bounds.cx - tableLeft) / columnWidth)
     const rows = timeSlotNames.length
 
     // [top-left[], top-right[], bot-left[], bot,right[]][]
@@ -132,11 +132,13 @@ export async function process(
             }
             lines.push(item)
         }
+        if(lines.length === 0) continue
 
         const bounds = boundsUnion(lines.map(it => it.bounds))
 
         const cellXI = Math.floor((bounds.l + 2 - tableLeft) / columnWidth) // left aligned
         const cellYI = Math.floor((tableTop - bounds.cy) / rowHeight)
+
         if(aaa) console.log(cellXI, cellYI, lines)
         if(!(cellXI >= 0 && cellXI < columns && cellYI >= 0 && cellYI < rows)) continue
         const cell = cellAt(cellYI, cellXI)
@@ -144,20 +146,28 @@ export async function process(
         const cellXCenter = tableLeft + cellXI * columnWidth + columnWidth * 0.5
         const cellYCenter = tableTop - cellYI * rowHeight - rowHeight * 0.5
 
-        const left = bounds.l < cellXCenter
-        const right = bounds.r >= cellXCenter
-        const top = bounds.t > cellYCenter
-        const bot = bounds.b <= cellYCenter
+        const left = bounds.l < cellXCenter - 2
+        const right = bounds.r >= cellXCenter + 2 || !left
+        const top = bounds.t > cellYCenter + 2
+        const bot = bounds.b <= cellYCenter - 2 || !top
 
-        if(top && left) cell[0] = lines
-        if(top && right) cell[1] = lines
-        if(bot && left) cell[2] = lines
-        if(bot && right) cell[3] = lines
+        if(isBlocker(lines)) {
+            if(cell[0].length === 0 && top && left) cell[0] = lines
+            if(cell[1].length === 0 && top && right) cell[1] = lines
+            if(cell[2].length === 0 && bot && left) cell[2] = lines
+            if(cell[3].length === 0 && bot && right) cell[3] = lines
+        }
+        else {
+            if(top && left) cell[0] = lines
+            if(top && right) cell[1] = lines
+            if(bot && left) cell[2] = lines
+            if(bot && right) cell[3] = lines
+        }
 
         if(left && right) {
             for(let x = cellXI + 1; x < columns; x++) {
                 const cellLeft = tableLeft + x * columnWidth
-                if(bounds.l <= cellLeft) break
+                if(bounds.r <= cellLeft) break
 
                 const cell = cellAt(cellYI, x)
                 if(top) {
@@ -212,7 +222,7 @@ export async function process(
         dayBounds.push(timeSlotNames.length)
     }
 
-    const columnI = groupNames.indexOf(groupNameItem)
+    const columnI = Math.floor((groupNameItem.bounds.cx - tableLeft) / columnWidth)
 
     const groupSchedule: GroupSchedule = []
     for(let dayI = 0; dayI < dayOfWeekItems.length; dayI++) {
@@ -232,22 +242,17 @@ export async function process(
         })
         groupSchedule.at(-1)!.rows = groupSchedule.at(-1)!.rows.slice(
             0,
-            Math.max(
-                0,
-                groupSchedule.at(-1)!.rows.findLastIndex(it => it.names.some(it => it !== ''))
-            )
+            groupSchedule.at(-1)!.rows.findLastIndex(it => it.names.some(it => it !== '')) + 1,
         )
     }
     while(groupSchedule.length < 7) groupSchedule.push({ day: '', rows: [] })
 
-    console.log(groupSchedule)
     return groupSchedule
 }
 
 function isBlocker(lines: Item[]) {
-    if(lines.length !== 1) return false
-    if(!isFinite(Number(lines[0].text.str))) return false
-    return true
+    const text = lines.join('')
+    return text && isFinite(Number(lines[0].text.str))
 }
 
 const daysOfWeek = [

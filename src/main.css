@@ -2,6 +2,7 @@
 
 @theme {
   --color-primary: #4286f1;
+  --color-hint: #ad44ff;
 }
 
 :root {

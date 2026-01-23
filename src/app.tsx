@@ -19,6 +19,7 @@ type FileInfo = {
 
 type State = {
     fileInfo: FileInfo | undefined
+    images: { url: string, name: string }[]
 
     groupName: string
     status: string
@@ -29,16 +30,19 @@ const store = Z.create<State>(() => {
     return {
         fileInfo: undefined,
         pageParser: undefined,
-        groupName: '',
-        status: '',
+        images: [],
+        groupName: localStorage.getItem('index__last_group_name') ?? '',
+        status: 'ВНИМАНИЕ: Университет изменил формат расписания, поэтому сайт пришлось переписать. '
+            + 'Если вы заметили ошибку в получившемся расписании или хотите скачать расписание как календарь и т.п., пожалуйста напишите мне: https://vk.ru/club221983441',
         progress: 0,
     }
 })
 
 export default function Root() {
+
+    /*
     const content = new Uint8Array(JSON.parse(localStorage.getItem('file')!)).buffer
     const [blob, setBlob] = R.useState<Blob | undefined>()
-
     ;(async() => {
         if(blob !== undefined) return
         const groupSchedule = await Process.process(
@@ -61,10 +65,13 @@ export default function Root() {
     return <div>
         {blob && <img src={URL.createObjectURL(blob)} width={600}/>}
     </div>
+    */
 
+    const downloadRef = R.useRef<HTMLAnchorElement | null>(null)
     const {
         fileInfo,
         groupName,
+        images,
         status,
         progress,
     } = store(it => it)
@@ -73,9 +80,9 @@ export default function Root() {
         && fileInfo?.fileName !== undefined
         && groupName !== ''
 
-    return <div className='flex-1 flex flex-col bg-slate-100'>
+    return <div className='flex-1 flex flex-col bg-gray-100 overflow-y-auto'>
         <div className='flex-1 flex items-end justify-center'>
-            <label className='text-center text-3xl cursor-pointer'>
+            <label className='text-center text-3xl cursor-pointer text-hint'>
                 Нажмите здесь чтобы загрузить файл расписания
                 <input
                     className='hidden'
@@ -108,14 +115,13 @@ export default function Root() {
                         const content = await file.arrayBuffer()
                         if(fileInfo.controller.signal.aborted) return
 
-
+                    /*
                     // TODO remove
                         localStorage.setItem(
                             'file',
                             JSON.stringify([...new Uint8Array(content)])
                         )
-
-
+                        */
 
                         if(content.byteLength === 0) {
                             store.setState({
@@ -133,17 +139,18 @@ export default function Root() {
                         store.setState({
                             fileInfo,
                             progress: 0,
-                            status: 'Введите имя группы (ИМгр-123, имгр123 и т.п.)',
+                            status: 'Файл загружен',
+                            //status: 'Введите имя группы (ИМгр-123, имгр123 и т.п.)',
                         })
                     }}
                 />
             </label>
         </div>
 
-        <div className='flex flex-col items-center m-4'>
-            <div className='flex flex-col'>
+        <div className='flex flex-col items-center mx-4 mt-4'>
+            <div className='flex flex-col max-w-full'>
                 <div className='mb-1'>{fileInfo?.fileName ?? nbsp}</div>
-                <div className='flex w-120 max-w-full rounded-full relative border border-stone-500 shadow-md'>
+                <div className='flex w-120 max-w-full rounded-full relative shadow-lg bg-white max-w-full'>
                     <input
                         className='min-w-0 flex-1 h-12 p-4 rounded-full pl-5'
                         placeholder='Название группы'
@@ -151,23 +158,69 @@ export default function Root() {
                         value={groupName}
                         onChange={ev => {
                             store.setState({ groupName: ev.target.value })
+                            localStorage.setItem('index__last_group_name', ev.target.value)
                         }}
                     />
                     <button
-                        type='button'
-                        disabled={!canStart}
-                        className={'flex ' + (canStart ? 'cursor-pointer' : '')}
-                        onClick={() => {
-                            if(!canStart) return
+                        type='submit'
+                        className={'w-12 h-12 p-1 flex'}
+                        onClick={async(ev) => {
+                            ev.preventDefault()
 
-                            Process.process(
-                                fileInfo.pageParser!,
-                                groupName,
-                                new AbortController()
-                            ).then(console.log)
+                            if(fileInfo === undefined) {
+                                store.setState({ progress: 1, status: 'Ошибка: Файл не загружен' })
+                                return
+                            }
+                            if(fileInfo?.pageParser === undefined) {
+                                store.setState({ progress: 1, status: 'Ошибка: Файл не PDF' })
+                                return
+                            }
+                            if(!groupName) {
+                                store.setState({ progress: 1, status: 'Ошибка: нет имени группы' })
+                                return
+                            }
+
+                            try {
+                                const schedule = await Process.process(
+                                    fileInfo.pageParser!,
+                                    groupName,
+                                    new AbortController()
+                                )
+                                fileInfo.pageParser!.release()
+                                store.setState({ progress: 0.4 })
+
+                                const renderer = new Renderer.CanvasRenderer()
+                                await Renderschedule.renderSchedule(renderer, schedule, [[0, 1, 2], [3, 4]], {
+                                    rowRatio: 1/5.2,
+                                    borderFactor: 0.01,
+                                    drawBorder: true,
+                                    dowOnTop: false,
+                                })
+
+                                store.setState({ progress: 0.8 })
+
+                                const blob = await renderer.canvas[1]()
+
+                                store.setState({
+                                    status: 'Готово. Нажми на изображение чтобы открыть',
+                                    progress: 1,
+                                    images: [
+                                        ...store.getState().images,
+                                        {
+                                            url: URL.createObjectURL(blob),
+                                            name: groupName + '-' + fileInfo.fileName!.replace(/\.pdf$/, '') + '.png',
+                                        },
+                                    ],
+                                })
+                            }
+                            catch(error) {
+                                store.setState({ status: '' + error, progress: 1 })
+                            }
                         }}
                     >
-                        <Arrow enabled={canStart}/>
+                        <div className={'flex-1 p-2.5 flex rounded-full transition-color duration-200 ' + (canStart ? 'cursor-pointer' : '')}>
+                            <Arrow enabled={canStart}/>
+                        </div>
                     </button>
                     <div className='absolute pointer-events-none inset-0 rounded-full overflow-hidden'>
                         <div
@@ -178,18 +231,42 @@ export default function Root() {
                         />
                     </div>
                 </div>
-                <div className='mt-1'>{status || nbsp}</div>
             </div>
         </div>
 
-        <div className='flex-1'>
+        <div className='flex-1 flex flex-col p-4 pt-2'>
+            <div className='mb-2'>{status || nbsp}</div>
+
+            <div className='self-center grow flex-0 flex flex-wrap gap-6'>
+                {images.map(it => {
+                    return <div className='flex flex-col'>
+                        <div className='min-h-0 max-h-full truncate'>{it.name}</div>
+                        <a
+                            type='button'
+                            target='_blank'
+                            className='max-w-60 max-h-70 flex items-center justify-center cursor-pointer'
+                            href={it.url}
+                        >
+                            <img
+                                src={it.url}
+                                className='max-w-full max-h-full bg-white shadow-md'
+                            />
+                        </a>
+                    </div>
+                })}
+            </div>
+            <div className='self-center flex flex-center'>
+                <a className='py-2 px-4' href="https://vk.ru/club221983441" target="_blank">VK</a>
+                <a className='py-2 px-4' href="https://github.com/GroupTimetable/GroupTimetable.github.io" target="_blank">GitHub</a>
+            </div>
         </div>
+        <a ref={downloadRef} className='hidden'/>
     </div>
 }
 
 function Arrow({ enabled }: { enabled: boolean }) {
     return <svg
-        className={'h-12 p-3.5 pr-4 ' + (enabled ? 'fill-primary' : 'fill-gray-500')}
+        className={'w-full h-full transition-color duration-200 stroke-1 ' + (enabled ? 'fill-primary stroke-primary' : 'fill-gray-500 stroke-gray-500')}
         xmlns="http://www.w3.org/2000/svg"
         viewBox="-1 0 24 24"
     >
