@@ -142,7 +142,7 @@ export default function Root() {
                             if(fileInfo.controller.signal.aborted) return
 
                             fileInfo = { ...fileInfo, pageParser }
-                            send('regMessage')('File loaded')
+                            send('regMessage')('File loaded ' + fileInfo.fileName + ' ' + groupName)
                             store.setState({
                                 fileInfo,
                                 progress: 0,
@@ -151,7 +151,7 @@ export default function Root() {
                             })
                         }
                         catch(error) {
-                            send('regGeneralError')('' + error)
+                            send('regGeneralError')(groupName + '\n' + error)
                             store.setState({
                                 fileInfo,
                                 progress: 1,
@@ -197,7 +197,7 @@ export default function Root() {
                                 return
                             }
 
-                            send('regMessage')('Gen started')
+                            send('regMessage')('Gen started ' + groupName + ' ' + fileInfo.fileName)
                             try {
                                 const schedule = await Process.process(
                                     fileInfo.pageParser!,
@@ -233,7 +233,7 @@ export default function Root() {
                                 })
                             }
                             catch(error) {
-                                send('regGeneralError')('' + error)
+                                send('regGeneralError')('' + groupName + ' ' + fileInfo.fileName + '\n' + error)
                                 store.setState({ status: '' + error, progress: 1 })
                             }
                         }}
