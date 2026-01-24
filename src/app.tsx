@@ -8,6 +8,7 @@ import * as Renderer from './renderer.ts'
 import * as Renderschedule from './renderSchedule.ts'
 // @ts-ignore
 import PdfjsWorkerUrl from './worker.js?worker&url'
+import send from './database.ts'
 
 pdfjs.GlobalWorkerOptions.workerSrc = PdfjsWorkerUrl
 
@@ -90,60 +91,74 @@ export default function Root() {
                     className='hidden'
                     type='file'
                     onChange={async(ev) => {
-                        store.getState().fileInfo?.controller.abort()
-                        let fileInfo: FileInfo = {
-                            controller: new AbortController(),
-                            fileName: undefined,
-                            pageParser: undefined,
-                        }
-                        store.setState({ fileInfo })
+                        try {
+                            store.getState().fileInfo?.controller.abort()
+                            let fileInfo: FileInfo = {
+                                controller: new AbortController(),
+                                fileName: undefined,
+                                pageParser: undefined,
+                            }
+                            store.setState({ fileInfo })
 
-                        const files = [...ev.target.files ?? []]
+                            const files = [...ev.target.files ?? []]
 
-                        const file = files.find(it => it.name.endsWith('.pdf')) ?? files.at(0)
-                        if(file === undefined) {
+                            const file = files.find(it => it.name.endsWith('.pdf')) ?? files.at(0)
+                            if(file === undefined) {
+                                if(fileInfo.controller.signal.aborted) return
+
+                                send('regGeneralError')('No file 1')
+                                store.setState({
+                                    progress: 0,
+                                    status: 'Не удалось получить файл. Попробуйте ещё раз',
+                                })
+                                return
+                            }
+
+                            fileInfo = { ...fileInfo, fileName: file.name }
+                            store.setState({ fileInfo })
+
+                            const content = await file.arrayBuffer()
                             if(fileInfo.controller.signal.aborted) return
 
+                        /*
+                        // TODO remove
+                            localStorage.setItem(
+                                'file',
+                                JSON.stringify([...new Uint8Array(content)])
+                            )
+                            */
+
+                            if(content.byteLength === 0) {
+                                send('regGeneralError')('No file 2')
+                                store.setState({
+                                    progress: 0,
+                                    status: 'Не удалось получить файл. Попробуйте ещё раз',
+                                })
+                                return
+                            }
+
+                            const pageParser = await U.makePageParser(content)
+                            U.onAbort(fileInfo.controller, () => pageParser.release())
+                            if(fileInfo.controller.signal.aborted) return
+
+                            fileInfo = { ...fileInfo, pageParser }
+                            send('regMessage')('File loaded')
                             store.setState({
+                                fileInfo,
                                 progress: 0,
-                                status: 'Не удалось получить файл. Попробуйте ещё раз',
+                                status: 'Файл загружен',
+                                //status: 'Введите имя группы (ИМгр-123, имгр123 и т.п.)',
                             })
-                            return
                         }
-
-                        fileInfo = { ...fileInfo, fileName: file.name }
-                        store.setState({ fileInfo })
-
-                        const content = await file.arrayBuffer()
-                        if(fileInfo.controller.signal.aborted) return
-
-                    /*
-                    // TODO remove
-                        localStorage.setItem(
-                            'file',
-                            JSON.stringify([...new Uint8Array(content)])
-                        )
-                        */
-
-                        if(content.byteLength === 0) {
+                        catch(error) {
+                            send('regGeneralError')('' + error)
                             store.setState({
-                                progress: 0,
-                                status: 'Не удалось получить файл. Попробуйте ещё раз',
+                                fileInfo,
+                                progress: 1,
+                                status: 'Ошибка',
                             })
-                            return
+
                         }
-
-                        const pageParser = await U.makePageParser(content)
-                        U.onAbort(fileInfo.controller, () => pageParser.release())
-                        if(fileInfo.controller.signal.aborted) return
-
-                        fileInfo = { ...fileInfo, pageParser }
-                        store.setState({
-                            fileInfo,
-                            progress: 0,
-                            status: 'Файл загружен',
-                            //status: 'Введите имя группы (ИМгр-123, имгр123 и т.п.)',
-                        })
                     }}
                 />
             </label>
@@ -182,6 +197,7 @@ export default function Root() {
                                 return
                             }
 
+                            send('regMessage')('Gen started')
                             try {
                                 const schedule = await Process.process(
                                     fileInfo.pageParser!,
@@ -203,6 +219,7 @@ export default function Root() {
 
                                 const blob = await renderer.canvas[1]()
 
+                                send('regDocumentCreated')(fileInfo.fileName ?? '', groupName)
                                 store.setState({
                                     status: 'Готово. Нажми на изображение чтобы открыть',
                                     progress: 1,
@@ -216,6 +233,7 @@ export default function Root() {
                                 })
                             }
                             catch(error) {
+                                send('regGeneralError')('' + error)
                                 store.setState({ status: '' + error, progress: 1 })
                             }
                         }}
@@ -248,6 +266,9 @@ export default function Root() {
                             target='_blank'
                             className='max-w-60 max-h-70 flex items-center justify-center cursor-pointer'
                             href={it.url}
+                            onClick={() => {
+                                send('regDocumentUsed')(it.name, groupName, 'img')
+                            }}
                         >
                             <img
                                 src={it.url}
