@@ -6,8 +6,10 @@ import * as Process from './process.ts'
 import * as U from './util.ts'
 import * as Renderer from './renderer.ts'
 import * as Renderschedule from './renderSchedule.ts'
+// @ts-ignore
+import PdfjsWorkerUrl from './worker.js?worker&url'
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL('./worker.js', import.meta.url).toString()
+pdfjs.GlobalWorkerOptions.workerSrc = PdfjsWorkerUrl
 
 const nbsp = '\u00A0';
 
@@ -150,7 +152,7 @@ export default function Root() {
         <div className='flex flex-col items-center mx-4 mt-4'>
             <div className='flex flex-col max-w-full'>
                 <div className='mb-1'>{fileInfo?.fileName ?? nbsp}</div>
-                <div className='flex w-120 max-w-full rounded-full relative shadow-lg bg-white max-w-full'>
+                <form className='flex w-120 max-w-full rounded-full relative shadow-lg bg-white max-w-full'>
                     <input
                         className='min-w-0 flex-1 h-12 p-4 rounded-full pl-5'
                         placeholder='Название группы'
@@ -230,12 +232,12 @@ export default function Root() {
                             }}
                         />
                     </div>
-                </div>
+                </form>
             </div>
         </div>
 
         <div className='flex-1 flex flex-col p-4 pt-2'>
-            <div className='mb-2'>{status || nbsp}</div>
+            <div className='mb-2 w-120 max-w-full self-center'>{status || nbsp}</div>
 
             <div className='self-center grow flex-0 flex flex-wrap gap-6'>
                 {images.map(it => {

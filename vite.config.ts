@@ -8,6 +8,10 @@ const projDir: string = (import.meta as any).dirname
 export default defineConfig(() => {
     return {
         root: path.join(projDir, 'src'),
+        build: {
+            outDir: path.join(projDir, 'build'),
+            emptyOutDir: true,
+        },
         plugins: [
             react(),
             tailwind(),

@@ -6,3 +6,4 @@ test*.html
 test*/
 *.sh
 /node_modules/
+/build/
