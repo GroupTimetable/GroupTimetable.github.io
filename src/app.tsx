@@ -258,8 +258,8 @@ export default function Root() {
             <div className='mb-2 w-120 max-w-full self-center'>{status || nbsp}</div>
 
             <div className='self-center grow flex-0 flex flex-wrap gap-6'>
-                {images.map(it => {
-                    return <div className='flex flex-col'>
+                {images.map((it, i) => {
+                    return <div className='flex flex-col' key={i}>
                         <div className='min-h-0 max-h-full truncate'>{it.name}</div>
                         <a
                             type='button'
