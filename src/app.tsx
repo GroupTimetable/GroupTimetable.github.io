@@ -17,7 +17,14 @@ const nbsp = '\u00A0';
 type FileInfo = {
     controller: AbortController
     fileName: string | undefined
-    pageParser: U.PageParser | undefined
+
+    data: {
+        type: 'json'
+        json: Process.GroupSchedule
+    } | {
+        type: 'pdf'
+        pageParser: U.PageParser
+    } | undefined
 }
 
 type State = {
@@ -31,6 +38,7 @@ type State = {
 
 const store = Z.create<State>(() => {
     return {
+        type: 'pdf',
         fileInfo: undefined,
         pageParser: undefined,
         images: [],
@@ -79,7 +87,7 @@ export default function Root() {
         progress,
     } = store(it => it)
 
-    const canStart = fileInfo?.pageParser !== undefined
+    const canStart = fileInfo?.data !== undefined
         && fileInfo?.fileName !== undefined
         && groupName !== ''
 
@@ -96,16 +104,15 @@ export default function Root() {
                             let fileInfo: FileInfo = {
                                 controller: new AbortController(),
                                 fileName: undefined,
-                                pageParser: undefined,
+                                data: undefined,
                             }
                             store.setState({ fileInfo })
 
                             const files = [...ev.target.files ?? []]
 
-                            const file = files.find(it => it.name.endsWith('.pdf')) ?? files.at(0)
+                            const file = files.find(it => it.name.endsWith('.pdf')) ?? files.find(it => it.name.endsWith('.json')) ?? files.at(0)
                             if(file === undefined) {
                                 if(fileInfo.controller.signal.aborted) return
-
                                 send('regGeneralError')('No file 1')
                                 store.setState({
                                     progress: 0,
@@ -120,14 +127,6 @@ export default function Root() {
                             const content = await file.arrayBuffer()
                             if(fileInfo.controller.signal.aborted) return
 
-                        /*
-                        // TODO remove
-                            localStorage.setItem(
-                                'file',
-                                JSON.stringify([...new Uint8Array(content)])
-                            )
-                            */
-
                             if(content.byteLength === 0) {
                                 send('regGeneralError')('No file 2')
                                 store.setState({
@@ -137,11 +136,30 @@ export default function Root() {
                                 return
                             }
 
-                            const pageParser = await U.makePageParser(content)
-                            U.onAbort(fileInfo.controller, () => pageParser.release())
-                            if(fileInfo.controller.signal.aborted) return
+                            if(file.name.endsWith('.pdf')) {
+                                const pageParser = await U.makePageParser(content)
+                                U.onAbort(fileInfo.controller, () => pageParser.release())
+                                if(fileInfo.controller.signal.aborted) return
 
-                            fileInfo = { ...fileInfo, pageParser }
+                                fileInfo = { ...fileInfo, data: { type: 'pdf', pageParser } }
+                            }
+                            else {
+                                try {
+                                    const json = JSON.parse(new TextDecoder().decode(content))
+                                    fileInfo = { ...fileInfo, data: { type: 'json', json } }
+                                }
+                                catch(error) {
+                                    console.error(error)
+                                    send('regGeneralError')(groupName + '\n' + error)
+                                    store.setState({
+                                        fileInfo,
+                                        progress: 1,
+                                        status: 'Ошибка в файле: ' + error,
+                                    })
+                                    return
+                                }
+                            }
+
                             send('regMessage')('File loaded ' + fileInfo.fileName + ' ' + groupName)
                             store.setState({
                                 fileInfo,
@@ -158,7 +176,6 @@ export default function Root() {
                                 progress: 1,
                                 status: 'Ошибка',
                             })
-
                         }
                     }}
                 />
@@ -189,24 +206,39 @@ export default function Root() {
                                 store.setState({ progress: 1, status: 'Ошибка: Файл не загружен' })
                                 return
                             }
-                            if(fileInfo?.pageParser === undefined) {
-                                store.setState({ progress: 1, status: 'Ошибка: Файл не PDF' })
+                            if(fileInfo?.data === undefined) {
+                                store.setState({ progress: 1, status: 'Ошибка: Файл не PDF/JSON' })
                                 return
                             }
-                            if(!groupName) {
-                                store.setState({ progress: 1, status: 'Ошибка: нет имени группы' })
-                                return
+                            if(fileInfo.data.type === 'pdf') {
+                                if(!groupName) {
+                                    store.setState({ progress: 1, status: 'Ошибка: нет имени группы' })
+                                    return
+                                }
                             }
 
                             send('regMessage')('Gen started ' + groupName + ' ' + fileInfo.fileName)
 
                             try {
-                                const schedule = await Process.process(
-                                    fileInfo.pageParser!,
-                                    groupName,
-                                    new AbortController()
-                                )
-                                fileInfo.pageParser!.release()
+                                const schedule = await (async() => {
+                                    const data = fileInfo.data
+                                    if(data?.type === 'pdf') {
+                                        const result = await Process.process(
+                                            data.pageParser,
+                                            groupName,
+                                            new AbortController()
+                                        )
+                                        data.pageParser!.release()
+                                        return result
+                                    }
+                                    else if(data?.type === 'json') {
+                                        return data.json
+                                    }
+                                    else {
+                                        throw new Error('Unreachable')
+                                    }
+                                })()
+
                                 store.setState({ progress: 0.4 })
 
                                 const renderer = new Renderer.CanvasRenderer()

@@ -241,7 +241,7 @@ export async function process(
 
     const columnI = Math.floor((groupNameItem.bounds.cx - tableLeft) / columnWidth)
 
-    const groupSchedule: GroupDaySchedule = []
+    const groupSchedule: GroupSchedule = []
     for(let dayI = 0; dayI < dayOfWeekItems.length; dayI++) {
         const begin = dayBounds[dayI]
         const end = dayBounds[dayI + 1]
@@ -253,7 +253,7 @@ export async function process(
                     names: cellAt(begin + off, columnI)
                         .map(it => {
                             return it.map(it => it.text.str.trim()).join(' ')
-                        }),
+                        }) as [string, string, string, string],
                 }
             }),
         })

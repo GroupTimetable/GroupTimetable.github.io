@@ -1,5 +1,5 @@
 import { Renderer } from './renderer'
-import { GroupDaySchedule } from './process'
+import { GroupSchedule } from './process'
 import { optimizeLineBreaks } from './textBreak'
 
 export type EditParams = {
@@ -12,7 +12,7 @@ export type EditParams = {
 //border factor is used inaccurately, but the difference should not be that big
 export async function renderSchedule(
     renderer: Renderer,
-    schedule: GroupDaySchedule,
+    schedule: GroupSchedule,
     origPattern: number[][],
     editParams: EditParams
 ) {
@@ -202,7 +202,7 @@ export async function renderSchedule(
     }
     renderer.finalizeTexts();
 
-    if(false) {
+    if(true) {
         renderer.setupText(false);
         for(let i = 0; i < timeArr.length; i++) {
             const it = timeArr[i];
@@ -220,7 +220,7 @@ export async function renderSchedule(
         renderer.finalizeTexts();
     }
 
-    if(true) {
+    if(false) {
         renderer.setupText(true);
         for(let i = 0; i < timeArr.length; i++) {
             const it = timeArr[i];
