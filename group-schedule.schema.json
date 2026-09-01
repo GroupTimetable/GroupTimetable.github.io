@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grouptimetable.github.io/schemas/group-schedule.schema.json",
+  "title": "GroupSchedule",
+  "description": "One student group's weekly schedule, extracted from a timetable table.\n\nTable structure: each column is a group; each row is a class session (one time slot). Rows are grouped by day: the leftmost column contains a tall merged cell spanning all the rows that belong to the same day of the week or date.\n\nWhat to do: the user will name a group. Find that group's column and read down it, collecting the sessions for every day.\n\nFormat: an array where each element represents one day, containing the sessions for that day. Days are in the order they appear in the table (Monday first). Trailing days with no sessions may still be present as padding entries with an empty `day` and an empty `rows` array.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/groupDaySchedule" },
+
+  "$defs": {
+    "groupDaySchedule": {
+      "title": "GroupDaySchedule",
+      "description": "All sessions of a single day for the selected group.",
+      "type": "object",
+      "properties": {
+        "day": {
+          "description": "Day of the week or specific date, exactly as written in the leftmost merged cell of the table (e.g. \"Понедельник\" or \"12.05\"). Empty string for a padding entry that carries no sessions.",
+          "type": "string"
+        },
+        "rows": {
+          "description": "The day's time slots, top to bottom, in table order. Trailing empty slots are cut off, so the last element always contains at least one non-empty cell text. May be empty for a day with no classes.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/scheduleRow" }
+        }
+      },
+      "required": ["day", "rows"],
+      "additionalProperties": false
+    },
+
+    "scheduleRow": {
+      "title": "ScheduleRow",
+      "description": "One timetable cell: the class session(s) for a single group in a single time slot.",
+      "type": "object",
+      "properties": {
+        "timeSlot": {
+          "description": "The time slot label of this row, taken from the table (e.g. \"8:30 - 10:00\", or an ordinal like \"1-я пара\").",
+          "type": "string"
+        },
+        "names": {
+          "description": "Class session text for one timetable cell, given as its four quadrants.\n\nTreat every cell as a 2x2 grid of quadrants and fill exactly four strings, in reading order: top-left, top-right, bottom-left, bottom-right. Each string is a single line (no line breaks).\n\nA cell may be divided vertically and/or horizontally, and a half may itself be subdivided, so a cell can hold 1, 2, 3, or 4 distinct regions. Whatever the layout, give each quadrant the text of the region covering it — a region that covers two quadrants has its text repeated in both. A cell may span several columns, so also consider them.\n\nAn empty quadrant is the empty string \"\"; a free period is four empty strings.",
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "prefixItems": [
+            { "type": "string", "description": "Top-left quadrant." },
+            { "type": "string", "description": "Top-right quadrant." },
+            { "type": "string", "description": "Bottom-left quadrant." },
+            { "type": "string", "description": "Bottom-right quadrant." }
+          ],
+          "items": false
+        }
+      },
+      "required": ["timeSlot", "names"],
+      "additionalProperties": false
+    }
+  },
+
+  "examples": [
+    [
+      {
+        "day": "Понедельник",
+        "rows": [
+          {
+            "timeSlot": "8:30 - 10:00",
+            "names": [
+              "Болотов А.В., Элективные дисциплины по физической культуре и спорту",
+              "Болотов А.В., Элективные дисциплины по физической культуре и спорту",
+              "Болотов А.В., Элективные дисциплины по физической культуре и спорту",
+              "Болотов А.В., Элективные дисциплины по физической культуре и спорту"
+            ]
+          },
+          {
+            "timeSlot": "12:10 - 13:40",
+            "names": [
+              "306-7, лк, Кириллова С.Л., География непроизводственной сферы",
+              "306-7, лк, Кириллова С.Л., География непроизводственной сферы",
+              "306-7, лк, Кириллова С.Л., Физическая география материков и океанов",
+              "306-7, лк, Кириллова С.Л., Физическая география материков и океанов"
+            ]
+          },
+          {
+            "timeSlot": "14:00 - 15:30",
+            "names": [
+              "236-7, лк, Дрозд К.В., Основы вожатской деятельности",
+              "236-7, лк, Дрозд К.В., Основы вожатской деятельности",
+              "",
+              ""
+            ]
+          }
+        ]
+      },
+      { "day": "", "rows": [] }
+    ]
+  ]
+}

@@ -5,7 +5,7 @@ import * as pdfjs from 'pdfjs-dist'
 import * as Process from './process.ts'
 import * as U from './util.ts'
 import * as Renderer from './renderer.ts'
-import * as Renderschedule from './renderSchedule.ts'
+import * as RenderSchedule from './renderSchedule.ts'
 // @ts-ignore
 import PdfjsWorkerUrl from './worker.js?worker&url'
 import send from './database.ts'
@@ -151,6 +151,7 @@ export default function Root() {
                             })
                         }
                         catch(error) {
+                            console.error(error)
                             send('regGeneralError')(groupName + '\n' + error)
                             store.setState({
                                 fileInfo,
@@ -198,6 +199,7 @@ export default function Root() {
                             }
 
                             send('regMessage')('Gen started ' + groupName + ' ' + fileInfo.fileName)
+
                             try {
                                 const schedule = await Process.process(
                                     fileInfo.pageParser!,
@@ -208,7 +210,7 @@ export default function Root() {
                                 store.setState({ progress: 0.4 })
 
                                 const renderer = new Renderer.CanvasRenderer()
-                                await Renderschedule.renderSchedule(renderer, schedule, [[0, 1, 2], [3, 4]], {
+                                await RenderSchedule.renderSchedule(renderer, schedule, [[0, 1, 2], [3, 4]], {
                                     rowRatio: 1/5.2,
                                     borderFactor: 0.01,
                                     drawBorder: true,
@@ -233,6 +235,7 @@ export default function Root() {
                                 })
                             }
                             catch(error) {
+                                console.error(error)
                                 send('regGeneralError')('' + groupName + ' ' + fileInfo.fileName + '\n' + error)
                                 store.setState({ status: '' + error, progress: 1 })
                             }

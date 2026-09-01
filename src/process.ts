@@ -9,13 +9,29 @@ type Item = {
     bounds: Bounds
 }
 
-export type GroupSchedule = {
+export type GroupDaySchedule = {
+    // Day of the week or specific date.
     day: string
     rows: {
-        timeSlot: string
-        names: string[]
+        timeSlot: string // e.g. "8:30 - 10:00"
+        // Class session text for one timetable cell, given as its four quadrants.
+        // Treat every cell as a 2x2 grid of quadrants and fill exactly four strings,
+        // in reading order: top-left, top-right, bottom-left, bottom-right. Each string
+        // is a single line (no line breaks).
+        // A cell may be divided vertically and/or horizontally, and a half may itself be
+        // subdivided, so a cell can hold 1, 2, 3, or 4 distinct regions. Whatever the
+        // layout, give each quadrant the text of the region covering it - a region that
+        // covers two quadrants has its text repeated in both.
+        // A cell may span several columns, so also consider them.
+        names: [string, string, string, string]
     }[]
-}[]
+}
+
+// Task: Extract one group's schedule from a timetable table.
+// Table structure: Each column is a group. Each row is a class session (one time slot). Rows are grouped by day: the leftmost column contains a tall merged cell spanning all the rows that belong to the same day of the week or date.
+// What to do: The user will name a group. Find that group's column and read down it, collecting the sessions for every day.
+// Format: An array where each element represents one day, containing the sessions for that day.
+export type GroupSchedule = GroupDaySchedule[]
 
 export async function process(
     pageParser: U.PageParser,
@@ -37,6 +53,7 @@ export async function process(
         if(controller.signal.aborted) throw controller
 
         const page = await pageParser.getPage(pageI)
+        //console.log(page.text)
         itemI = page.text.findIndex(it => {
             if('str' in it) {
                 if(normalizeName(it.str) === normalizedGroupName) return true
@@ -224,7 +241,7 @@ export async function process(
 
     const columnI = Math.floor((groupNameItem.bounds.cx - tableLeft) / columnWidth)
 
-    const groupSchedule: GroupSchedule = []
+    const groupSchedule: GroupDaySchedule = []
     for(let dayI = 0; dayI < dayOfWeekItems.length; dayI++) {
         const begin = dayBounds[dayI]
         const end = dayBounds[dayI + 1]

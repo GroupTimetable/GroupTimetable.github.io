@@ -1,5 +1,5 @@
 import { Renderer } from './renderer'
-import { GroupSchedule } from './process'
+import { GroupDaySchedule } from './process'
 import { optimizeLineBreaks } from './textBreak'
 
 export type EditParams = {
@@ -12,7 +12,7 @@ export type EditParams = {
 //border factor is used inaccurately, but the difference should not be that big
 export async function renderSchedule(
     renderer: Renderer,
-    schedule: GroupSchedule,
+    schedule: GroupDaySchedule,
     origPattern: number[][],
     editParams: EditParams
 ) {
@@ -202,26 +202,46 @@ export async function renderSchedule(
     }
     renderer.finalizeTexts();
 
-    renderer.setupText(true);
-    for(let i = 0; i < timeArr.length; i++) {
-        const it = timeArr[i];
-        const t = it.text;
-        const size = calcFontSizeForBoundsSingle(
-            renderer,
-            t,
-            (it.h - innerBorderWidth) * 0.9,
-            (it.w - innerBorderWidth) * 0.9,
-            widths
-        );
-        renderer.setFontSize(size);
-        renderer.drawText(
-            t,
-            it.x + it.w*0.5 + size*0.5,
-            it.y + it.h*0.5 + widths[0]*0.5
-        )
-        //drawTextCentered(renderer, t, size, it.x + it.w*0.5, , widths);
+    if(false) {
+        renderer.setupText(false);
+        for(let i = 0; i < timeArr.length; i++) {
+            const it = timeArr[i];
+            const t = it.text.split(' ').map(it => it.trim()).filter(it => it);
+            const size = calcFontSizeForBounds(
+                renderer,
+                t,
+                (it.h - innerBorderWidth) * 0.9,
+                (it.w - innerBorderWidth) * 0.9,
+                widths
+            );
+            renderer.setFontSize(size);
+            drawTextCentered(renderer, t, size, it.x + it.w*0.5, it.y + it.h*0.5, widths);
+        }
+        renderer.finalizeTexts();
     }
-    renderer.finalizeTexts();
+
+    if(true) {
+        renderer.setupText(true);
+        for(let i = 0; i < timeArr.length; i++) {
+            const it = timeArr[i];
+            const t = it.text;
+            const size = calcFontSizeForBoundsSingle(
+                renderer,
+                t,
+                (it.h - innerBorderWidth) * 0.9,
+                (it.w - innerBorderWidth) * 0.9,
+                widths
+            );
+            renderer.setFontSize(size);
+            renderer.drawText(
+                t,
+                it.x + it.w*0.5 + size*0.5,
+                it.y + it.h*0.5 + widths[0]*0.5
+            )
+            //drawTextCentered(renderer, t, size, it.x + it.w*0.5, , widths);
+        }
+        renderer.finalizeTexts();
+    }
 
     renderer.setupText(false);
     for(let i = 0; i < lessonsArr.length; i++) {
