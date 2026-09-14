@@ -6,8 +6,11 @@ import * as Process from './process.ts'
 import * as U from './util.ts'
 import * as Renderer from './renderer.ts'
 import * as RenderSchedule from './renderSchedule.ts'
+// Emitted verbatim as an asset (`?url`), NOT bundled as a Vite worker: Vite strips
+// entry exports from worker bundles, and pdf.js's fallback path needs to be able to
+// `import(workerSrc)` and read WorkerMessageHandler off it when a real Worker can't start.
 // @ts-ignore
-import PdfjsWorkerUrl from './worker.js?worker&url'
+import PdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import send from './database.ts'
 
 pdfjs.GlobalWorkerOptions.workerSrc = PdfjsWorkerUrl
@@ -110,7 +113,8 @@ export default function Root() {
 
                             const files = [...ev.target.files ?? []]
 
-                            const file = files.find(it => it.name.endsWith('.pdf')) ?? files.find(it => it.name.endsWith('.json')) ?? files.at(0)
+                            const isPdf = (it: File) => /\.pdf$/i.test(it.name)
+                            const file = files.find(isPdf) ?? files.find(it => /\.json$/i.test(it.name)) ?? files.at(0)
                             if(file === undefined) {
                                 if(fileInfo.controller.signal.aborted) return
                                 send('regGeneralError')('No file 1')
@@ -136,10 +140,20 @@ export default function Root() {
                                 return
                             }
 
-                            if(file.name.endsWith('.pdf')) {
+                            if(isPdf(file)) {
                                 const pageParser = await U.makePageParser(content)
                                 U.onAbort(fileInfo.controller, () => pageParser.release())
                                 if(fileInfo.controller.signal.aborted) return
+
+                                if(pageParser.error) {
+                                    send('regGeneralError')(groupName + ' ' + fileInfo.fileName + '\n' + pageParser.error)
+                                    store.setState({
+                                        fileInfo,
+                                        progress: 1,
+                                        status: pageParser.error,
+                                    })
+                                    return
+                                }
 
                                 fileInfo = { ...fileInfo, data: { type: 'pdf', pageParser } }
                             }
