@@ -31,7 +31,7 @@ export async function makePageParser(contentOrig: ArrayBuffer): Promise<PagePars
             console.error(error)
             controller.abort()
             return {
-                error: 'Файл не является PDF',
+                error: 'Файл не является PDF: ' + error,
                 pages: 0,
                 getPage: () => { throw new Error() },
                 aquire: () => {},
@@ -108,7 +108,8 @@ export function onAbort(it: AbortController | AbortSignal, cb: () => void) {
         ;(async() => {
             await Promise.resolve()
             cb()
-        })
+        })()
+        return
     }
-    it.onabort = () => { cb() }
+    it.addEventListener('abort', () => { cb() })
 }
